@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title desc">
+  <title id="title">MUPA</title>
+  <desc id="desc">Mugla Planlama Ajansi logo</desc>
+  <rect width="640" height="420" fill="#fff"/>
+  <g transform="translate(198 54)" fill="none" stroke="#a47b3c" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 166V88c0-38 27-64 66-64h64c39 0 66 26 66 64v78"/>
+    <path d="M80 166V92c0-10 7-18 18-18h50c11 0 18 8 18 18v74"/>
+    <path d="M136 166V78"/>
+    <path d="M222 166V24"/>
+  </g>
+  <g transform="translate(198 54)" fill="#a47b3c">
+    <rect x="12" y="154" width="56" height="24" rx="5"/>
+    <rect x="68" y="154" width="56" height="24" rx="5"/>
+    <rect x="124" y="154" width="56" height="24" rx="5"/>
+    <rect x="180" y="154" width="56" height="24" rx="5"/>
+  </g>
+  <text x="320" y="300" fill="#161616" font-family="Georgia, 'Times New Roman', serif" font-size="78" letter-spacing="22" text-anchor="middle">MUPA</text>
+  <text x="320" y="334" fill="#3f3f3f" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="3" text-anchor="middle">MUGLA PLANLAMA AJANSI</text>
+</svg>

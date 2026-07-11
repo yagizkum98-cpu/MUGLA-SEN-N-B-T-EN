@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">MUSKI</title>
+  <desc id="desc">T.C. Mugla Su ve Kanalizasyon Idaresi Genel Mudurlugu logo</desc>
+  <rect width="512" height="512" fill="#fff"/>
+  <circle cx="256" cy="256" r="222" fill="#fff" stroke="#1478b7" stroke-width="28"/>
+  <circle cx="256" cy="256" r="170" fill="#fff" stroke="#1478b7" stroke-width="2" opacity=".18"/>
+  <g fill="#1478b7">
+    <path d="M256 104c-46 61-74 108-74 153 0 53 36 92 84 92 50 0 85-38 85-91 0-46-42-98-95-154zm-15 65c-14 30-25 62-25 91 0 31 17 58 46 73-43-8-70-39-70-78 0-28 17-61 49-86z"/>
+    <g transform="translate(256 256)">
+      <circle r="7" transform="rotate(0) translate(0 -142)"/>
+      <circle r="7" transform="rotate(30) translate(0 -142)"/>
+      <circle r="7" transform="rotate(60) translate(0 -142)"/>
+      <circle r="7" transform="rotate(90) translate(0 -142)"/>
+      <circle r="7" transform="rotate(120) translate(0 -142)"/>
+      <circle r="7" transform="rotate(150) translate(0 -142)"/>
+      <circle r="7" transform="rotate(180) translate(0 -142)"/>
+      <circle r="7" transform="rotate(210) translate(0 -142)"/>
+      <circle r="7" transform="rotate(240) translate(0 -142)"/>
+      <circle r="7" transform="rotate(270) translate(0 -142)"/>
+      <circle r="7" transform="rotate(300) translate(0 -142)"/>
+      <circle r="7" transform="rotate(330) translate(0 -142)"/>
+    </g>
+  </g>
+  <path fill="#28a845" d="M295 228c43-45 91-37 122-34-8 52-37 97-104 106-20 3-39 1-57-6 9-23 22-45 39-66z"/>
+  <path fill="none" stroke="#897f74" stroke-width="21" stroke-linecap="round" d="M108 308c62-45 113-57 151-11 48-56 97-48 157-31"/>
+  <text x="256" y="436" fill="#0b4f83" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" text-anchor="middle">MUSKI</text>
+</svg>

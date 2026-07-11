@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CITIZEN
+  REVIEWER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  AI_REVIEW
+  TECHNICAL_REVIEW
+  ELIGIBLE
+  VOTING
+  SELECTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+enum ReviewDecision {
+  PENDING
+  APPROVED
+  REVISION
+  REJECTED
+}
+
+model User {
+  id String @id @default(cuid())
+  authId String? @unique
+  email String @unique
+  name String?
+  nationalIdHash String? @unique
+  role Role @default(CITIZEN)
+  district String?
+  verifiedAt DateTime?
+  projects Project[]
+  votes Vote[]
+  reviews Review[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BudgetCycle {
+  id String @id @default(cuid())
+  title String
+  year Int
+  totalBudget Decimal @db.Decimal(16,2)
+  voteLimit Int @default(5)
+  startsAt DateTime
+  endsAt DateTime
+  isActive Boolean @default(false)
+  projects Project[]
+  @@unique([year,title])
+}
+
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  color String @default("#006cae")
+  icon String?
+  projects Project[]
+}
+
+model Project {
+  id String @id @default(cuid())
+  slug String @unique
+  title String
+  summary String
+  description String
+  requestedBudget Decimal @db.Decimal(16,2)
+  status ProjectStatus @default(DRAFT)
+  district String
+  neighborhood String?
+  latitude Float?
+  longitude Float?
+  coverUrl String?
+  aiScore Float?
+  aiSummary String?
+  ownerId String
+  owner User @relation(fields:[ownerId],references:[id])
+  categoryId String
+  category Category @relation(fields:[categoryId],references:[id])
+  cycleId String
+  cycle BudgetCycle @relation(fields:[cycleId],references:[id])
+  votes Vote[]
+  reviews Review[]
+  milestones Milestone[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,cycleId])
+  @@index([district])
+}
+
+model Vote {
+  id String @id @default(cuid())
+  userId String
+  projectId String
+  weight Int @default(1)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId,projectId])
+  @@index([projectId])
+}
+
+model Review {
+  id String @id @default(cuid())
+  projectId String
+  reviewerId String
+  decision ReviewDecision @default(PENDING)
+  feasibility Int?
+  impact Int?
+  inclusion Int?
+  note String?
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  reviewer User @relation(fields:[reviewerId],references:[id])
+  createdAt DateTime @default(now())
+  @@unique([projectId,reviewerId])
+}
+
+model Milestone {
+  id String @id @default(cuid())
+  projectId String
+  title String
+  progress Int @default(0)
+  completedAt DateTime?
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  actorId String?
+  action String
+  entity String
+  entityId String?
+  metadata Json?
+  ipHash String?
+  createdAt DateTime @default(now())
+  @@index([entity,entityId])
+}
