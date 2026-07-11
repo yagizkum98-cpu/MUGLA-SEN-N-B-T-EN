@@ -9,6 +9,7 @@ export type ProjectRecord={
   id:string
   title:string
   category:string
+  subcategory?:string
   district:string
   country?:string
   countryCode?:string
