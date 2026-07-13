@@ -1,46 +1,157 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useRef, useState } from 'react'
-import { motion, useInView, useScroll, useTransform } from 'framer-motion'
-import { ArrowRight, ChevronDown, CircleDollarSign, Eye, Globe2, Lightbulb, MapPin, Menu, Sparkles, Vote, X } from 'lucide-react'
-import {formatBudget,useProjects} from '@/lib/projects-store'
-import {FAQ} from '@/components/faq'
+import Link from 'next/link'
+import {ArrowRight, CheckCircle2, FileText, FolderKanban, HelpCircle, Lightbulb, Vote} from 'lucide-react'
+import {formatBudget, useProjects} from '@/lib/projects-store'
 
-const places = ['Ölüdeniz', 'Bodrum Marina', 'Datça', 'Marmaris', 'Akyaka']
-const journey = [['💡','Fikir','Hayalini birkaç cümleyle anlat.'],['🤖','AI Analizi','Etki ve uygulanabilirlik analizi.'],['🏛️','Teknik İnceleme','Uzman ekiplerle doğrulama.'],['🗳️','Oylama','Muğla kararını birlikte verir.'],['🏗️','Uygulama','Kaynaklar şeffafça işe dönüşür.'],['🎉','Tamamlandı','Fikir, şehrin yeni gerçeği olur.']]
-const ideas = [['🇯🇵','Tokyo','Akıllı Bisiklet Sistemi'],['🇩🇪','Berlin','Karbon Nötr Mahalle'],['🇨🇦','Toronto','Dijital Gençlik Merkezi']]
-const districtPositions = [{n:'Bodrum',x:14,y:51},{n:'Milas',x:34,y:37},{n:'Datça',x:29,y:70},{n:'Marmaris',x:48,y:68},{n:'Yatağan',x:47,y:34},{n:'Menteşe',x:54,y:44},{n:'Kavaklıdere',x:61,y:28},{n:'Ula',x:59,y:53},{n:'Köyceğiz',x:65,y:59},{n:'Ortaca',x:70,y:65},{n:'Dalaman',x:75,y:61},{n:'Seydikemer',x:86,y:57},{n:'Fethiye',x:84,y:72}]
-const badges = [['🏆','Muğla Elçisi'],['🌱','İklim Kahramanı'],['🚀','İnovasyon Lideri'],['🎯','Gençlik Temsilcisi']]
+function Stat({label, value, note}: {label: string; value: string; note: string}) {
+  return <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
+    <p className="text-sm text-mugla-navy/55">{label}</p>
+    <strong className="mt-2 block text-3xl">{value}</strong>
+    <p className="mt-1 text-xs text-mugla-navy/45">{note}</p>
+  </div>
+}
 
-function Counter({value}:{value:number}){const ref=useRef<HTMLElement>(null);const view=useInView(ref,{once:true});const[n,setN]=useState(0);useEffect(()=>{if(!view)return;let s=0;const id=setInterval(()=>{s+=1;setN(Math.round(value*Math.min(s/45,1)));if(s>=45)clearInterval(id)},28);return()=>clearInterval(id)},[view,value]);return <strong ref={ref}>{n.toLocaleString('tr-TR')}</strong>}
+function Step({icon: Icon, title, text}: {icon: typeof Lightbulb; title: string; text: string}) {
+  return <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
+    <span className="grid h-11 w-11 place-items-center rounded-lg bg-mugla-sand text-mugla-orange"><Icon size={21}/></span>
+    <h3 className="mt-5 text-lg font-bold">{title}</h3>
+    <p className="mt-2 text-sm leading-6 text-mugla-navy/60">{text}</p>
+  </div>
+}
 
-function Navbar(){const[open,setOpen]=useState(false);return <header className="cine-nav"><Link href="#top" className="cine-brand"><Image className="header-municipality-logo" src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721} priority/><span>MUĞLA SENİN<br/><b>BÜTÇEN</b></span></Link><nav className={open?'show':''}><a href="#nabiz">Dijital Nabız</a><Link href="/nasil-isler">Nasıl İşler?</Link><a href="#projeler">Projeler</a><a href="#seffaflik">Şeffaflık</a><Link href="/giris" className="nav-join">Katıl <ArrowRight size={15}/></Link></nav><button className="nav-toggle" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></header>}
+export default function Home() {
+  const {projects} = useProjects()
+  const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
+  const active = approved.filter(project => String(project.status) === 'Oylamada')
+  const completed = approved.filter(project => String(project.status).startsWith('Tamamland'))
+  const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
 
-function Hero(){const[place,setPlace]=useState(0);useEffect(()=>{const id=setInterval(()=>setPlace(x=>(x+1)%places.length),3800);return()=>clearInterval(id)},[]);return <section className="cine-hero" id="top"><motion.div className="hero-photo" initial={{scale:1.15}} animate={{scale:1}} transition={{duration:18,ease:'linear'}}/><div className="hero-shade"/><div className="network-lines"><svg viewBox="0 0 1000 600"><path d="M80 410 L230 300 L390 375 L525 240 L690 325 L860 190 L930 380"/><path d="M230 300 L525 240 L930 380 M390 375 L690 325 L860 190"/>{[[80,410],[230,300],[390,375],[525,240],[690,325],[860,190],[930,380]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="5"/>)}</svg></div><Navbar/><div className="hero-center"><motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="hero-overline">GLOBAL PARTICIPATORY BUDGETING PLATFORM</motion.p><motion.h1 initial={{opacity:0,y:25}} animate={{opacity:1,y:0}} transition={{delay:.15}}>MUĞLA<br/><span>SENİN BÜTÇEN</span></motion.h1><motion.p className="hero-lead" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.45}}>Muğla için fikrin varsa, dünyanın neresinde olursan ol katıl.</motion.p><motion.div className="hero-buttons" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:.6}}><Link href="/giris?next=/fikir-gonder" className="action green"><Lightbulb/>Fikir Gönder</Link><Link href="/projeler" className="action blue"><Globe2/>Projeleri Keşfet</Link><a href="#nabiz" className="action yellow"><Vote/>Canlı Sonuçlar</a></motion.div></div><div className="place-switch"><span>ŞİMDİ</span><motion.b key={place} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{places[place]}</motion.b><div>{places.map((_,i)=><i key={i} className={i===place?'active':''}/>)}</div></div><a href="#nabiz" className="scroll-down"><ChevronDown/></a></section>}
+  return <main className="min-h-screen bg-mugla-sand text-mugla-navy">
+    <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-white p-1 shadow-sm">
+            <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
+          </span>
+          <span className="text-sm font-bold leading-tight">Mugla Senin<br/><span className="text-mugla-orange">Butcen</span></span>
+        </Link>
+        <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
+          <a href="#nasil">Nasıl işler?</a>
+          <Link href="/projeler">Projeler</Link>
+          <Link href="/sss">S.S.S.</Link>
+          <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
+        </nav>
+        <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">
+          Fikir gonder <ArrowRight size={16}/>
+        </Link>
+      </div>
+    </header>
 
-function Pulse(){const{projects}=useProjects();const stats:[[number,string],[number,string],[number,string],[number,string],[number,string]]=[[projects.length,'Katılımcı'],[projects.length,'Proje'],[new Set(projects.map(p=>p.countryCode||p.country).filter(Boolean)).size,'Ülkeden Katılım'],[new Set(projects.map(p=>`${p.countryCode||p.country}:${p.province}:${p.district}`)).size,'İlçe'],[projects.filter(p=>p.status==='Tamamlandı').length,'Tamamlanan Proje']];return <section className="pulse-section" id="nabiz"><div className="mesh"/><div className="section-title light"><span>CANLI VERİ · ANLIK ETKİ</span><h2>Muğla’nın<br/><em>Dijital Nabzı</em></h2><p>Yerelden dünyaya uzanan fikirlerin, oyların ve ortak kararların canlı görünümü.</p></div><div className="stat-grid">{stats.map(([v,l],i)=><motion.div key={l} initial={{opacity:0,y:30}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*.1}}><span>0{i+1}</span><Counter value={v}/><p>{l}</p></motion.div>)}</div><div className="live-bar"><i/> VERİLER PROJE KAYITLARIYLA ANLIK GÜNCELLENİR <b>{projects.length?`${projects.length} proje kayıtlı`:'Henüz proje girilmedi'}</b></div></section>}
+    <section className="relative overflow-hidden bg-mugla-navy text-white">
+      <div className="absolute inset-0 opacity-25">
+        <Image src="/landing/mugla-hero.png" alt="" fill priority className="object-cover"/>
+      </div>
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-20 lg:grid-cols-[1.1fr_.9fr] lg:py-24">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Katılımcı bütçe MVP</p>
+          <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-6xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">İlk aşamada hedef basit: vatandaş fikir göndersin, belediye projeleri yayınlasın, herkes durumu kolayca takip etsin.</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-5 py-3 font-bold text-white"><Lightbulb size={18}/> Fikir gonder</Link>
+            <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy"><FolderKanban size={18}/> Projeleri gör</Link>
+          </div>
+        </div>
+        <div className="grid content-end gap-3">
+          <Stat label="Yayındaki proje" value={String(approved.length)} note="Admin onayından geçen kayıtlar"/>
+          <Stat label="Aktif oylama" value={String(active.length)} note="Vatandasin oy verebildigi projeler"/>
+          <Stat label="Görünen bütçe" value={formatBudget(totalBudget)} note="Onaylı proje portföyü"/>
+        </div>
+      </div>
+    </section>
 
-function Journey(){return <section className="journey" id="yolculuk"><div className="section-title"><span>FİKİRDEN GERÇEĞE</span><h2>Bir düşünce,<br/><em>şehrin geleceğine dönüşür.</em></h2></div><div className="journey-track"><motion.div className="track-fill" initial={{width:0}} whileInView={{width:'100%'}} viewport={{once:true}} transition={{duration:2}}/>{journey.map((x,i)=><motion.article key={x[1]} initial={{opacity:.25,y:25}} whileInView={{opacity:1,y:0}} viewport={{amount:.8}}><span>{x[0]}</span><small>0{i+1}</small><h3>{x[1]}</h3><p>{x[2]}</p></motion.article>)}</div></section>}
+    <section id="nasil" className="mx-auto max-w-6xl px-5 py-14">
+      <div className="max-w-2xl">
+        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Basit akış</p>
+        <h2 className="mt-3 text-3xl font-black md:text-4xl">MVP deneyimi dört adımda ilerler.</h2>
+      </div>
+      <div className="mt-8 grid gap-4 md:grid-cols-4">
+        <Step icon={Lightbulb} title="Fikir al" text="Vatandaş giriş yapar ve fikrini kısa bir formla iletir."/>
+        <Step icon={CheckCircle2} title="Onayla" text="Başvurular incelenir, uygun projeler yayına alınır."/>
+        <Step icon={Vote} title="Oy ver" text="Onaylı projeler listelenir ve destek sayısı takip edilir."/>
+        <Step icon={FolderKanban} title="Takip et" text="Proje durumu, bütçe ve ilerleme bilgileri sade biçimde görünür."/>
+      </div>
+    </section>
 
-function World(){return <section className="world"><div className="globe-wrap"><div className="globe"><div className="globe-grid"/><span className="mugla-pin">MUĞLA<i/></span>{[1,2,3,4,5,6].map(x=><i key={x} className={`star s${x}`}/>)}</div><div className="orbit o1"/><div className="orbit o2"/></div><div className="world-copy"><span>DÜNYA MUĞLA İÇİN DÜŞÜNÜYOR</span><h2>Fikirlerin<br/>sınırı yok.</h2><p>81 ülkeden kent dostu, geleceğin kıyı şehri için bilgisini ve hayalini paylaşıyor.</p><div className="global-ideas">{ideas.map(x=><motion.div key={x[1]} whileHover={{x:8}}><b>{x[0]}</b><span><small>{x[1]} →</small>{x[2]}</span></motion.div>)}</div></div></section>}
+    <section className="border-y border-mugla-navy/10 bg-white">
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-3">
+        <Link href="/projeler" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
+          <FolderKanban className="text-mugla-orange"/>
+          <h3 className="mt-4 text-xl font-bold">Projeler</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Tüm onaylı projeleri ara, filtrele, oy ver ve durumlarını gör.</p>
+        </Link>
+        <Link href="/giris?next=/fikir-gonder" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
+          <Lightbulb className="text-mugla-cyan"/>
+          <h3 className="mt-4 text-xl font-bold">Fikir Gönder</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Muğla için önerini kısa bir başvuru formuyla ilet.</p>
+        </Link>
+        <Link href="/kitapcik" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
+          <FileText className="text-mugla-green"/>
+          <h3 className="mt-4 text-xl font-bold">Muğla Senin Bütçen Kitapçığı</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kitapçık PDF’i hazır olduğunda bu sekmede yayınlanır.</p>
+        </Link>
+      </div>
+    </section>
 
-function DistrictMap(){const[active,setActive]=useState(2);const{projects}=useProjects();const districts=districtPositions.map(d=>{const records=projects.filter(p=>p.district===d.n);return{...d,p:records.length,v:records.reduce((sum,p)=>sum+p.votes,0),b:records.reduce((sum,p)=>sum+p.budget,0)}});return <section className="districts"><div className="section-title light"><span>13 İLÇE · TEK GELECEK</span><h2>İlçeler arası<br/><em>etkileşim haritası</em></h2></div><div className="map-card"><svg className="mugla-shape" viewBox="0 0 1000 520"><path d="M42 272 C105 205 159 240 210 186 C278 114 364 124 429 174 C492 224 549 166 617 198 C687 231 706 172 758 200 C817 231 866 275 950 264 L925 351 C868 340 846 403 789 391 C735 380 691 425 624 398 C562 373 504 434 435 400 C370 368 337 425 279 391 C221 356 166 398 115 359 Z"/></svg><div className="map-connections"><svg viewBox="0 0 100 100">{districts.slice(1).map((d,i)=><line key={d.n} x1={districts[i].x} y1={districts[i].y} x2={d.x} y2={d.y}/>)}</svg></div>{districts.map((d,i)=><button key={d.n} style={{left:`${d.x}%`,top:`${d.y}%`}} onMouseEnter={()=>setActive(i)} onClick={()=>setActive(i)} className={active===i?'active':''}><i/><span>{d.n}</span></button>)}<motion.div className="map-info" key={active} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}><small>{districts[active].n.toUpperCase()}</small><strong>{districts[active].p} aktif proje</strong><div><span><b>{districts[active].v.toLocaleString('tr-TR')}</b> oy</span><span><b>{formatBudget(districts[active].b)}</b> bütçe</span></div></motion.div></div></section>}
+    <section id="sss" className="mx-auto max-w-6xl px-5 py-14">
+      <div className="max-w-2xl">
+        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">S.S.S.</p>
+        <h2 className="mt-3 text-3xl font-black md:text-4xl">Sıkça sorulan sorular</h2>
+      </div>
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
+          <HelpCircle className="text-mugla-orange"/>
+          <h3 className="mt-4 font-bold">Kimler katılabilir?</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Muğla için fikri olan vatandaşlar, öğrenciler, kurumlar ve ziyaretçiler katılabilir.</p>
+        </div>
+        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
+          <HelpCircle className="text-mugla-orange"/>
+          <h3 className="mt-4 font-bold">Proje nasıl görünür?</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Başvurular incelendikten sonra uygun projeler proje listesinde yayınlanır.</p>
+        </div>
+        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
+          <HelpCircle className="text-mugla-orange"/>
+          <h3 className="mt-4 font-bold">Oy vermek için ne gerekir?</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Oy vermek ve dashboard görmek için kayıt olup giriş yapmak gerekir.</p>
+        </div>
+      </div>
+    </section>
 
-function Future(){const[pos,setPos]=useState(50);return <section className="future"><div className="future-head"><span>GELECEĞİN MUĞLA’SI</span><h2>Bugünden <em>2035’e</em></h2><p>Bir şehrin değişimi, ortak bir kararla başlar.</p></div><div className="compare"><img src="/landing/mugla-2035.png" alt="Muğla 2035 vizyonu"/><div className="before" style={{width:`${pos}%`}}><img src="/landing/mugla-2035.png" alt="Bugünkü Muğla"/></div><div className="compare-line" style={{left:`${pos}%`}}><span>↔</span></div><input aria-label="Bugün ve 2035 karşılaştırması" type="range" min="3" max="97" value={pos} onChange={e=>setPos(+e.target.value)}/><b className="label-now">BUGÜN</b><b className="label-future">2035</b></div></section>}
+    <section className="mx-auto max-w-6xl px-5 py-14">
+      <div className="rounded-lg bg-mugla-navy p-7 text-white md:flex md:items-center md:justify-between md:gap-8">
+        <div>
+          <p className="text-sm font-bold text-mugla-cyan">{completed.length} tamamlanan proje</p>
+          <h2 className="mt-2 text-2xl font-black">İlk sürüm için odak: az ekran, net yol, gerçek veri.</h2>
+        </div>
+        <Link href="/giris?next=/fikir-gonder" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy md:mt-0">
+          Basla <CheckCircle2 size={18}/>
+        </Link>
+      </div>
+    </section>
 
-function Completed(){const{projects}=useProjects();const completed=projects.filter(p=>p.status==='Tamamlandı');return <section className="completed" id="projeler"><div className="section-title"><span>FİKİRDEN ESERE</span><h2>Tamamlanan<br/><em>projeler</em></h2></div>{completed.length?<div className="project-reel">{completed.map((project,i)=><motion.article key={project.id} whileHover={{y:-12}}><div className="project-shot project-shot--record" style={{background:`linear-gradient(135deg,${project.color},#06283f)`}}><span>TAMAMLANDI</span><b>{String(i+1).padStart(2,'0')}</b></div><small>{project.category.toUpperCase()}</small><h3>{project.title}</h3><p>{project.district} · {formatBudget(project.budget)} · Tamamlandı ✓</p></motion.article>)}</div>:<div className="project-empty">Henüz tamamlanan proje bulunmuyor.</div>}</section>}
-
-function IdeaWall(){const{projects}=useProjects();const liveIdeas=projects.filter(p=>p.moderationStatus!=='Reddedildi').sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10);function timeLabel(value:string){const diff=Date.now()-new Date(value).getTime();if(Number.isNaN(diff))return'canlı veri';if(diff<60000)return'az önce';if(diff<3600000)return`${Math.max(1,Math.floor(diff/60000))} dk önce`;if(diff<86400000)return`${Math.floor(diff/3600000)} saat önce`;return new Intl.DateTimeFormat('tr-TR',{day:'numeric',month:'short'}).format(new Date(value))}return <section className="idea-wall"><div className="wall-title"><Sparkles/><h2>Muğla<br/>Fikir Duvarı</h2><p>{liveIdeas.length?'Girilen fikirler ve proje başvuruları burada anlık yayınlanır.':'Veri geldiğinde fikirler bu duvarda anlık yayınlanacak.'}</p><div className="wall-live-status"><i/><b>{liveIdeas.length?`${liveIdeas.length} canlı fikir`:'Yayın bekleniyor'}</b></div></div><div className="wall-stream">{liveIdeas.length?liveIdeas.map((project,i)=><motion.div key={project.id} initial={{opacity:0,x:40}} whileInView={{opacity:1,x:0}} transition={{delay:(i%5)*.08}}><span>💡</span><p>“{project.title}”</p><small>{project.district} · {project.category} · {timeLabel(project.createdAt)}</small></motion.div>):<motion.div className="wall-empty" initial={{opacity:0,x:40}} whileInView={{opacity:1,x:0}}><span>⏳</span><p>Henüz yayınlanan fikir yok.</p><small>İlk başvuru kaydedildiğinde burada görünecek.</small></motion.div>}</div></section>}
-
-
-function Simulator(){const[cats,setCats]=useState([25,25,20,15,15]);const names=[['🚌','Ulaşım'],['🌿','Çevre'],['🚀','Gençlik'],['🎭','Kültür'],['⚽','Spor']];const total=cats.reduce((a,b)=>a+b,0);function update(i:number,v:number){setCats(c=>c.map((x,n)=>n===i?v:x))}return <section className="sim"><div className="sim-copy"><span>BÜTÇE SENİN</span><h2>100 milyon TL’yi<br/>sen nasıl dağıtırdın?</h2><p>Önceliklerini belirle, kendi Muğla bütçeni oluştur.</p><div className={`total ${total===100?'ok':''}`}><small>DAĞITILAN BÜTÇE</small><b>₺{total} M</b><span>{total===100?'Bütçen dengede ✓':`${100-total} M kaldı`}</span></div></div><div className="sliders">{names.map((n,i)=><div key={n[1]}><label><span>{n[0]} {n[1]}</span><b>₺{cats[i]} M</b></label><input type="range" min="0" max="50" value={cats[i]} onChange={e=>update(i,+e.target.value)} style={{'--fill':`${cats[i]*2}%`} as React.CSSProperties}/></div>)}<button onClick={()=>setCats([25,25,20,15,15])}>Bütçemi Oluştur <ArrowRight/></button></div></section>}
-
-function Passport(){return <section className="passport"><div><span>MUĞLA PASSPORT</span><h2>Katıl.<br/>Etki yarat.<br/><em>İz bırak.</em></h2><p>Her katkın dijital yurttaşlık yolculuğunda yeni bir rozet.</p></div><div className="badges">{badges.map((b,i)=><motion.article key={b[1]} initial={{opacity:0,scale:.5,rotate:-15}} whileInView={{opacity:1,scale:1,rotate:i%2?5:-5}} transition={{type:'spring',delay:i*.12}}><span>{b[0]}</span><b>{b[1]}</b><small>SEVİYE {i+1}</small></motion.article>)}</div></section>}
-
-function Transparency(){const{projects}=useProjects();const publicProjects=projects.filter(project=>project.moderationStatus==='Onaylandı');const visible=publicProjects.filter(project=>project.status==='Devam Ediyor'||project.status==='Tamamlandı'||project.progress>0).slice(0,3);const totalBudget=publicProjects.reduce((sum,project)=>sum+project.budget,0);return <section className="transparency" id="seffaflik"><div className="section-title light"><span>AÇIK VERİ · CANLI SİSTEM</span><h2>Veri geldikçe<br/><em>şeffaflık ekranı oluşur.</em></h2><p>Proje onaylandığında, oylama ve uygulama adımları ilerledikçe bu alan otomatik olarak dolmaya başlar. Henüz veri yoksa sahte kayıt gösterilmez.</p></div><div className="transparency-live"><div><i/><span>Canlı veri durumu</span><b>{publicProjects.length?`${publicProjects.length} proje kaydı izleniyor`:'Henüz yayınlanmış proje verisi yok'}</b></div><div><span>Toplam görünür bütçe</span><b>{formatBudget(totalBudget)}</b></div><div><span>Güncelleme</span><b>Anlık</b></div></div>{visible.length?<div className="glass-grid">{visible.map((project,i)=><motion.article key={project.id} whileHover={{y:-8}}><span>0{i+1}</span><small>{project.district}</small><h3>{project.title}</h3><div><p>Bütçe <b>{formatBudget(project.budget)}</b></p><p>Durum <b>{project.status}</b></p></div><label><span>İlerleme</span><b>%{project.progress}</b></label><div className="progress"><i style={{width:`${project.progress}%`}}/></div><button><Eye/> Açık veriyi incele</button></motion.article>)}</div>:<motion.div className="transparency-empty" initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}} viewport={{once:true}}><Eye/><h3>Daha veri oluşmadı.</h3><p>Projeler onaylanıp oylama, ihale, bütçe ve uygulama bilgileri geldikçe burada gerçek zamanlı açık veri kartları oluşacak.</p><div><span>Beklenen veri alanları</span><b>Proje · Bütçe · Oy · İlerleme · Tamamlanma</b></div></motion.div>}</section>}
-
-function Vision(){return <><section className="vision"><motion.p initial={{opacity:.12}} whileInView={{opacity:1}} viewport={{amount:.8}}>Bugün Bir Fikir Ver.</motion.p><motion.p initial={{opacity:.12}} whileInView={{opacity:1}} viewport={{amount:.8}}>Yarın Bir Şehri Değiştir.</motion.p><motion.p initial={{opacity:.12}} whileInView={{opacity:1}} viewport={{amount:.8}}><span>2035’in Muğla’sını</span><br/>Birlikte İnşa Edelim.</motion.p></section><section className="final-cta"><div className="final-bg"/><div><span>GLOBAL PARTICIPATORY BUDGETING PLATFORM</span><h2>MUĞLA<br/>SENİN BÜTÇEN</h2><p>Dünyanın en kapsayıcı yerel demokrasi platformu.</p><Link href="/giris">🚀 Hemen Katıl <ArrowRight/></Link></div></section></>}
-
-export default function Home(){const{scrollYProgress}=useScroll();const width=useTransform(scrollYProgress,[0,1],['0%','100%']);return <main className="cinematic"><motion.div className="scroll-progress" style={{width}}/><Hero/><Pulse/><Journey/><World/><DistrictMap/><Future/><Completed/><IdeaWall/><Simulator/><Passport/><Transparency/><Vision/><FAQ/><footer className="cine-footer"><div className="cine-brand"><Image className="footer-brand-logo" src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721}/><span>MUĞLA SENİN<br/><b>BÜTÇEN</b></span></div><p>Muğla Büyükşehir Belediyesi · Açık, adil, katılımcı.</p><div className="footer-partners" aria-label="Kurum logoları"><div className="partner-logo partner-logo--municipality"><Image src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721}/></div><div className="partner-logo partner-logo--municipality"><Image src="/partners/muski.svg" alt="MUSKİ" width={512} height={512}/></div><div className="partner-logo partner-logo--mupa"><Image src="/partners/mupa.svg" alt="MUPA Muğla Planlama Ajansı" width={512} height={512}/></div></div><div className="footer-links"><a href="#top">Ana Sayfa</a><Link href="/projeler">Projeler</Link><Link href="/dashboard">Dashboard</Link><a href="#seffaflik">Açık Veri</a><a href="#sss">S.S.S.</a></div><small>© 2026 Muğla Senin Bütçen</small></footer></main>}
+    <footer className="border-t border-mugla-navy/10 bg-white px-5 py-8">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
+        <span>Muğla Senin Bütçen MVP</span>
+        <div className="flex gap-4">
+          <a href="#nasil">Nasıl işler?</a>
+          <Link href="/projeler">Projeler</Link>
+          <Link href="/sss">S.S.S.</Link>
+          <Link href="/kitapcik">Kitapçık</Link>
+          <Link href="/giris?next=/dashboard">Dashboard</Link>
+          <Link href="/admin/giris">Admin</Link>
+        </div>
+      </div>
+    </footer>
+  </main>
+}

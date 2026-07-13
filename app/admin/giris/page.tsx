@@ -1,0 +1,60 @@
+'use client'
+
+import {FormEvent, useState} from 'react'
+import Link from 'next/link'
+import {ArrowLeft, LockKeyhole, ShieldCheck} from 'lucide-react'
+import {Button} from '@/components/ui/button'
+import {initialSuperAdmin, loginAdmin} from '@/lib/admin-auth'
+
+const field = 'w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
+
+export default function AdminLoginPage() {
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setLoading(true)
+    const form = new FormData(event.currentTarget)
+    try {
+      await loginAdmin(String(form.get('email')), String(form.get('password')))
+      location.href = '/admin'
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Giris yapilamadi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return <main className="grid min-h-screen bg-mugla-sand lg:grid-cols-[.9fr_1.1fr]">
+    <section className="hidden bg-mugla-navy p-14 text-white lg:flex lg:flex-col">
+      <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60"><ArrowLeft size={16}/> Ana sayfa</Link>
+      <div className="my-auto max-w-xl">
+        <span className="grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-mugla-cyan"><ShieldCheck size={32}/></span>
+        <h1 className="mt-8 text-5xl font-bold leading-tight">Admin alani yalnizca tanimli yetkililere aciktir.</h1>
+        <p className="mt-5 text-lg leading-8 text-white/60">Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.</p>
+      </div>
+    </section>
+
+    <section className="grid place-items-center p-6">
+      <div className="w-full max-w-md">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-mugla-navy/55 lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
+        <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YETKILI GIRISI</p>
+        <h2 className="mt-2 text-3xl font-bold">Admin paneli</h2>
+        <p className="mt-3 text-sm leading-6 text-mugla-navy/55">E-posta ve sifrenle giris yap. Ilk demo super admin hesabi asagidadir.</p>
+        <form onSubmit={submit} className="mt-7 space-y-4">
+          <label className="block"><span className="mb-2 block text-sm font-semibold">E-posta</span><input name="email" type="email" required className={field} defaultValue={initialSuperAdmin.email}/></label>
+          <label className="block"><span className="mb-2 block text-sm font-semibold">Sifre</span><input name="password" type="password" required className={field} defaultValue={initialSuperAdmin.password}/></label>
+          {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+          <Button type="submit" variant="orange" disabled={loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading ? 'Giris yapiliyor...' : 'Admin paneline gir'}</Button>
+        </form>
+        <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-mugla-navy/60">
+          <b className="text-mugla-navy">Demo super admin:</b><br/>
+          {initialSuperAdmin.email}<br/>
+          {initialSuperAdmin.password}
+        </div>
+      </div>
+    </section>
+  </main>
+}

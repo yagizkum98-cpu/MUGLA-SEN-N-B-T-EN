@@ -1,283 +1,129 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
-import {useEffect,useMemo,useState} from 'react'
-import {motion,useScroll,useTransform} from 'framer-motion'
-import {formatBudget,useProjects,type ProjectRecord} from '@/lib/projects-store'
-import {
-  ArrowLeft,
-  Bell,
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
-  Construction,
-  Database,
-  Eye,
-  Heart,
-  Hourglass,
-  Lock,
-  MapPin,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Trophy,
-  Vote,
-} from 'lucide-react'
+import {useMemo, useState} from 'react'
+import {ArrowLeft, CheckCircle2, MapPin, Search, ShoppingCart} from 'lucide-react'
+import {getCurrentUser} from '@/lib/local-auth'
+import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
+import {useVoteBasket} from '@/lib/vote-basket'
 
-const VOTED_KEY='mugla-senin-butcen-voted-projects-v1'
+const filters = [
+  ['all', 'Tum'],
+  ['Oylamada', 'Oylama'],
+  ['Devam Ediyor', 'Devam'],
+  ['completed', 'Tamam'],
+] as const
 
-type Stage='active'|'upcoming'|'ended'|'evaluation'|'waiting'|'winner'|'building'|'completed'
-type ProjectCard=ProjectRecord&{
-  stage:Stage
-  image:string
-  votingStart:string
-  votingEnd:string
-  resultAt:string
-  announcement:string
-  benefit:string
+function statusClass(status: string) {
+  if (status === 'Oylamada') return 'bg-green-50 text-green-700'
+  if (status === 'Devam Ediyor') return 'bg-sky-50 text-sky-700'
+  if (status.startsWith('Tamamland')) return 'bg-emerald-50 text-emerald-700'
+  return 'bg-orange-50 text-mugla-orange'
 }
 
-const stageMeta:Record<Stage,{tone:string;badge:string}>={
-  active:{tone:'bg-green-500',badge:'Oy Veriliyor'},
-  upcoming:{tone:'bg-yellow-400',badge:'Yakinda Oylamaya Acilacak'},
-  ended:{tone:'bg-slate-400',badge:'Oylama Tamamlandi'},
-  evaluation:{tone:'bg-orange-500',badge:'Teknik ve Mali Degerlendirme'},
-  waiting:{tone:'bg-sky-500',badge:'Sonuclar Belirlenen Tarihte Aciklanacak'},
-  winner:{tone:'bg-amber-500',badge:'Kazanan Proje'},
-  building:{tone:'bg-cyan-500',badge:'Uygulama Surecinde'},
-  completed:{tone:'bg-emerald-600',badge:'Tamamlandi'},
-}
+function ProjectRow({project, inBasket, confirmed, onAdd}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; onAdd: (id: string) => void}) {
+  const status = String(project.status)
+  const canVote = status === 'Oylamada'
 
-const tabs:[Stage|'all',string][]=[
-  ['all','Tum Projeler'],
-  ['active','Aktif'],
-  ['upcoming','Yakinda'],
-  ['evaluation','Degerlendirme'],
-  ['winner','Kazanan'],
-  ['building','Yapim Asamasinda'],
-  ['completed','Tamamlanan'],
-]
+  return <article className="border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(status)}`}>{status}</span>
+          <span className="text-xs font-semibold text-mugla-navy/45">{project.category}</span>
+        </div>
+        <h2 className="mt-2 truncate text-lg font-black">{project.title}</h2>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-mugla-navy/55">
+          <span className="flex items-center gap-1.5"><MapPin size={14}/>{project.district}</span>
+          <span>{formatBudget(project.budget)}</span>
+          <span>{project.votes.toLocaleString('tr-TR')} destek</span>
+        </div>
+        {project.summary && <p className="mt-2 line-clamp-2 text-sm leading-6 text-mugla-navy/55">{project.summary}</p>}
+      </div>
 
-function readVotedProjects(){
-  if(typeof window==='undefined')return []
-  try{
-    const value=JSON.parse(localStorage.getItem(VOTED_KEY)??'[]')
-    return Array.isArray(value)?value.filter(item=>typeof item==='string'):[]
-  }catch{return []}
-}
+      <div className="text-sm text-mugla-navy/55">
+        {project.progress > 0 ? <div>
+          <div className="mb-2 flex justify-between"><span>Ilerleme</span><b>%{project.progress}</b></div>
+          <div className="h-2 rounded-full bg-mugla-navy/10"><span className="block h-full rounded-full bg-mugla-cyan" style={{width: `${Math.min(100, Math.max(0, project.progress))}%`}}/></div>
+        </div> : <span>Surec baslangicinda</span>}
+      </div>
 
-function dateOffset(days:number){
-  const date=new Date()
-  date.setDate(date.getDate()+days)
-  return date.toISOString()
-}
-
-function dateLabel(value:string){
-  return new Intl.DateTimeFormat('tr-TR',{day:'numeric',month:'long'}).format(new Date(value))
-}
-
-function timeLeft(target:string){
-  const diff=Math.max(0,new Date(target).getTime()-Date.now())
-  return{
-    days:Math.floor(diff/86400000),
-    hours:Math.floor(diff%86400000/3600000),
-    minutes:Math.floor(diff%3600000/60000),
-    seconds:Math.floor(diff%60000/1000),
-  }
-}
-
-function Countdown({target,seconds=false}:{target:string;seconds?:boolean}){
-  const[now,setNow]=useState(()=>timeLeft(target))
-  useEffect(()=>{const id=setInterval(()=>setNow(timeLeft(target)),1000);return()=>clearInterval(id)},[target])
-  const cells=seconds?[['Gun',now.days],['Saat',now.hours],['Dakika',now.minutes],['Saniye',now.seconds]]:[['Gun',now.days],['Saat',now.hours],['Dakika',now.minutes]]
-  return <div className="project-countdown">{cells.map(([label,value])=><span key={label as string}><b>{String(value).padStart(2,'0')}</b><small>{label}</small></span>)}</div>
-}
-
-function enrich(project:ProjectRecord):ProjectCard{
-  const stage:Stage=project.status==='Tamamlandı'?'completed':project.status==='Devam Ediyor'?'building':project.status==='Oylamada'?'active':project.status==='İncelemede'?'evaluation':project.status==='Uygun'?'upcoming':'waiting'
-  return{
-    ...project,
-    stage,
-    image:`linear-gradient(135deg,${project.color},#06283f)`,
-    votingStart:dateOffset(8),
-    votingEnd:dateOffset(22),
-    resultAt:dateOffset(45),
-    announcement:'Sonuclar takvimde belirlenen tarihte aciklanacak.',
-    benefit:'Veri geldikce hesaplanacak',
-  }
-}
-
-function StatusPill({stage}:{stage:Stage}){
-  const meta=stageMeta[stage]
-  return <span className="status-pill"><i className={meta.tone}/>{meta.badge}</span>
-}
-
-function LiveWaiting({title,text,dark=false}:{title:string;text:string;dark?:boolean}){
-  return <motion.div className={`live-waiting-card ${dark?'is-dark':''}`} initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true}}>
-    <Database/>
-    <span>Canli veri bekleniyor</span>
-    <h3>{title}</h3>
-    <p>{text}</p>
-    <div><i/><b>Anlik sistem aktif</b><small>Proje eklendiginde bu alan otomatik dolacak.</small></div>
-  </motion.div>
-}
-
-function ProjectTile({project,onVote,voted}:{project:ProjectCard;onVote:(id:string)=>void;voted:boolean}){
-  const locked=project.stage==='ended'||project.stage==='evaluation'||project.stage==='waiting'
-  const won=project.stage==='winner'
-  return <motion.article className={`project-tile ${locked?'is-muted':''} ${won?'is-winner':''}`} whileHover={{y:-6}} layout>
-    <div className="project-shot" style={{background:project.image}}>
-      <StatusPill stage={project.stage}/>
-      {locked&&<div className="lock-layer"><Lock/><b>Oylama Tamamlandi</b><span>Bu proje icin oy verme suresi sona ermistir.</span></div>}
-      {won&&<div className="winner-ribbon"><Trophy/> Kazandi</div>}
-    </div>
-    <div className="project-tile-body">
-      <div className="project-meta"><span>{project.category}</span><b>{formatBudget(project.budget)}</b></div>
-      <h3>{project.title}</h3>
-      <p className="project-location"><MapPin size={14}/>{project.district} · {project.votes.toLocaleString('tr-TR')} oy</p>
-      {project.summary&&<p className="project-summary">{project.summary}</p>}
-      {project.stage==='active'&&<><Countdown target={project.votingEnd}/><div className="progress-line"><i style={{width:'64%'}}/></div></>}
-      {project.stage==='upcoming'&&<div className="upcoming-box"><CalendarDays/><b>{dateLabel(project.votingStart)} - {dateLabel(project.votingEnd)}</b><span>Oylamaya {timeLeft(project.votingStart).days} gun kaldi</span></div>}
-      {project.stage==='evaluation'&&<div className="eval-mini"><span>Teknik ve Mali Degerlendirme Sureci Devam Etmektedir.</span><b>%{Math.max(project.progress,20)}</b><i><em style={{width:`${Math.max(project.progress,20)}%`}}/></i></div>}
-      {project.stage==='winner'&&<div className="winner-note"><CheckCircle2 size={16}/> {project.announcement}<strong>Uygulanacak</strong></div>}
-      {project.stage==='building'&&<div className="build-note"><Construction size={16}/> Uygulama sureci ilerliyor <b>%{project.progress}</b></div>}
-      {project.stage==='completed'&&<div className="build-note done"><CheckCircle2 size={16}/> Tamamlandi <b>%100</b></div>}
-      <button className="project-action" disabled={project.stage!=='active'} onClick={()=>onVote(project.id)}>
-        {project.stage==='active'?<><Heart size={16} fill={voted?'currentColor':'none'}/>{voted?'Oy Verildi':'Oy Ver'}</>:<><Eye size={16}/> Detaylari Gor</>}
+      <button disabled={!canVote || confirmed} onClick={() => onAdd(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
+        <ShoppingCart size={16}/>
+        {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Sepete ekle') : 'Kapali'}
       </button>
     </div>
-  </motion.article>
+  </article>
 }
 
-export default function Projects(){
-  const{projects,voteProject}=useProjects()
-  const{scrollYProgress}=useScroll()
-  const progress=useTransform(scrollYProgress,[0,1],['0%','100%'])
-  const[voted,setVoted]=useState<string[]>([])
-  const[tab,setTab]=useState<Stage|'all'>('all')
-  const[query,setQuery]=useState('')
+export default function Projects() {
+  const {projects} = useProjects()
+  const [user] = useState(() => getCurrentUser())
+  const {basket, confirmed, remaining, availableForBasket, add} = useVoteBasket(user?.id)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<(typeof filters)[number][0]>('all')
+  const [message, setMessage] = useState('')
 
-  useEffect(()=>setVoted(readVotedProjects()),[])
+  const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
+  const filtered = approved.filter(project => {
+    const status = String(project.status)
+    const matchesFilter = filter === 'all' || status === filter || (filter === 'completed' && status.startsWith('Tamamland'))
+    const haystack = `${project.title} ${project.district} ${project.category}`.toLocaleLowerCase('tr')
+    return matchesFilter && haystack.includes(query.toLocaleLowerCase('tr'))
+  })
 
-  const allProjects=useMemo(()=>projects.filter(project=>project.moderationStatus==='Onaylandı').map(enrich),[projects])
-  const filtered=allProjects.filter(project=>(tab==='all'||project.stage===tab)&&project.title.toLocaleLowerCase('tr').includes(query.toLocaleLowerCase('tr')))
-  const active=allProjects.filter(project=>project.stage==='active')
-  const upcoming=allProjects.filter(project=>project.stage==='upcoming')
-  const evaluating=allProjects.filter(project=>project.stage==='evaluation')
-  const waiting=allProjects.filter(project=>project.stage==='waiting')
-  const winners=allProjects.filter(project=>project.stage==='winner')
-  const building=allProjects.filter(project=>project.stage==='building')
-  const completed=allProjects.filter(project=>project.stage==='completed')
-  const nextResultTarget=allProjects[0]?.resultAt??dateOffset(45)
-
-  function toggleVote(id:string){
-    setVoted(current=>{
-      const selected=current.includes(id)
-      const next=selected?current.filter(item=>item!==id):[...current,id]
-      localStorage.setItem(VOTED_KEY,JSON.stringify(next))
-      voteProject(id,selected?-1:1)
-      return next
-    })
+  function addToBasket(id: string) {
+    if (!user) {
+      location.href = '/giris?next=/projeler'
+      return
+    }
+    const result = add(id)
+    setMessage(result.message)
   }
 
-  return <main className="projects-landing">
-    <motion.div className="project-scroll-progress" style={{width:progress}}/>
-    <header className="project-topbar">
-      <Link href="/" className="project-back"><Image className="topbar-municipality-logo" src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721}/><ArrowLeft size={17}/> Ana Sayfa</Link>
-      <nav><a href="#aktif">Aktif</a><a href="#yakinda">Yakinda</a><a href="#kazananlar">Kazananlar</a><a href="#tum">Tum Projeler</a></nav>
+  return <main className="min-h-screen bg-mugla-sand text-mugla-navy">
+    <header className="border-b border-mugla-navy/10 bg-white">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/70 hover:text-mugla-navy">
+          <ArrowLeft size={16}/> Ana sayfa
+        </Link>
+        <Link href="/giris?next=/fikir-gonder" className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Fikir gonder</Link>
+      </div>
     </header>
 
-    <section className="projects-hero">
-      <div className="project-hero-video"/>
-      <motion.div className="floating-status-card c1" animate={{y:[0,-18,0]}} transition={{duration:4,repeat:Infinity}}><Vote/> Aktif Oylama</motion.div>
-      <motion.div className="floating-status-card c2" animate={{y:[0,-14,0]}} transition={{duration:4.8,repeat:Infinity}}><Trophy/> Kazananlar</motion.div>
-      <motion.div className="floating-status-card c3" animate={{y:[0,-16,0]}} transition={{duration:4.4,repeat:Infinity}}><ShieldCheck/> Degerlendirme</motion.div>
-      <div className="projects-hero-content">
-        <span>Mugla Senin Butcen</span>
-        <h1>PROJELER</h1>
-        <p>Mugla'nin Gelecegini Sekillendirecek Projeleri Kesfet.</p>
-        <small>Su anda ornek proje gosterilmez. Admin panelinden proje onaylandikca bu sayfa anlik olarak dolmaya baslar.</small>
-        <div className="hero-status-links">
-          <a href="#aktif">Aktif Projeler</a>
-          <a href="#yakinda">Yakinda Oylanacak</a>
-          <a href="#degerlendirme">Degerlendirme</a>
-          <a href="#kazananlar">Kazanan Projeler</a>
+    <section className="mx-auto max-w-5xl px-4 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.2em] text-mugla-orange">Projeler</p>
+          <h1 className="mt-2 text-3xl font-black md:text-4xl">Proje listesi</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-mugla-navy/55">Oylama acik projeleri sepete ekle. Her vatandasin toplam 5 proje secme kredisi vardir.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-mugla-navy/60">{filtered.length} / {approved.length} proje</p>
+          <Link href={user?'/vatandas/panel#sepetim':'/giris?next=/vatandas/panel'} className="rounded-full bg-mugla-navy px-3 py-1 text-sm font-bold text-white">Sepetim: {basket.length} · Kredi: {remaining}</Link>
         </div>
       </div>
-      <a className="hero-down" href="#takvim"><ChevronDown/></a>
-    </section>
+      {message && <div className="mt-4 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-mugla-navy/65">{message} {availableForBasket === 0 && remaining > 0 ? 'Sepeti onaylayabilir veya bir proje cikarabilirsiniz.' : ''}</div>}
 
-    <section id="takvim" className="project-stage-timeline">
-      {['Fikir Toplama','Teknik Inceleme','Oylama','Degerlendirme','Kazananlar','Uygulama','Tamamlandi'].map((item,index)=><motion.article key={item} initial={{opacity:.35}} whileInView={{opacity:1}} viewport={{amount:.85}}>
-        <span>{index+1}</span><b>{item}</b>
-      </motion.article>)}
-    </section>
-
-    <section id="aktif" className="project-section">
-      <div className="project-section-head"><span>Aktif Oylama</span><h2>Su Anda Oylanan Projeler</h2><p>Oy verme suresi acik olan projeler canli sayac ve ilerleme cubuguyla takip edilir.</p></div>
-      {active.length?<div className="featured-grid">{active.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</div>:<LiveWaiting title="Aktif oylamada proje yok." text="Onaylanan ve oylama takvimi acilan projeler burada canli olarak gorunecek."/>}
-    </section>
-
-    <section id="yakinda" className="project-section">
-      <div className="project-section-head"><span>Yakinda Oylanacak</span><h2>Takvim verisi bekleniyor</h2><p>Oylama tarihi belirlenen projeler, tarih araligi ve hatirlatici secenekleriyle burada listelenir.</p></div>
-      {upcoming.length?<div className="featured-grid">{upcoming.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</div>:<LiveWaiting title="Yakinda oylanacak proje yok." text="Admin panelinden uygun proje takvime alindiginda bu alan otomatik dolacak."/>}
-    </section>
-
-    <section id="degerlendirme" className="project-section dark">
-      <div className="project-section-head"><span>Degerlendirme</span><h2>Uzman kurul verisi bekleniyor</h2><p>Oylamasi biten projeler teknik, mali, hukuki, cevresel ve sosyal fayda adimlariyla izlenir.</p></div>
-      {evaluating.length?<div className="featured-grid">{evaluating.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</div>:<LiveWaiting dark title="Degerlendirme asamasinda proje yok." text="Oylama kapaninca projeler burada kilitli ve surec bilgisiyle gorunecek."/>}
-      <div className="review-card mt-6">
-        <Sparkles/>
-        <span>Canli Degerlendirme Modulu</span>
-        <h2>Degerlendirme Devam Ediyor</h2>
-        {['Teknik Uygunluk','Mali Analiz','Hukuki Inceleme','Cevresel Etki','Sosyal Fayda'].map(item=><p key={item}><CheckCircle2 size={16}/>{item}</p>)}
-        <div className="spinner-ai"><Hourglass/></div>
+      <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+          <label className="flex h-11 items-center gap-2 rounded-lg border border-mugla-navy/10 px-3">
+            <Search size={17} className="text-mugla-navy/45"/>
+            <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Ara: proje, ilce, kategori" className="w-full bg-transparent text-sm outline-none"/>
+          </label>
+          <div className="flex gap-2 overflow-x-auto">
+            {filters.map(([value, label]) => <button key={value} onClick={() => setFilter(value)} className={`h-11 shrink-0 rounded-full px-4 text-sm font-bold ${filter === value ? 'bg-mugla-navy text-white' : 'bg-mugla-sand text-mugla-navy/65'}`}>{label}</button>)}
+          </div>
+        </div>
       </div>
-    </section>
 
-    <section className="results-soon">
-      <Trophy/>
-      <span>Kazanan Projeler</span>
-      <h2>Sonuclar veri geldikce aciklanacak</h2>
-      <p>Takvim bekleniyor</p>
-      <Countdown target={nextResultTarget} seconds/>
-      <button><Bell size={17}/> Bildirim Al</button>
+      <section className="mt-4 overflow-hidden rounded-lg border border-mugla-navy/10 bg-white">
+        {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} onAdd={addToBasket}/>) : <div className="p-10 text-center">
+          <CheckCircle2 className="mx-auto text-mugla-orange"/>
+          <h2 className="mt-3 text-xl font-bold">Proje bulunamadi.</h2>
+          <p className="mt-2 text-sm text-mugla-navy/55">Filtreyi temizleyebilir veya admin panelinden yeni proje yayinlayabilirsin.</p>
+        </div>}
+      </section>
     </section>
-
-    <section id="kazananlar" className="project-section winners">
-      <div className="project-section-head"><span>Kazanan Projeler</span><h2>Uygulanacak Projeler</h2><p>Secilen projeler yatirim programina alinir ve uygulama takvimine baglanir.</p></div>
-      {winners.length?<div className="featured-grid">{winners.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</div>:<LiveWaiting title="Kazanan proje henuz yayinlanmadi." text="Degerlendirme tamamlandiginda kazanan projeler burada altin kartlarla gorunecek."/>}
-    </section>
-
-    <section className="project-section">
-      <div className="project-section-head"><span>Uygulanan Projeler</span><h2>Uygulama sureci beklemede</h2><p>Kazanan projeler ihale, baslangic, devam ve tamamlanma adimlariyla canli takip edilir.</p></div>
-      {building.length?<div className="featured-grid">{building.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</div>:<LiveWaiting title="Yapim asamasinda proje yok." text="Kazanan bir proje uygulamaya alindiginda ilerleme yuzdesi burada olusacak."/>}
-    </section>
-
-    <section className="project-section completed-showcase">
-      {completed.length?<><div className="before-after-mini"><div>Before</div><div>After</div></div><div><span>Tamamlanan Projeler</span><h2>{completed[0].title}</h2><p>Tamamlanan projeler icin vatandas yorumlari ve yatirim istatistikleri acikca yayinlanir.</p><div className="completed-stats"><article><b>{completed[0].votes.toLocaleString('tr-TR')}</b><span>Oy</span></article><article><b>{formatBudget(completed[0].budget)}</b><span>Yatirim</span></article><article><b>%100</b><span>Tamamlandi</span></article></div></div></>:<LiveWaiting title="Tamamlanan proje yok." text="Bir proje tamamlandiginda once/sonra gorseli ve etki verileri burada yayinlanacak."/>}
-    </section>
-
-    <section id="tum" className="all-projects">
-      <div className="project-section-head"><span>Tum Projeler</span><h2>Proje Yasam Dongusu</h2><p>Duruma gore filtrele, hangi projenin hangi asamada oldugunu aninda gor.</p></div>
-      <div className="project-filterbar">
-        <label><Search size={17}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Proje ara"/></label>
-        <div>{tabs.map(([value,label])=><button key={value} className={tab===value?'active':''} onClick={()=>setTab(value)}>{label}</button>)}</div>
-      </div>
-      {filtered.length?<motion.div className="all-project-grid" layout>{filtered.map(project=><ProjectTile key={project.id} project={project} onVote={toggleVote} voted={voted.includes(project.id)}/>)}</motion.div>:<LiveWaiting title="Henuz proje kaydi yok." text="Admin panelinden onaylanan ilk proje burada ve ilgili yasam dongusu bolumlerinde anlik gorunecek."/>}
-    </section>
-
-    <section className="project-final-quote">
-      <p>Her Proje<br/><span>Bir Fikirle Baslar.</span></p>
-      <p>Her Oy<br/><span>Bir Gelecek Insa Eder.</span></p>
-      <p>Her Katilim<br/><span>Mugla'nin Yarinina Deger Katar.</span></p>
-    </section>
-
-    <footer className="projects-footer">
-      <b className="projects-footer-brand"><Image className="footer-brand-logo" src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721}/>Mugla Senin Butcen</b>
-      <span>Projeler takvimi, oylama ve uygulama surecleri veri geldikce anlik yayinlanir.</span>
-      <Link href="/fikir-gonder">Fikrini Gonder</Link>
-    </footer>
   </main>
 }

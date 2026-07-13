@@ -50,6 +50,10 @@ function withDefaults(project:ProjectRecord):ProjectRecord{
   return {...project,moderationStatus:project.moderationStatus??'Onaylandı'}
 }
 
+function isPublished(project:ProjectRecord){
+  return !['Bekliyor','Reddedildi'].includes(String(project.moderationStatus))
+}
+
 export function useProjects(){
   const[projects,setProjects]=useState<ProjectRecord[]>([])
   const[ready,setReady]=useState(false)
@@ -78,12 +82,13 @@ export function useProjects(){
   const reviewProject=useCallback((id:string,moderationStatus:ProjectModerationStatus)=>{
     save(readProjects().map(project=>{
       if(project.id!==id)return project
-      return {...project,moderationStatus,status:moderationStatus==='Onaylandı'?'Oylamada':project.status,progress:moderationStatus==='Onaylandı'?0:project.progress}
+      const approved=!['Bekliyor','Reddedildi'].includes(String(moderationStatus))
+      return {...project,moderationStatus,status:approved?'Oylamada':project.status,progress:approved?0:project.progress}
     }))
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{
     save(readProjects().map(project=>{
-      if(project.id!==id||project.moderationStatus!=='Onaylandı'||project.status!=='Oylamada')return project
+      if(project.id!==id||!isPublished(project)||String(project.status)!=='Oylamada')return project
       return {...project,votes:Math.max(0,project.votes+delta)}
     }))
   },[save])

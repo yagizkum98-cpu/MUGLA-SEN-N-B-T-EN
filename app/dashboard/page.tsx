@@ -1,5 +1,6 @@
 import {DistrictDashboard} from '@/components/district-dashboard'
+import {DashboardAuthGate} from '@/components/dashboard-auth-gate'
 
 export default function Dashboard(){
-  return <DistrictDashboard/>
+  return <DashboardAuthGate><DistrictDashboard/></DashboardAuthGate>
 }

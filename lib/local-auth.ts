@@ -41,13 +41,13 @@ function bytesToBase64(bytes:Uint8Array){let value='';bytes.forEach(byte=>value+
 function base64ToBytes(value:string){return Uint8Array.from(atob(value),char=>char.charCodeAt(0))}
 async function derive(password:string,salt:Uint8Array){const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const saltBuffer=new Uint8Array(salt).buffer;const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:saltBuffer,iterations:120000,hash:'SHA-256'},material,256);return bytesToBase64(new Uint8Array(bits))}
 
-export async function registerUser(input:{name:string;email:string;phone:string;district:string;password:string;verificationMethod:VerificationMethod;verificationCode:string;identityReference?:string;botAnswer:string;website?:string}){
+export async function registerUser(input:{name:string;email:string;phone:string;district:string;password:string;verificationMethod:VerificationMethod;verificationCode:string;verificationExpected:string;identityReference?:string;botAnswer:string;botExpected:string;website?:string}){
   const users=readUsers()
   const email=input.email.trim().toLocaleLowerCase('tr')
   if(users.some(user=>user.email===email))throw new Error('Bu e-posta adresiyle daha önce kayıt oluşturulmuş.')
   if(input.website?.trim())throw new Error('Bot kontrolü başarısız.')
-  if(input.botAnswer.trim()!=='11')throw new Error('Lütfen bot kontrolü sorusunu doğru yanıtlayın.')
-  if((input.verificationMethod==='phone'||input.verificationMethod==='email')&&input.verificationCode.trim()!=='123456')throw new Error('Doğrulama kodu hatalı. Demo kod: 123456')
+  if(input.botAnswer.trim()!==input.botExpected.trim())throw new Error('Lütfen bot kontrolü sorusunu doğru yanıtlayın.')
+  if((input.verificationMethod==='phone'||input.verificationMethod==='email')&&input.verificationCode.trim()!==input.verificationExpected.trim())throw new Error('Doğrulama kodu hatalı.')
   if((input.verificationMethod==='passport'||input.verificationMethod==='international-id')&&String(input.identityReference??'').trim().length<6)throw new Error('Kimlik/pasaport referansı en az 6 karakter olmalıdır.')
 
   const salt=crypto.getRandomValues(new Uint8Array(16))

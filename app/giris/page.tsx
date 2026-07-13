@@ -6,16 +6,31 @@ import Image from 'next/image'
 import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {createClient} from '@/lib/supabase/client'
-import {loginUser,registerUser,type VerificationMethod} from '@/lib/local-auth'
+import {loginUser,registerUser} from '@/lib/local-auth'
 import {muglaDistricts} from '@/lib/locations'
 
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
-const verificationMethods:{value:VerificationMethod;label:string;note:string}[]=[
-  {value:'phone',label:'Telefon SMS OTP',note:'Demo kod: 123456'},
-  {value:'email',label:'E-posta dogrulama',note:'Demo kod: 123456'},
-  {value:'passport',label:'Pasaport',note:'Yabanci kullanici kimlik referansi'},
-  {value:'international-id',label:'Uluslararasi kimlik',note:'Yabanci kullanici kimlik referansi'},
-]
+
+type PendingRegistration={
+  name:string
+  email:string
+  phone:string
+  district:string
+  password:string
+  botAnswer:string
+  botExpected:string
+  website:string
+}
+
+function createBotCheck(){
+  const first=Math.floor(Math.random()*8)+3
+  const second=Math.floor(Math.random()*7)+2
+  return{question:`${first} + ${second} = ?`,answer:String(first+second)}
+}
+
+function createActivationCode(){
+  return String(Math.floor(100000+Math.random()*900000))
+}
 
 function nextPage(){
   if(typeof location==='undefined')return'/vatandas/panel'
@@ -29,11 +44,14 @@ export default function Login(){
   const[error,setError]=useState('')
   const[message,setMessage]=useState('')
   const[loginEmail,setLoginEmail]=useState('')
-  const[verificationMethod,setVerificationMethod]=useState<VerificationMethod>('phone')
+  const[botCheck,setBotCheck]=useState(createBotCheck)
+  const[pendingRegistration,setPendingRegistration]=useState<PendingRegistration|null>(null)
+  const[activationMethod,setActivationMethod]=useState<'email'|'phone'|''>('')
+  const[activationCode,setActivationCode]=useState('')
 
   function changeMode(value:'login'|'register'){setMode(value);setError('');setMessage('')}
 
-  async function register(event:FormEvent<HTMLFormElement>){
+  function register(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setError('');setMessage('')
     const form=event.currentTarget
     const data=new FormData(form)
@@ -41,24 +59,41 @@ export default function Login(){
     const repeat=String(data.get('repeat'))
     if(password.length<8){setError('Sifre en az 8 karakter olmalidir.');return}
     if(password!==repeat){setError('Sifreler birbiriyle eslesmiyor.');return}
+    const botAnswer=String(data.get('botAnswer')??'')
+    if(botAnswer.trim()!==botCheck.answer){setBotCheck(createBotCheck());setError('Lutfen bot kontrolu sorusunu dogru yanitlayin.');return}
+    setPendingRegistration({
+      name:String(data.get('name')),
+      email:String(data.get('email')),
+      phone:String(data.get('phone')),
+      district:String(data.get('district')),
+      password,
+      botAnswer,
+      botExpected:botCheck.answer,
+      website:String(data.get('website')??''),
+    })
+    setActivationMethod('')
+    setActivationCode('')
+    setBotCheck(createBotCheck())
+    setMessage('Bilgiler alindi. Aktivasyon kodu icin e-posta veya telefon secin.')
+  }
+
+  async function activate(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();setError('');setMessage('')
+    if(!pendingRegistration||!activationMethod){setError('Lutfen aktivasyon yontemi secin.');return}
     setLoading('register')
+    const data=new FormData(event.currentTarget)
     try{
-      const email=String(data.get('email'))
       await registerUser({
-        name:String(data.get('name')),
-        email,
-        phone:String(data.get('phone')),
-        district:String(data.get('district')),
-        password,
-        verificationMethod,
-        verificationCode:String(data.get('verificationCode')??''),
-        identityReference:String(data.get('identityReference')??''),
-        botAnswer:String(data.get('botAnswer')??''),
-        website:String(data.get('website')??''),
+        ...pendingRegistration,
+        verificationMethod:activationMethod,
+        verificationCode:String(data.get('activationCode')??''),
+        verificationExpected:activationCode,
+        identityReference:'',
       })
-      setLoginEmail(email)
-      form.reset()
-      setVerificationMethod('phone')
+      setLoginEmail(pendingRegistration.email)
+      setPendingRegistration(null)
+      setActivationMethod('')
+      setActivationCode('')
       setMode('login')
       setMessage('Kayit tamamlandi. ✔ Dogrulanmis Kullanici rozeti tanimlandi. Simdi e-posta ve sifrenizle giris yapin.')
     }catch(cause){setError(cause instanceof Error?cause.message:'Kayit olusturulamadi.')}
@@ -85,9 +120,6 @@ export default function Login(){
 
   function eDevlet(){setLoading('edevlet');location.href=`/api/auth/edevlet?next=${encodeURIComponent(nextPage())}`}
 
-  const needsOtp=verificationMethod==='phone'||verificationMethod==='email'
-  const needsIdentity=verificationMethod==='passport'||verificationMethod==='international-id'
-
   return <main className="grid min-h-screen bg-mugla-sand lg:grid-cols-[.9fr_1.1fr]">
     <section className="hidden bg-mugla-navy p-16 text-white lg:flex lg:flex-col">
       <Link href="/" className="text-sm text-white/60">Ana sayfa</Link>
@@ -113,7 +145,22 @@ export default function Login(){
           <button onClick={()=>changeMode('login')} className={`rounded-xl px-4 py-3 text-sm font-bold ${mode==='login'?'bg-mugla-navy text-white':'text-mugla-navy/55'}`}>Giris Yap</button>
         </div>
 
-        {mode==='register'?<div>
+        {mode==='register'?(pendingRegistration?<div>
+          <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">AKTIVASYON KODU</p>
+          <h2 className="mt-2 text-3xl font-bold">Kaydini dogrula</h2>
+          <p className="mt-3 text-mugla-navy/55">Aktivasyon kodunu hangi kanaldan almak istedigini sec. Kod her gonderimde degisken uretilir.</p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <button type="button" onClick={()=>{const code=createActivationCode();setActivationCode(code);setActivationMethod('email');setMessage(`${pendingRegistration.email} adresine aktivasyon kodu gonderildi. Demo kod: ${code}`)}} className={`rounded-2xl border p-4 text-left ${activationMethod==='email'?'border-mugla-orange bg-orange-50':'border-mugla-navy/10 bg-white'}`}><b className="block">Mail adresime gonder</b><span className="mt-1 block text-sm text-mugla-navy/55">{pendingRegistration.email}</span></button>
+            <button type="button" onClick={()=>{const code=createActivationCode();setActivationCode(code);setActivationMethod('phone');setMessage(`${pendingRegistration.phone} numarasina aktivasyon kodu gonderildi. Demo kod: ${code}`)}} className={`rounded-2xl border p-4 text-left ${activationMethod==='phone'?'border-mugla-orange bg-orange-50':'border-mugla-navy/10 bg-white'}`}><b className="block">Telefon numarama gonder</b><span className="mt-1 block text-sm text-mugla-navy/55">{pendingRegistration.phone}</span></button>
+          </div>
+          <form onSubmit={activate} className="mt-6 space-y-4">
+            <label className="block"><span className="mb-2 block text-sm font-semibold">Aktivasyon kodu</span><input required name="activationCode" inputMode="numeric" placeholder="6 haneli kod" className={field}/></label>
+            {message&&<p className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</p>}
+            {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+            <Button type="submit" variant="orange" disabled={!!loading||!activationMethod} className="h-14 w-full"><UserPlus size={18}/>{loading==='register'?'Kayit tamamlanıyor...':'Kodu Onayla ve Kaydi Tamamla'}</Button>
+            <button type="button" onClick={()=>{setPendingRegistration(null);setActivationMethod('');setActivationCode('');setMessage('');setError('')}} className="w-full text-center text-sm font-semibold text-mugla-blue">Bilgileri duzenle</button>
+          </form>
+        </div>:<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">COK KATMANLI KIMLIK DOGRULAMA</p>
           <h2 className="mt-2 text-3xl font-bold">Kayit ol</h2>
           <p className="mt-3 text-mugla-navy/55">Fikir gonderebilmek icin en az bir dogrulama yontemi zorunludur.</p>
@@ -125,25 +172,17 @@ export default function Login(){
               <label><span className="mb-2 block text-sm font-semibold">Telefon numarasi</span><input required name="phone" type="tel" autoComplete="tel" className={field} pattern="[0-9+() -]{10,20}"/></label>
             </div>
             <label className="block"><span className="mb-2 block text-sm font-semibold">Vatandas panel ilcesi</span><select required name="district" className={field}>{muglaDistricts.map(district=><option key={district}>{district}</option>)}</select></label>
-            <div className="rounded-3xl border border-mugla-navy/10 bg-white p-4">
-              <p className="mb-3 text-sm font-bold">Dogrulama yontemi</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {verificationMethods.map(method=><button type="button" key={method.value} onClick={()=>setVerificationMethod(method.value)} className={`rounded-2xl border p-3 text-left text-sm ${verificationMethod===method.value?'border-mugla-orange bg-orange-50':'border-mugla-navy/10 bg-white'}`}><b className="block">{method.label}</b><span className="text-xs text-mugla-navy/50">{method.note}</span></button>)}
-              </div>
-              {needsOtp&&<label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Dogrulama kodu</span><input required name="verificationCode" inputMode="numeric" placeholder="123456" className={field}/></label>}
-              {needsIdentity&&<label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Pasaport / uluslararasi kimlik referansi</span><input required name="identityReference" placeholder="Belge referans numarasi" className={field} minLength={6}/></label>}
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Sifre</span><input required name="password" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
               <label><span className="mb-2 block text-sm font-semibold">Sifre tekrar</span><input required name="repeat" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
             </div>
-            <label className="block rounded-2xl bg-white p-4 text-sm"><span className="mb-2 block font-semibold">Bot kontrolu: 7 + 4 = ?</span><input required name="botAnswer" inputMode="numeric" className={field}/></label>
+            <label className="block rounded-2xl bg-white p-4 text-sm"><span className="mb-2 block font-semibold">Bot kontrolu: {botCheck.question}</span><input required name="botAnswer" inputMode="numeric" className={field}/></label>
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 text-sm leading-6"><input required type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-mugla-orange"/><span>KVKK Aydinlatma Metni'ni okudum, anladim ve onayliyorum.</span></label>
             <div className="rounded-2xl bg-green-50 p-4 text-sm text-green-800"><b>Rozet:</b> ✔ Dogrulanmis Kullanici. Bu rozet bot hesaplari azaltmak ve oylama guvenini artirmak icin kullanilir.</div>
             {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
             <Button type="submit" variant="orange" disabled={!!loading} className="h-14 w-full"><UserPlus size={18}/>{loading==='register'?'Kayit olusturuluyor...':'Kayit Ol ve Dogrula'}</Button>
           </form>
-        </div>:<div>
+        </div>):<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">GUVENLI GIRIS</p>
           <h2 className="mt-2 text-3xl font-bold">Hesabina giris yap</h2>
           <p className="mt-3 text-mugla-navy/55">Dogrulanmis hesabinla devam et.</p>
