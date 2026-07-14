@@ -13,9 +13,11 @@ import {
   Bot,
   Building2,
   Calculator,
+  CalendarDays,
   Camera,
   Check,
   ChevronDown,
+  Clock3,
   CircleDollarSign,
   ClipboardCheck,
   Construction,
@@ -86,6 +88,15 @@ function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
 }
 
 const processStages = ['Başvuru', 'İnceleme', 'Uygunluk', 'Oylama', 'Uygulama', 'Tamamlandı'] as const
+const publicSchedule = [
+  { stage: 'Başvuru', start: '1 Mart 2026', end: '31 Mart 2026', time: '09:00 - 18:00', note: 'Vatandaş fikirleri ve ek dosyalar toplanır.' },
+  { stage: 'İnceleme', start: '1 Nisan 2026', end: '14 Nisan 2026', time: '09:30 - 17:30', note: 'Eksik bilgi, mükerrer kayıt ve temel uygunluk kontrol edilir.' },
+  { stage: 'Uygunluk', start: '15 Nisan 2026', end: '30 Nisan 2026', time: '10:00 - 17:00', note: 'Uzman ekipler uygulanabilir projeleri netleştirir.' },
+  { stage: 'Oylama', start: '1 Mayıs 2026', end: '21 Mayıs 2026', time: '08:00 - 23:59', note: 'Onaylı projeler halk oylamasına açılır.' },
+  { stage: 'Uygulama', start: '1 Haziran 2026', end: '30 Eylül 2026', time: '09:00 - 18:00', note: 'Kazanan projeler sahada uygulanır ve ilerleme yayınlanır.' },
+  { stage: 'Tamamlandı', start: '1 Ekim 2026', end: '15 Ekim 2026', time: '10:00 - 16:00', note: 'Sonuçlar, etki verileri ve kapanış raporu paylaşılır.' },
+] as const
+const stageDurations = [7, 14, 10, 21, 45, 5] as const
 
 function projectYear(project: ProjectRecord) {
   const date = new Date(project.createdAt)
@@ -96,6 +107,31 @@ function dateText(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Tarih bekleniyor'
   return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function projectStageSchedule(project: ProjectRecord) {
+  const created = new Date(project.createdAt)
+  const anchor = Number.isNaN(created.getTime()) ? new Date() : created
+  let cursor = anchor
+
+  return processStages.map((stage, index) => {
+    const start = cursor
+    const end = addDays(start, stageDurations[index] - 1)
+    cursor = addDays(end, 1)
+
+    return {
+      stage,
+      start: dateText(start.toISOString()),
+      end: dateText(end.toISOString()),
+      time: index === 3 ? '08:00 - 23:59' : index === 5 ? '10:00 - 16:00' : '09:00 - 18:00',
+    }
+  })
 }
 
 function stageIndex(status: ProjectRecord['status']) {
@@ -167,7 +203,7 @@ export default function NasilIslerPage() {
   const [yearFilter, setYearFilter] = useState<'all' | number>('all')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const visibleProjects = projects.filter(project => project.moderationStatus !== 'Reddedildi')
-  const activeVotingProjects = visibleProjects.filter(project => project.moderationStatus === 'Onaylandı' && project.status === 'Oylamada')
+  const activeVotingProjects = visibleProjects.filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const liveVotingProject = activeVotingProjects[0] ?? null
   const liveVotingVotes = activeVotingProjects.reduce((sum, project) => sum + project.votes, 0)
   const projectYears = Array.from(new Set(visibleProjects.map(projectYear))).sort((a, b) => b - a)
@@ -212,6 +248,7 @@ export default function NasilIslerPage() {
           <a href="#fikir">Fikir</a>
           <a href="#analiz">Analiz</a>
           <a href="#oylama">Oylama</a>
+          <a href="#takvim">Takvim</a>
           <a href="#sonuc">Sonuç</a>
         </nav>
       </header>
@@ -379,6 +416,31 @@ export default function NasilIslerPage() {
         </div>
       </Section>
 
+      <Section id="takvim" dark eyebrow="Zaman Takvimi" title="Her aşamanın başlangıç ve bitiş zamanı bellidir." text="Katılımcı bütçe süreci başvuru, inceleme, uygunluk, oylama, uygulama ve kapanış adımlarına ayrılır; her adımın tarih aralığı ve günlük çalışma saati şeffaf biçimde yayınlanır.">
+        <div className="schedule-board">
+          {publicSchedule.map((item, index) => (
+            <motion.article
+              key={item.stage}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              viewport={{ once: true }}
+            >
+              <div className="schedule-index">
+                <span>{index + 1}</span>
+                <b>{item.stage}</b>
+              </div>
+              <div className="schedule-dates">
+                <p><CalendarDays size={16} /> <strong>Başlangıç</strong> {item.start}</p>
+                <p><CalendarDays size={16} /> <strong>Bitiş</strong> {item.end}</p>
+                <p><Clock3 size={16} /> <strong>Saat</strong> {item.time}</p>
+              </div>
+              <small>{item.note}</small>
+            </motion.article>
+          ))}
+        </div>
+      </Section>
+
       <Section eyebrow="Uygulama Süreci" title="Her proje kendi yılı ve aşamasıyla izlenir." text="Girilen projeler kayıt yılına göre filtrelenir; proje kartına tıklanınca kapsamlı açık veri paneli açılır.">
         <div className="process-live">
           <div className="process-filter">
@@ -441,6 +503,17 @@ export default function NasilIslerPage() {
                       <span>{index + 1}</span>
                       <b>{stage}</b>
                     </div>
+                  ))}
+                </div>
+
+                <div className="panel-schedule">
+                  <span>Aşama takvimi</span>
+                  {projectStageSchedule(selectedProcessProject).map((item, index) => (
+                    <section key={item.stage} className={index <= stageIndex(selectedProcessProject.status) ? 'done' : ''}>
+                      <b>{item.stage}</b>
+                      <p>{item.start} - {item.end}</p>
+                      <small>{item.time}</small>
+                    </section>
                   ))}
                 </div>
 

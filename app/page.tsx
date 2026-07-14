@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {ArrowRight, CheckCircle2, FileText, FolderKanban, HelpCircle, Lightbulb, Vote} from 'lucide-react'
+import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, Vote} from 'lucide-react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -24,7 +24,7 @@ function Step({icon: Icon, title, text}: {icon: typeof Lightbulb; title: string;
 export default function Home() {
   const {projects} = useProjects()
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
-  const active = approved.filter(project => String(project.status) === 'Oylamada')
+  const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const completed = approved.filter(project => String(project.status).startsWith('Tamamland'))
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
 
@@ -101,30 +101,6 @@ export default function Home() {
           <h3 className="mt-4 text-xl font-bold">Muğla Senin Bütçen Kitapçığı</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kitapçık PDF’i hazır olduğunda bu sekmede yayınlanır.</p>
         </Link>
-      </div>
-    </section>
-
-    <section id="sss" className="mx-auto max-w-6xl px-5 py-14">
-      <div className="max-w-2xl">
-        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">S.S.S.</p>
-        <h2 className="mt-3 text-3xl font-black md:text-4xl">Sıkça sorulan sorular</h2>
-      </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
-          <HelpCircle className="text-mugla-orange"/>
-          <h3 className="mt-4 font-bold">Kimler katılabilir?</h3>
-          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Muğla için fikri olan vatandaşlar, öğrenciler, kurumlar ve ziyaretçiler katılabilir.</p>
-        </div>
-        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
-          <HelpCircle className="text-mugla-orange"/>
-          <h3 className="mt-4 font-bold">Proje nasıl görünür?</h3>
-          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Başvurular incelendikten sonra uygun projeler proje listesinde yayınlanır.</p>
-        </div>
-        <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
-          <HelpCircle className="text-mugla-orange"/>
-          <h3 className="mt-4 font-bold">Oy vermek için ne gerekir?</h3>
-          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Oy vermek ve dashboard görmek için kayıt olup giriş yapmak gerekir.</p>
-        </div>
       </div>
     </section>
 

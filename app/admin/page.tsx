@@ -12,7 +12,7 @@ import {addAdminAccount, getCurrentAdmin, listAdminAccounts, removeAdminAccount,
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
-const statuses: ProjectStatus[] = ['Başvuru', 'İncelemede', 'Uygun', 'Oylamada', 'Devam Ediyor', 'Tamamlandı']
+const statuses: ProjectStatus[] = ['Başvuru', 'İncelemede', 'Uygun', 'Oylamada', 'Yılın Kazanan Adayı', 'İhale Aşamasında', 'Devam Ediyor', 'Tamamlandı', 'Yapılamadı', 'Ertelendi']
 const field = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan'
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
@@ -22,13 +22,15 @@ const roles: {value: AdminRole; label: string; note: string}[] = [
 ]
 
 export default function Admin() {
-  const {projects, addProject, removeProject, reviewProject} = useProjects()
+  const {projects, addProject, mergeProjects, removeProject, reviewProject} = useProjects()
   const [open, setOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(true)
   const [message, setMessage] = useState('')
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
+  const [mergeSelection, setMergeSelection] = useState<string[]>([])
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
+  const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
 
   async function refreshAccounts() {
     const [current, nextAccounts] = await Promise.all([getCurrentAdmin(), listAdminAccounts()])
@@ -58,6 +60,38 @@ export default function Admin() {
     event.currentTarget.reset()
     setOpen(false)
     setMessage('Proje kaydedildi.')
+  }
+
+  function toggleMergeSelection(id: string) {
+    setMergeSelection(value => value.includes(id) ? value.filter(item => item !== id) : [...value, id])
+  }
+
+  function submitMergedProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const category = String(form.get('category'))
+    try {
+      const project = mergeProjects(mergeSelection, {
+        title: String(form.get('title')).trim(),
+        district: String(form.get('district')),
+        category,
+        budget: Number(form.get('budget')) || 0,
+        status: 'Oylamada',
+        lat: Number(form.get('lat')) || 37.08,
+        lng: Number(form.get('lng')) || 28.45,
+        color: selectedMergeProjects[0]?.color ?? categories.find(item => item[0] === category)?.[1] ?? '#64748b',
+        purpose: String(form.get('purpose')).trim(),
+        summary: String(form.get('summary')).trim(),
+        activities: selectedMergeProjects.map(project => project.activities).filter(Boolean).join('\n\n'),
+        expectedResults: selectedMergeProjects.map(project => project.expectedResults).filter(Boolean).join('\n\n'),
+        mergeNote: String(form.get('mergeNote')).trim(),
+      })
+      event.currentTarget.reset()
+      setMergeSelection([])
+      setMessage(`${project.title} birleştirilmiş proje olarak onaylandı ve oylamaya açıldı.`)
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Projeler birleştirilemedi.')
+    }
   }
 
   async function submitPerson(event: FormEvent<HTMLFormElement>) {
@@ -94,7 +128,7 @@ export default function Admin() {
   const stats = [
     ['Toplam proje', projects.length, 'Kayitli tum projeler', FolderKanban],
     ['Onay bekleyen', pendingProjects.length, 'Admin karari bekliyor', Clock3],
-    ['Oylamada', projects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && p.status === 'Oylamada').length, 'Projeler sekmesinde', CheckCircle2],
+    ['Oylamada', projects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(p.status))).length, 'Projeler sekmesinde', CheckCircle2],
     ['Yetkili kisi', accounts.length, 'Tanimli admin hesaplari', ShieldCheck],
   ] as const
 
@@ -160,7 +194,27 @@ export default function Admin() {
 
       <Card>
         <CardHeader><h2 className="text-xl font-bold">Onay bekleyen basvurular</h2><p className="text-sm text-mugla-navy/55">Onaylanan projeler proje listesinde oylamaya acilir.</p></CardHeader>
-        <CardContent className="space-y-3">{pendingProjects.length ? pendingProjects.map(project => <div key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4"><div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><p className="font-bold">{project.title}</p><p className="mt-1 text-sm text-mugla-navy/55">{project.district} - {project.category} - {formatBudget(project.budget)}</p>{project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}</div><div className="flex shrink-0 gap-2"><Button size="sm" variant="orange" onClick={() => {reviewProject(project.id, 'Onaylandı'); setMessage('Proje onaylandi ve oylamaya acildi.')}}><CheckCircle2 size={15}/>Onayla</Button><Button size="sm" variant="outline" onClick={() => {reviewProject(project.id, 'Reddedildi'); setMessage('Proje reddedildi.')}}><XCircle size={15}/>Reddet</Button></div></div></div>) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}</CardContent>
+        <CardContent className="space-y-4">
+          {selectedMergeProjects.length >= 2 && <form onSubmit={submitMergedProject} className="grid gap-4 rounded-2xl border border-mugla-cyan/30 bg-cyan-50/40 p-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="md:col-span-2 xl:col-span-3">
+              <p className="text-xs font-bold tracking-[.18em] text-mugla-cyan">BIRLESTIRILMIS PROJE</p>
+              <h3 className="mt-1 text-lg font-bold">{selectedMergeProjects.length} benzer basvuru tek projeye donusturulecek.</h3>
+              <p className="mt-1 text-sm text-mugla-navy/55">Kaynak basvurular pasif hale gelir; olusturulan ortak proje onayli olarak oylamaya acilir.</p>
+            </div>
+            <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirilmiş proje adı</span><input className={field} name="title" required defaultValue={selectedMergeProjects[0]?.title ?? ''}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} name="district" required defaultValue={selectedMergeProjects[0]?.district}>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required defaultValue={selectedMergeProjects[0]?.category}>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Tahmini butce (TL)</span><input className={field} name="budget" type="number" min="0" step="1" required defaultValue={selectedMergeProjects.reduce((sum, project) => sum + project.budget, 0)}/></label>
+            <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Amaç</span><textarea className={`${field} min-h-24`} name="purpose" defaultValue={selectedMergeProjects.map(project => project.purpose).filter(Boolean).join('\n\n')} required/></label>
+            <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirilmiş açıklama</span><textarea className={`${field} min-h-32`} name="summary" defaultValue={selectedMergeProjects.map(project => project.summary).filter(Boolean).join('\n\n')} required/></label>
+            <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirme gerekçesi</span><textarea className={`${field} min-h-24`} name="mergeNote" placeholder="Aynı mahalle, aynı ihtiyaç veya aynı uygulama konusu nedeniyle birleştirildi." required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Enlem</span><input className={field} name="lat" type="number" step="any" placeholder="37.08"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Boylam</span><input className={field} name="lng" type="number" step="any" placeholder="28.45"/></label>
+            <div className="flex items-end gap-2"><Button type="submit" variant="orange"><CheckCircle2 size={16}/> Birleştir ve onayla</Button><Button type="button" variant="outline" onClick={() => setMergeSelection([])}>Seçimi temizle</Button></div>
+          </form>}
+
+          {pendingProjects.length ? pendingProjects.map(project => <div key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4"><div className="flex flex-wrap items-start justify-between gap-4"><label className="flex min-w-0 flex-1 items-start gap-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" checked={mergeSelection.includes(project.id)} onChange={() => toggleMergeSelection(project.id)} /><span className="min-w-0"><p className="font-bold">{project.title}</p><p className="mt-1 text-sm text-mugla-navy/55">{project.district} - {project.category} - {formatBudget(project.budget)}</p>{project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}</span></label><div className="flex shrink-0 gap-2"><Button size="sm" variant="orange" onClick={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje onaylandi ve oylamaya acildi.')}}><CheckCircle2 size={15}/>Onayla</Button><Button size="sm" variant="outline" onClick={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje reddedildi.')}}><XCircle size={15}/>Reddet</Button></div></div></div>) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
+        </CardContent>
       </Card>
 
       <Card id="projeler">

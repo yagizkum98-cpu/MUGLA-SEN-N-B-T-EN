@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useState} from 'react'
 
-export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Devam Ediyor'|'Tamamlandı'
+export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
 
 export type ProjectRecord={
@@ -31,6 +31,8 @@ export type ProjectRecord={
   ownerId?:string
   ownerName?:string
   ownerEmail?:string
+  mergedFrom?:string[]
+  mergeNote?:string
 }
 
 export type NewProject=Omit<ProjectRecord,'id'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}
@@ -79,6 +81,25 @@ export function useProjects(){
   },[save])
 
   const removeProject=useCallback((id:string)=>save(readProjects().filter(project=>project.id!==id)),[save])
+  const mergeProjects=useCallback((ids:string[],input:NewProject&{mergeNote?:string})=>{
+    const uniqueIds=Array.from(new Set(ids))
+    const current=readProjects()
+    const sources=current.filter(project=>uniqueIds.includes(project.id))
+    if(sources.length<2)throw new Error('Birleştirmek için en az iki başvuru seçin.')
+    const project:ProjectRecord={
+      ...input,
+      moderationStatus:'Onaylandı',
+      id:crypto.randomUUID(),
+      votes:0,
+      progress:input.status==='Tamamlandı'?100:0,
+      createdAt:new Date().toISOString(),
+      mergedFrom:sources.map(project=>project.id),
+      mergeNote:input.mergeNote,
+      attachments:sources.flatMap(project=>project.attachments??[]),
+    }
+    save([project,...current.map(item=>uniqueIds.includes(item.id)?{...item,moderationStatus:'Reddedildi' as ProjectModerationStatus,mergeNote:`${project.title} projesi altında birleştirildi.`}:item)])
+    return project
+  },[save])
   const reviewProject=useCallback((id:string,moderationStatus:ProjectModerationStatus)=>{
     save(readProjects().map(project=>{
       if(project.id!==id)return project
@@ -88,12 +109,12 @@ export function useProjects(){
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{
     save(readProjects().map(project=>{
-      if(project.id!==id||!isPublished(project)||String(project.status)!=='Oylamada')return project
+      if(project.id!==id||!isPublished(project)||!['Oylamada','Yılın Kazanan Adayı'].includes(String(project.status)))return project
       return {...project,votes:Math.max(0,project.votes+delta)}
     }))
   },[save])
 
-  return{projects,ready,addProject,removeProject,reviewProject,voteProject}
+  return{projects,ready,addProject,mergeProjects,removeProject,reviewProject,voteProject}
 }
 
 export function formatBudget(value:number){return new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',maximumFractionDigits:0}).format(value)}

@@ -4,26 +4,53 @@ import Link from 'next/link'
 import {useMemo, useState} from 'react'
 import {ArrowLeft, CheckCircle2, MapPin, Search, ShoppingCart} from 'lucide-react'
 import {getCurrentUser} from '@/lib/local-auth'
+import {projectCategories, projectSubcategories, subcategoriesFor} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
-const filters = [
-  ['all', 'Tum'],
-  ['Oylamada', 'Oylama'],
-  ['Devam Ediyor', 'Devam'],
-  ['completed', 'Tamam'],
+const muglaDistricts = [
+  'Bodrum',
+  'Dalaman',
+  'Datça',
+  'Fethiye',
+  'Kavaklıdere',
+  'Köyceğiz',
+  'Marmaris',
+  'Menteşe',
+  'Milas',
+  'Ortaca',
+  'Seydikemer',
+  'Ula',
+  'Yatağan',
+] as const
+const projectStatusOptions = [
+  { value: 'all', label: 'Tüm durumlar', description: 'Başvuru, inceleme, oylama, ihale, uygulama, tamamlanma ve yapılamama dahil tüm proje kayıtlarını gösterir.' },
+  { value: 'Başvuru', label: 'Başvuru alındı', description: 'Fikir kaydı alınmıştır; ekipler tarafından ön kontrol ve eksik bilgi değerlendirmesi beklenir.' },
+  { value: 'İncelemede', label: 'İncelemede', description: 'Proje teknik, mali, çevresel ve toplumsal etki açısından ilgili birimler tarafından değerlendirilmektedir.' },
+  { value: 'Uygun', label: 'Uygun bulundu', description: 'Proje uygulanabilir görülmüştür; oylama, bütçelendirme veya uygulama takvimine alınmaya hazırdır.' },
+  { value: 'Oylamada', label: 'Oylamada', description: 'Proje halk oylamasına açıktır; vatandaşlar projeyi sepete ekleyerek destek verebilir.' },
+  { value: 'Yılın Kazanan Adayı', label: 'Yılın kazanan adayı', description: 'O yılın katılımcı bütçe döneminde kazanma ihtimali olan, oylamada öne çıkan ve yıl içi uygulama için değerlendirilen projeleri gösterir.' },
+  { value: 'İhale Aşamasında', label: 'İhale aşamasında', description: 'Uygulama için satın alma, teklif toplama, ihale hazırlığı veya yüklenici belirleme süreci devam etmektedir.' },
+  { value: 'Devam Ediyor', label: 'Devam ediyor', description: 'Proje sahada uygulanmaktadır; fiziksel ilerleme, bütçe ve faaliyet bilgileri güncellenir.' },
+  { value: 'Tamamlandı', label: 'Tamamlandı', description: 'Proje tamamlanmıştır; sonuçlar, etki verileri ve kapanış bilgileri kamuoyuyla paylaşılır.' },
+  { value: 'Yapılamadı', label: 'Yapılamadı', description: 'Proje teknik, hukuki, mali veya saha koşulları nedeniyle uygulanamamıştır; gerekçe bilgisi açıklanır.' },
+  { value: 'Ertelendi', label: 'Ertelendi', description: 'Proje mevcut dönemde uygulanmamış, sonraki takvim veya bütçe değerlendirmesine bırakılmıştır.' },
 ] as const
 
 function statusClass(status: string) {
   if (status === 'Oylamada') return 'bg-green-50 text-green-700'
+  if (status === 'Yılın Kazanan Adayı') return 'bg-lime-50 text-lime-700'
+  if (status === 'İhale Aşamasında') return 'bg-amber-50 text-amber-700'
   if (status === 'Devam Ediyor') return 'bg-sky-50 text-sky-700'
   if (status.startsWith('Tamamland')) return 'bg-emerald-50 text-emerald-700'
+  if (status === 'Yapılamadı') return 'bg-red-50 text-red-700'
+  if (status === 'Ertelendi') return 'bg-slate-100 text-slate-700'
   return 'bg-orange-50 text-mugla-orange'
 }
 
 function ProjectRow({project, inBasket, confirmed, onAdd}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; onAdd: (id: string) => void}) {
   const status = String(project.status)
-  const canVote = status === 'Oylamada'
+  const canVote = ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
 
   return <article className="border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
@@ -60,16 +87,37 @@ export default function Projects() {
   const {projects} = useProjects()
   const [user] = useState(() => getCurrentUser())
   const {basket, confirmed, remaining, availableForBasket, add} = useVoteBasket(user?.id)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<(typeof filters)[number][0]>('all')
+  const [projectQuery, setProjectQuery] = useState('')
+  const [districtFilter, setDistrictFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [message, setMessage] = useState('')
 
   const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
+  const districts = useMemo(() => {
+    const projectDistricts = approved.map(project => project.district).filter(Boolean)
+    return Array.from(new Set([...muglaDistricts, ...projectDistricts])).sort((a, b) => a.localeCompare(b, 'tr'))
+  }, [approved])
+  const categories = useMemo(() => {
+    const formCategories = projectCategories.map(([name]) => name)
+    const projectCategoryNames = approved.map(project => project.category).filter(Boolean)
+    return Array.from(new Set([...formCategories, ...projectCategoryNames])).sort((a, b) => a.localeCompare(b, 'tr'))
+  }, [approved])
+  const subcategories = useMemo(() => {
+    if (categoryFilter !== 'all') return subcategoriesFor(categoryFilter)
+    return Array.from(new Set(Object.values(projectSubcategories).flat())).sort((a, b) => a.localeCompare(b, 'tr'))
+  }, [categoryFilter])
+  const selectedStatus = projectStatusOptions.find(option => option.value === statusFilter) ?? projectStatusOptions[0]
   const filtered = approved.filter(project => {
     const status = String(project.status)
-    const matchesFilter = filter === 'all' || status === filter || (filter === 'completed' && status.startsWith('Tamamland'))
-    const haystack = `${project.title} ${project.district} ${project.category}`.toLocaleLowerCase('tr')
-    return matchesFilter && haystack.includes(query.toLocaleLowerCase('tr'))
+    const matchesStatus = statusFilter === 'all' || status === statusFilter || (statusFilter === 'Tamamlandı' && status.startsWith('Tamamland'))
+    const projectText = `${project.title} ${project.summary ?? ''}`.toLocaleLowerCase('tr')
+    const matchesProject = projectText.includes(projectQuery.toLocaleLowerCase('tr'))
+    const matchesDistrict = districtFilter === 'all' || project.district === districtFilter
+    const matchesCategory = categoryFilter === 'all' || project.category === categoryFilter
+    const matchesSubcategory = subcategoryFilter === 'all' || project.subcategory === subcategoryFilter
+    return matchesStatus && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory
   })
 
   function addToBasket(id: string) {
@@ -106,13 +154,36 @@ export default function Projects() {
       {message && <div className="mt-4 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-mugla-navy/65">{message} {availableForBasket === 0 && remaining > 0 ? 'Sepeti onaylayabilir veya bir proje cikarabilirsiniz.' : ''}</div>}
 
       <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_160px_180px_180px]">
           <label className="flex h-11 items-center gap-2 rounded-lg border border-mugla-navy/10 px-3">
             <Search size={17} className="text-mugla-navy/45"/>
-            <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Ara: proje, ilce, kategori" className="w-full bg-transparent text-sm outline-none"/>
+            <input value={projectQuery} onChange={event => setProjectQuery(event.target.value)} placeholder="Proje ara" className="w-full bg-transparent text-sm outline-none"/>
           </label>
-          <div className="flex gap-2 overflow-x-auto">
-            {filters.map(([value, label]) => <button key={value} onClick={() => setFilter(value)} className={`h-11 shrink-0 rounded-full px-4 text-sm font-bold ${filter === value ? 'bg-mugla-navy text-white' : 'bg-mugla-sand text-mugla-navy/65'}`}>{label}</button>)}
+          <select value={districtFilter} onChange={event => setDistrictFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            <option value="all">Tüm ilçeler</option>
+            {districts.map(district => <option key={district} value={district}>{district}</option>)}
+          </select>
+          <select value={categoryFilter} onChange={event => {setCategoryFilter(event.target.value); setSubcategoryFilter('all')}} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            <option value="all">Tüm kategoriler</option>
+            {categories.map(category => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <select value={subcategoryFilter} onChange={event => setSubcategoryFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            <option value="all">Tüm alt kategoriler</option>
+            {subcategories.map(subcategory => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
+          </select>
+          <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            {projectStatusOptions.map(status => <option key={status.value} value={status.value}>{status.label}</option>)}
+          </select>
+        </div>
+
+        <div className="mt-3 rounded-lg bg-mugla-sand/70 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Proje durumu</p>
+              <h2 className="mt-1 text-lg font-black">{selectedStatus.label}</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{selectedStatus.description}</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/55">{filtered.length} proje</span>
           </div>
         </div>
       </div>

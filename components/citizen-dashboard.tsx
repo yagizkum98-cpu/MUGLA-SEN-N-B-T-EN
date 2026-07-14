@@ -31,11 +31,11 @@ export function CitizenDashboard() {
 
   const myProjects = useMemo(() => user ? projects.filter(project => project.ownerId === user.id || project.ownerEmail === user.email) : [], [projects, user])
   const districtProjects = useMemo(() => user ? projects.filter(project => project.district === user.district && !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))) : [], [projects, user])
-  const activeVoteProjects = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && String(project.status) === 'Oylamada'), [projects])
+  const activeVoteProjects = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status))), [projects])
   const basketProjects = useMemo(() => activeVoteProjects.filter(project => basket.includes(project.id)), [activeVoteProjects, basket])
   const confirmedProjects = useMemo(() => projects.filter(project => confirmed.includes(project.id)), [projects, confirmed])
   const totalVotes = myProjects.reduce((sum, project) => sum + project.votes, 0)
-  const active = myProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && String(project.status) === 'Oylamada')
+  const active = myProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const pending = myProjects.filter(project => project.moderationStatus === 'Bekliyor' || String(project.status).startsWith('Ba'))
 
   function signOut() {

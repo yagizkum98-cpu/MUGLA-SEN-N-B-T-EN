@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import {ChangeEvent,FormEvent,useEffect,useRef,useState} from 'react'
+import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from 'react'
 import {ArrowLeft,CheckCircle2,FileText,Lightbulb,Paperclip,Send,Trash2,UploadCloud} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
@@ -12,6 +12,7 @@ import {createClient} from '@/lib/supabase/client'
 import {projectCategories,subcategoriesFor,type ProjectCategory} from '@/lib/project-taxonomy'
 
 const MAX_TOTAL=100*1024*1024
+const YEARLY_IDEA_LIMIT=5
 const allowed=['pdf','doc','docx','ppt','pptx','xls','xlsx']
 const countryOptions=countries()
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
@@ -21,7 +22,7 @@ function size(value:number){
 }
 
 export default function IdeaForm(){
-  const{addProject,removeProject}=useProjects()
+  const{projects,addProject,removeProject}=useProjects()
   const[files,setFiles]=useState<File[]>([])
   const[error,setError]=useState('')
   const[submitting,setSubmitting]=useState(false)
@@ -32,6 +33,18 @@ export default function IdeaForm(){
   const[authorized,setAuthorized]=useState(false)
   const inputRef=useRef<HTMLInputElement>(null)
   const total=files.reduce((sum,file)=>sum+file.size,0)
+  const currentUser=getCurrentUser()
+  const currentYear=new Date().getFullYear()
+  const yearlyIdeaCount=useMemo(()=>{
+    if(!currentUser)return 0
+    return projects.filter(project=>{
+      const created=new Date(project.createdAt)
+      const sameYear=!Number.isNaN(created.getTime())&&created.getFullYear()===currentYear
+      const sameOwner=project.ownerId===currentUser.id||project.ownerEmail===currentUser.email
+      return sameYear&&sameOwner
+    }).length
+  },[projects,currentUser,currentYear])
+  const remainingIdeas=Math.max(0,YEARLY_IDEA_LIMIT-yearlyIdeaCount)
 
   useEffect(()=>{
     async function check(){
@@ -65,6 +78,19 @@ export default function IdeaForm(){
     const selectedCountry=countryOptions.find(x=>x.code===countryCode)?.name??countryCode
     const selectedCategory=String(data.get('category'))
     const user=getCurrentUser()
+    if(user){
+      const sentThisYear=projects.filter(project=>{
+        const created=new Date(project.createdAt)
+        const sameYear=!Number.isNaN(created.getTime())&&created.getFullYear()===currentYear
+        const sameOwner=project.ownerId===user.id||project.ownerEmail===user.email
+        return sameYear&&sameOwner
+      }).length
+      if(sentThisYear>=YEARLY_IDEA_LIMIT){
+        setError(`${currentYear} yılı için en fazla ${YEARLY_IDEA_LIMIT} proje fikri gönderebilirsiniz. Bu yılki hakkınız doldu.`)
+        setSubmitting(false)
+        return
+      }
+    }
     const project=addProject({
       title:String(data.get('title')).trim(),
       purpose:String(data.get('purpose')).trim(),
@@ -130,7 +156,11 @@ export default function IdeaForm(){
         <p className="mt-7 text-xs font-bold tracking-[.22em] text-mugla-cyan">FIKRINI PROJEYE DONUSTUR</p>
         <h1 className="mt-3 text-4xl font-bold leading-tight lg:text-5xl">Mugla icin fikrini paylas.</h1>
         <p className="mt-5 max-w-md leading-7 text-mugla-navy/55">Formu acik ve anlasilir bilgilerle doldurun. Basvurunuz teknik ekip tarafindan incelenerek degerlendirme surecine alinacaktir.</p>
-        <div className="mt-8 space-y-4 text-sm text-mugla-navy/65">{['Tum zorunlu alanlari doldurun.','Kategori ve alt kategori basvuruyu ilgili birime yonlendirir.','PDF, Word, PowerPoint ve Excel dosyalari ekleyebilirsiniz.','Dosyalarin toplam boyutu en fazla 100 MB olabilir.'].map((text,index)=><div key={text} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white font-bold text-mugla-cyan">{index+1}</span><p className="pt-1">{text}</p></div>)}</div>
+        <div className="mt-6 rounded-2xl bg-white p-4 text-sm shadow-soft">
+          <p className="font-bold text-mugla-navy">Yıllık fikir hakkı</p>
+          <p className="mt-1 text-mugla-navy/60">{currentYear} döneminde {yearlyIdeaCount}/{YEARLY_IDEA_LIMIT} fikir gönderdiniz. Kalan hakkınız: {remainingIdeas}</p>
+        </div>
+        <div className="mt-8 space-y-4 text-sm text-mugla-navy/65">{['Tum zorunlu alanlari doldurun.','Bir yıl dönemi içinde en fazla 5 proje fikri gönderebilirsiniz.','Kategori ve alt kategori basvuruyu ilgili birime yonlendirir.','PDF, Word, PowerPoint ve Excel dosyalari ekleyebilirsiniz.','Dosyalarin toplam boyutu en fazla 100 MB olabilir.'].map((text,index)=><div key={text} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white font-bold text-mugla-cyan">{index+1}</span><p className="pt-1">{text}</p></div>)}</div>
       </aside>
 
       <section className="rounded-[30px] bg-white p-6 shadow-soft sm:p-9">
@@ -174,7 +204,7 @@ export default function IdeaForm(){
 
           {error&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
           <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yuklediginiz belgelerde kisisel veya hassas bilgi bulunmadigindan emin olun. Basvuru gonderildiginde proje havuzuna kaydedilir.</p></div>
-          <Button type="submit" variant="orange" disabled={submitting} className="h-13 w-full text-base">{submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
+          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
