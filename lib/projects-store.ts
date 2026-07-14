@@ -31,6 +31,7 @@ export type ProjectRecord={
   ownerId?:string
   ownerName?:string
   ownerEmail?:string
+  applicantType?:string
   mergedFrom?:string[]
   mergeNote?:string
 }

@@ -15,6 +15,7 @@ const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
 const allowed=['pdf','doc','docx','ppt','pptx','xls','xlsx']
 const countryOptions=countries()
+const applicantTypes=['Bireysel','Tüzel','Grup'] as const
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 
 function size(value:number){
@@ -103,6 +104,7 @@ export default function IdeaForm(){
       district:String(data.get('district')).trim(),
       category:selectedCategory,
       subcategory:String(data.get('subcategory')),
+      applicantType:String(data.get('applicantType')),
       budget:0,
       status:'Başvuru',
       lat:37.08,
@@ -169,6 +171,12 @@ export default function IdeaForm(){
             <label className="mb-2 block font-semibold" htmlFor="title">Proje adi <span className="text-red-500">*</span></label>
             <input id="title" name="title" className={field} required maxLength={160} placeholder="Projenize kisa ve anlasilir bir ad verin"/>
           </div>
+
+          <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
+            <legend className="px-2 font-bold">Başvuru sahibi</legend>
+            <p className="mb-4 text-sm text-mugla-navy/50">Fikrin bireysel, tüzel kişi/kurum veya grup adına gönderildiğini belirtin.</p>
+            <label><span className="mb-2 block text-sm font-semibold">Başvuru türü <span className="text-red-500">*</span></span><select name="applicantType" className={field} required>{applicantTypes.map(type=><option key={type}>{type}</option>)}</select></label>
+          </fieldset>
 
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <legend className="px-2 font-bold">Basvuru konumu</legend>

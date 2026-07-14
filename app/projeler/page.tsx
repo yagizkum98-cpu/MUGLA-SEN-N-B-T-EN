@@ -2,13 +2,20 @@
 
 import Link from 'next/link'
 import {useMemo, useState} from 'react'
-import {ArrowLeft, CheckCircle2, MapPin, Search, ShoppingCart} from 'lucide-react'
+import {ArrowLeft, CheckCircle2, FileText, MapPin, Search, ShoppingCart} from 'lucide-react'
 import {getCurrentUser} from '@/lib/local-auth'
 import {projectCategories, projectSubcategories, subcategoriesFor} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
-const isVotingPeriodOpen = false
+const votingSchedule = {
+  start: '2026-05-01T00:00:00+03:00',
+  end: '2026-05-21T23:59:59+03:00',
+}
+function isWithinVotingPeriod(date = new Date()) {
+  const time = date.getTime()
+  return time >= new Date(votingSchedule.start).getTime() && time <= new Date(votingSchedule.end).getTime()
+}
 const participationSteps = [
   {
     id: 'vote',
@@ -16,13 +23,6 @@ const participationSteps = [
     status: 'Şu an açık değil',
     description: 'Vatandaşlar, oylama takvimi başladığında istedikleri projeleri bu adımda destekleyebilecek.',
     action: 'Oylama takvimi bekleniyor',
-  },
-  {
-    id: 'selected',
-    label: 'Seçilen Projeler',
-    status: 'Şu an açık değil',
-    description: 'Oylama dönemi kapandıktan sonra değerlendirmeye alınan ve yılın seçilen proje listesine giren projeler burada yayınlanacak.',
-    action: 'Seçilen proje ilanı bekleniyor',
   },
   {
     id: 'winners',
@@ -73,7 +73,7 @@ function statusClass(status: string) {
   return 'bg-orange-50 text-mugla-orange'
 }
 
-function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void}) {
+function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDetails}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void; onShowDetails: (project: ProjectRecord) => void}) {
   const status = String(project.status)
   const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
 
@@ -100,10 +100,16 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd}: {project:
         </div> : <span>Surec baslangicinda</span>}
       </div>
 
-      <button disabled={!canVote || confirmed} onClick={() => onAdd(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
-        <ShoppingCart size={16}/>
-        {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Oylamaya katıl') : 'Takvim bekleniyor'}
-      </button>
+      <div className="grid gap-2">
+        <button type="button" onClick={() => onShowDetails(project)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy">
+          <FileText size={16}/>
+          Detay
+        </button>
+        <button disabled={!canVote || confirmed} onClick={() => onAdd(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
+          <ShoppingCart size={16}/>
+          {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Sepete ekle') : 'Takvim bekleniyor'}
+        </button>
+      </div>
     </div>
   </article>
 }
@@ -118,7 +124,9 @@ export default function Projects() {
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
+  const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null)
   const [message, setMessage] = useState('')
+  const votingOpen = isWithinVotingPeriod()
 
   const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
   const districts = useMemo(() => {
@@ -136,6 +144,8 @@ export default function Projects() {
   }, [categoryFilter])
   const selectedStatus = projectStatusOptions.find(option => option.value === statusFilter) ?? projectStatusOptions[0]
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
+  const votingProjects = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const winnerProjects = approved.filter(project => ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
   const filtered = approved.filter(project => {
     const status = String(project.status)
     const matchesStatus = statusFilter === 'all' || status === statusFilter || (statusFilter === 'Tamamlandı' && status.startsWith('Tamamland'))
@@ -154,6 +164,10 @@ export default function Projects() {
     }
     const result = add(id)
     setMessage(result.message)
+  }
+
+  function showDetails(project: ProjectRecord) {
+    setSelectedProject(project)
   }
 
   return <main className="min-h-screen bg-mugla-sand text-mugla-navy">
@@ -181,7 +195,7 @@ export default function Projects() {
       {message && <div className="mt-4 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-mugla-navy/65">{message} {availableForBasket === 0 && remaining > 0 ? 'Sepeti onaylayabilir veya bir proje cikarabilirsiniz.' : ''}</div>}
 
       <section className="mt-6 rounded-lg border border-mugla-navy/10 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {participationSteps.map(step => (
             <button
               key={step.id}
@@ -199,14 +213,76 @@ export default function Projects() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Takvim durumu</p>
               <h2 className="mt-1 text-lg font-black">{selectedParticipationStep.label}</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{selectedParticipationStep.description}</p>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{votingOpen && participationStep === 'vote' ? 'Oylama takvimi açık. Onaylanan veya birleştirilerek oylamaya sunulan projeleri inceleyip kalan kredinize göre sepete ekleyebilirsiniz.' : selectedParticipationStep.description}</p>
             </div>
-            <button type="button" disabled className="rounded-full bg-mugla-navy/10 px-4 py-2 text-xs font-bold text-mugla-navy/45">
-              {selectedParticipationStep.action}
+            <button type="button" disabled={!votingOpen || participationStep !== 'vote'} className={`rounded-full px-4 py-2 text-xs font-bold ${votingOpen && participationStep === 'vote' ? 'bg-mugla-orange text-white' : 'bg-mugla-navy/10 text-mugla-navy/45'}`}>
+              {votingOpen && participationStep === 'vote' ? 'Oylama açık' : selectedParticipationStep.action}
             </button>
           </div>
+
+          {participationStep === 'vote' && <div className="mt-4 grid gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-bold text-mugla-navy">Oylamaya sunulan projeler</p>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/55">Kalan kredi: {remaining} · Sepete eklenebilir: {availableForBasket}</span>
+            </div>
+            {votingProjects.length ? votingProjects.map(project => {
+              const inBasket = basket.includes(project.id)
+              const done = confirmed.includes(project.id)
+              return <article key={project.id} className="grid gap-3 rounded-lg border border-mugla-navy/10 bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span>
+                    {project.mergedFrom?.length ? <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">Birleştirilmiş proje</span> : null}
+                  </div>
+                  <h3 className="mt-2 font-black">{project.title}</h3>
+                  <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.category} · {project.votes.toLocaleString('tr-TR')} destek</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => showDetails(project)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
+                  <button type="button" disabled={!votingOpen || done || inBasket || availableForBasket === 0} onClick={() => addToBasket(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45"><ShoppingCart size={16}/>{done ? 'Oy alındı' : inBasket ? 'Sepette' : 'Sepete ekle'}</button>
+                </div>
+              </article>
+            }) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Oylamaya sunulan proje bulunmuyor.</div>}
+          </div>}
+
+          {participationStep === 'winners' && <div className="mt-4 grid gap-3">
+            <p className="text-sm font-bold text-mugla-navy">Kazanan proje ilanları</p>
+            {winnerProjects.length ? winnerProjects.map(project => <article key={project.id} className="rounded-lg border border-mugla-navy/10 bg-white p-4">
+              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span>
+              <h3 className="mt-2 font-black">{project.title}</h3>
+              <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
+            </article>) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Kazanan projeler henüz ilan edilmedi.</div>}
+          </div>}
         </div>
       </section>
+
+      {selectedProject && <section className="mt-4 rounded-lg border border-mugla-navy/10 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>
+            <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
+            <p className="mt-1 text-sm text-mugla-navy/55">{selectedProject.district} · {selectedProject.category}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</p>
+          </div>
+          <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {[
+            ['Amaç', selectedProject.purpose],
+            ['Özet', selectedProject.summary],
+            ['Faaliyetler', selectedProject.activities],
+            ['Beklenen sonuçlar', selectedProject.expectedResults],
+            ['Birleştirme notu', selectedProject.mergeNote],
+          ].map(([label, value]) => value ? <section key={label} className="rounded-lg bg-mugla-sand/70 p-4"><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">{label}</span><p className="mt-2 whitespace-pre-line text-sm leading-6 text-mugla-navy/65">{value}</p></section> : null)}
+        </div>
+        <div className="mt-4 rounded-lg border border-mugla-navy/10 p-4">
+          <p className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Ek dosyalar</p>
+          {selectedProject.attachments?.length ? <div className="mt-3 grid gap-2">{selectedProject.attachments.map(file => <p key={`${file.name}-${file.size}`} className="flex flex-wrap items-center gap-2 rounded-lg bg-mugla-sand/70 px-3 py-2 text-sm text-mugla-navy/65"><FileText size={15}/><b>{file.name}</b><span>{(file.size / 1024 / 1024).toFixed(1)} MB</span></p>)}</div> : <p className="mt-2 text-sm text-mugla-navy/45">Bu proje için ek dosya yok.</p>}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-mugla-navy/55">Sepete eklenen projeler vatandaş panelinde onay bekleyen oylama sepetine düşer.</p>
+          <button type="button" disabled={!votingOpen || confirmed.includes(selectedProject.id) || basket.includes(selectedProject.id) || availableForBasket === 0 || !['Oylamada', 'Yılın Kazanan Adayı'].includes(String(selectedProject.status))} onClick={() => addToBasket(selectedProject.id)} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-mugla-orange px-5 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45"><ShoppingCart size={17}/>{basket.includes(selectedProject.id) ? 'Sepette' : 'Sepete ekle'}</button>
+        </div>
+      </section>}
 
       <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
         <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_160px_180px_180px]">
@@ -244,7 +320,7 @@ export default function Projects() {
       </div>
 
       <section className="mt-4 overflow-hidden rounded-lg border border-mugla-navy/10 bg-white">
-        {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} votingOpen={isVotingPeriodOpen} onAdd={addToBasket}/>) : <div className="p-10 text-center">
+        {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} votingOpen={votingOpen} onAdd={addToBasket} onShowDetails={showDetails}/>) : <div className="p-10 text-center">
           <CheckCircle2 className="mx-auto text-mugla-orange"/>
           <h2 className="mt-3 text-xl font-bold">Proje bulunamadi.</h2>
           <p className="mt-2 text-sm text-mugla-navy/55">Filtreyi temizleyebilir veya admin panelinden yeni proje yayinlayabilirsin.</p>
