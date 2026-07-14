@@ -8,6 +8,31 @@ import {projectCategories, projectSubcategories, subcategoriesFor} from '@/lib/p
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
+const isVotingPeriodOpen = false
+const participationSteps = [
+  {
+    id: 'vote',
+    label: 'Oylamaya Katıl',
+    status: 'Şu an açık değil',
+    description: 'Vatandaşlar, oylama takvimi başladığında istedikleri projeleri bu adımda destekleyebilecek.',
+    action: 'Oylama takvimi bekleniyor',
+  },
+  {
+    id: 'selected',
+    label: 'Seçilen Projeler',
+    status: 'Şu an açık değil',
+    description: 'Oylama dönemi kapandıktan sonra değerlendirmeye alınan ve yılın seçilen proje listesine giren projeler burada yayınlanacak.',
+    action: 'Seçilen proje ilanı bekleniyor',
+  },
+  {
+    id: 'winners',
+    label: 'Kazanan Projeler',
+    status: 'İlan dönemi bekleniyor',
+    description: 'Kazanan projeler kesinleştiğinde bu adım aktif olacak ve ilan edilen projeler vatandaşlarla paylaşılacak.',
+    action: 'Kazananlar henüz ilan edilmedi',
+  },
+] as const
+
 const muglaDistricts = [
   'Bodrum',
   'Dalaman',
@@ -48,9 +73,9 @@ function statusClass(status: string) {
   return 'bg-orange-50 text-mugla-orange'
 }
 
-function ProjectRow({project, inBasket, confirmed, onAdd}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; onAdd: (id: string) => void}) {
+function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void}) {
   const status = String(project.status)
-  const canVote = ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
+  const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
 
   return <article className="border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
@@ -77,7 +102,7 @@ function ProjectRow({project, inBasket, confirmed, onAdd}: {project: ProjectReco
 
       <button disabled={!canVote || confirmed} onClick={() => onAdd(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
         <ShoppingCart size={16}/>
-        {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Sepete ekle') : 'Kapali'}
+        {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Oylamaya katıl') : 'Takvim bekleniyor'}
       </button>
     </div>
   </article>
@@ -92,6 +117,7 @@ export default function Projects() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
   const [message, setMessage] = useState('')
 
   const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
@@ -109,6 +135,7 @@ export default function Projects() {
     return Array.from(new Set(Object.values(projectSubcategories).flat())).sort((a, b) => a.localeCompare(b, 'tr'))
   }, [categoryFilter])
   const selectedStatus = projectStatusOptions.find(option => option.value === statusFilter) ?? projectStatusOptions[0]
+  const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
   const filtered = approved.filter(project => {
     const status = String(project.status)
     const matchesStatus = statusFilter === 'all' || status === statusFilter || (statusFilter === 'Tamamlandı' && status.startsWith('Tamamland'))
@@ -144,7 +171,7 @@ export default function Projects() {
         <div>
           <p className="text-xs font-bold uppercase tracking-[.2em] text-mugla-orange">Projeler</p>
           <h1 className="mt-2 text-3xl font-black md:text-4xl">Proje listesi</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-mugla-navy/55">Oylama acik projeleri sepete ekle. Her vatandasin toplam 5 proje secme kredisi vardir.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-mugla-navy/55">Oylama takvimi açıldığında vatandaşlar istedikleri projeleri destekleyebilir. Şu an oylamaya katılım kapalıdır.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-mugla-navy/60">{filtered.length} / {approved.length} proje</p>
@@ -152,6 +179,34 @@ export default function Projects() {
         </div>
       </div>
       {message && <div className="mt-4 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-mugla-navy/65">{message} {availableForBasket === 0 && remaining > 0 ? 'Sepeti onaylayabilir veya bir proje cikarabilirsiniz.' : ''}</div>}
+
+      <section className="mt-6 rounded-lg border border-mugla-navy/10 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-3">
+          {participationSteps.map(step => (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => setParticipationStep(step.id)}
+              className={`rounded-lg border px-4 py-3 text-left transition ${participationStep === step.id ? 'border-mugla-orange bg-orange-50 text-mugla-navy' : 'border-mugla-navy/10 bg-mugla-sand/60 text-mugla-navy/65 hover:border-mugla-orange/50'}`}
+            >
+              <span className="block text-sm font-black">{step.label}</span>
+              <span className="mt-1 block text-xs font-bold text-mugla-orange">{step.status}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 rounded-lg bg-mugla-sand/70 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Takvim durumu</p>
+              <h2 className="mt-1 text-lg font-black">{selectedParticipationStep.label}</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{selectedParticipationStep.description}</p>
+            </div>
+            <button type="button" disabled className="rounded-full bg-mugla-navy/10 px-4 py-2 text-xs font-bold text-mugla-navy/45">
+              {selectedParticipationStep.action}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
         <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_160px_180px_180px]">
@@ -189,7 +244,7 @@ export default function Projects() {
       </div>
 
       <section className="mt-4 overflow-hidden rounded-lg border border-mugla-navy/10 bg-white">
-        {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} onAdd={addToBasket}/>) : <div className="p-10 text-center">
+        {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} votingOpen={isVotingPeriodOpen} onAdd={addToBasket}/>) : <div className="p-10 text-center">
           <CheckCircle2 className="mx-auto text-mugla-orange"/>
           <h2 className="mt-3 text-xl font-bold">Proje bulunamadi.</h2>
           <p className="mt-2 text-sm text-mugla-navy/55">Filtreyi temizleyebilir veya admin panelinden yeni proje yayinlayabilirsin.</p>
