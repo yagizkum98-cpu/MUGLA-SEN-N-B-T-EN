@@ -25,15 +25,8 @@ export default function EdevletCompletePage(){
     try{
       const params=new URLSearchParams(location.search)
       if(params.get('error'))throw new Error('e-Devlet dogrulama cevabi tamamlanamadi.')
-      const demo=params.get('demo')==='1'
       const profileParam=params.get('profile')
-      const profile=demo?{
-        externalId:`demo-${Date.now()}`,
-        name:'e-Devlet Demo Kullanicisi',
-        email:`edevlet-demo-${Date.now()}@edevlet.local`,
-        phone:'',
-        identityReference:'DEMO-TC-DOGRULAMA',
-      }:profileParam?decodeProfile(profileParam):null
+      const profile=profileParam?decodeProfile(profileParam):null
       if(!profile)throw new Error('e-Devlet profil bilgisi alinamadi.')
       loginWithEdevletUser(profile)
       location.replace(safeNext())

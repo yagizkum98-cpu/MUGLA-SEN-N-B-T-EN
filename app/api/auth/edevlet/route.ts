@@ -22,9 +22,7 @@ export async function GET(request: Request) {
   const issuer = process.env.EDEVLET_OIDC_ISSUER
   const client = process.env.EDEVLET_CLIENT_ID
 
-  if (!issuer || !client) {
-    return NextResponse.redirect(new URL(`/auth/edevlet/complete?demo=1&next=${encodeURIComponent(next)}`, request.url))
-  }
+  if (!issuer || !client) return NextResponse.redirect(new URL(`/auth/edevlet/login?next=${encodeURIComponent(next)}`, request.url))
 
   const redirectUrl = new URL('/api/auth/edevlet/callback', request.url)
   const url = new URL(await authorizationEndpoint(issuer))
