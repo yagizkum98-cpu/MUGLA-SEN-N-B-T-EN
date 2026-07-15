@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {useMemo, useState} from 'react'
 import {ArrowLeft, CheckCircle2, FileText, MapPin, Search, ShoppingCart} from 'lucide-react'
 import {getCurrentUser} from '@/lib/local-auth'
-import {projectCategories, projectSubcategories, subcategoriesFor} from '@/lib/project-taxonomy'
+import {projectCategories, subcategoriesFor} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
@@ -143,8 +143,8 @@ export default function Projects() {
     return Array.from(new Set([...formCategories, ...projectCategoryNames])).sort((a, b) => a.localeCompare(b, 'tr'))
   }, [approved])
   const subcategories = useMemo(() => {
-    if (categoryFilter !== 'all') return subcategoriesFor(categoryFilter)
-    return Array.from(new Set(Object.values(projectSubcategories).flat())).sort((a, b) => a.localeCompare(b, 'tr'))
+    if (categoryFilter === 'all') return []
+    return subcategoriesFor(categoryFilter)
   }, [categoryFilter])
   const selectedStatus = projectStatusOptions.find(option => option.value === statusFilter) ?? projectStatusOptions[0]
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
@@ -303,7 +303,7 @@ export default function Projects() {
             <option value="all">Tüm kategoriler</option>
             {categories.map(category => <option key={category} value={category}>{category}</option>)}
           </select>
-          <select value={subcategoryFilter} onChange={event => setSubcategoryFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+          <select value={subcategoryFilter} onChange={event => setSubcategoryFilter(event.target.value)} disabled={categoryFilter === 'all'} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none disabled:bg-mugla-sand/70 disabled:text-mugla-navy/40">
             <option value="all">Tüm alt kategoriler</option>
             {subcategories.map(subcategory => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
           </select>
