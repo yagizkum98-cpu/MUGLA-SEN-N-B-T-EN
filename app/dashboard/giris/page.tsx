@@ -5,6 +5,7 @@ import {Suspense,useMemo,useState} from 'react'
 import {useRouter,useSearchParams} from 'next/navigation'
 import {ArrowLeft,KeyRound,LogIn} from 'lucide-react'
 import {Button} from '@/components/ui/button'
+import {DashboardAuthGate} from '@/components/dashboard-auth-gate'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {loginDistrictPanel} from '@/lib/district-auth'
 
@@ -32,5 +33,5 @@ function DistrictLoginForm(){
 }
 
 export default function DistrictLoginPage(){
-  return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-mugla-sand p-6"><div className="rounded-3xl bg-white p-8 shadow-soft">Giris hazirlaniyor...</div></main>}><DistrictLoginForm/></Suspense>
+  return <DashboardAuthGate><Suspense fallback={<main className="grid min-h-screen place-items-center bg-mugla-sand p-6"><div className="rounded-3xl bg-white p-8 shadow-soft">Giris hazirlaniyor...</div></main>}><DistrictLoginForm/></Suspense></DashboardAuthGate>
 }

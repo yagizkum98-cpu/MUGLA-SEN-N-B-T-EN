@@ -16,9 +16,8 @@ const citizen = [
 ] as const
 
 const admin = [
-  ['/admin', 'Admin', ShieldCheck],
-  ['/dashboard', 'Dashboard', Home],
-  ['/projeler', 'Projeler', FolderKanban],
+  ['/admin', 'Belediye Yonetimi', ShieldCheck],
+  ['/projeler', 'Proje Verileri', FolderKanban],
   ['/crm', 'CRM', UsersRound],
 ] as const
 

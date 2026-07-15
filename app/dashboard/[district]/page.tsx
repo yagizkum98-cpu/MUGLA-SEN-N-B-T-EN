@@ -1,6 +1,7 @@
 import {notFound} from 'next/navigation'
 import {DistrictDashboard} from '@/components/district-dashboard'
 import {DistrictPanelGate} from '@/components/district-panel-gate'
+import {DashboardAuthGate} from '@/components/dashboard-auth-gate'
 import {findDistrictDashboard,muglaDistrictDashboards} from '@/lib/district-dashboards'
 
 export function generateStaticParams(){
@@ -11,5 +12,5 @@ export default async function DistrictDashboardPage({params}:{params:Promise<{di
   const{district:slug}=await params
   const district=findDistrictDashboard(slug)
   if(!district)notFound()
-  return <DistrictPanelGate district={district}><DistrictDashboard district={district}/></DistrictPanelGate>
+  return <DashboardAuthGate><DistrictPanelGate district={district}><DistrictDashboard district={district}/></DistrictPanelGate></DashboardAuthGate>
 }
