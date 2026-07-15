@@ -122,11 +122,12 @@ export default function Login(){
   async function google(){
     setError('');setLoading('google')
     try{
+      if(!process.env.NEXT_PUBLIC_SUPABASE_URL||!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)throw new Error('Google girisi icin Supabase URL ve anon key tanimlanmali.')
       const next=nextPage()
       const supabase=createClient()
       const{error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:`${location.origin}/auth/callback?next=${encodeURIComponent(next)}`}})
       if(error)throw error
-    }catch{setError('Google girisi baslatilamadi. Supabase baglanti ayarlarini kontrol edin.');setLoading('')}
+    }catch(cause){setError(cause instanceof Error?cause.message:'Google girisi baslatilamadi. Supabase baglanti ayarlarini kontrol edin.');setLoading('')}
   }
 
   function eDevlet(){setLoading('edevlet');location.href=`/api/auth/edevlet?next=${encodeURIComponent(nextPage())}`}

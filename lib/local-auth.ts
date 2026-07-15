@@ -20,6 +20,8 @@ export type LocalUser={
   panelPath:string
   apiPath:string
   identityReference?:string
+  externalProvider?:'google'|'edevlet'
+  externalId?:string
 }
 
 const USERS='mugla-auth-users-v1'
@@ -85,6 +87,89 @@ export async function registerUser(input:{name:string;email:string;phone:string;
   }
   localStorage.setItem(USERS,JSON.stringify([...users,user]))
   window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+  return user
+}
+
+export function loginWithGoogleUser(input:{externalId:string;name:string;email:string;avatarUrl?:string}){
+  const users=listLocalUsers()
+  const email=input.email.trim().toLocaleLowerCase('tr')
+  const existing=users.find(user=>user.email===email||user.externalId===input.externalId)
+  const now=new Date().toISOString()
+  if(existing){
+    const updated={...existing,name:existing.name||input.name,verificationMethod:'google' as VerificationMethod,verifiedAt:now,verifiedBadge:'DoÄŸrulanmÄ±ÅŸ KullanÄ±cÄ±',externalProvider:'google' as const,externalId:input.externalId}
+    localStorage.setItem(USERS,JSON.stringify(users.map(user=>user.id===existing.id?updated:user)))
+    localStorage.setItem(SESSION,updated.id)
+    window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+    window.dispatchEvent(new Event('mugla-auth-session-changed'))
+    return updated
+  }
+  const id=crypto.randomUUID()
+  const user:LocalUser={
+    id,
+    name:input.name.trim()||email.split('@')[0],
+    email,
+    phone:'',
+    nationality:'tc',
+    province:'Mugla',
+    district:'Mentese',
+    passwordHash:'',
+    salt:'',
+    kvkkAcceptedAt:now,
+    createdAt:now,
+    verificationMethod:'google',
+    verifiedAt:now,
+    verifiedBadge:'DoÄŸrulanmÄ±ÅŸ KullanÄ±cÄ±',
+    panelPath:'/vatandas/panel',
+    apiPath:`/api/vatandas/${id}`,
+    externalProvider:'google',
+    externalId:input.externalId,
+  }
+  localStorage.setItem(USERS,JSON.stringify([...users,user]))
+  localStorage.setItem(SESSION,user.id)
+  window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+  window.dispatchEvent(new Event('mugla-auth-session-changed'))
+  return user
+}
+
+export function loginWithEdevletUser(input:{externalId:string;name:string;email?:string;phone?:string;identityReference?:string}){
+  const users=listLocalUsers()
+  const email=(input.email?.trim()||`edevlet-${input.externalId}@edevlet.local`).toLocaleLowerCase('tr')
+  const existing=users.find(user=>user.email===email||user.externalId===input.externalId)
+  const now=new Date().toISOString()
+  if(existing){
+    const updated={...existing,name:existing.name||input.name,email,phone:existing.phone||input.phone||'',verificationMethod:'edevlet' as VerificationMethod,verifiedAt:now,verifiedBadge:'Dogrulanmis Kullanici',identityReference:input.identityReference||existing.identityReference,externalProvider:'edevlet' as const,externalId:input.externalId}
+    localStorage.setItem(USERS,JSON.stringify(users.map(user=>user.id===existing.id?updated:user)))
+    localStorage.setItem(SESSION,updated.id)
+    window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+    window.dispatchEvent(new Event('mugla-auth-session-changed'))
+    return updated
+  }
+  const id=crypto.randomUUID()
+  const user:LocalUser={
+    id,
+    name:input.name.trim()||'e-Devlet Kullanicisi',
+    email,
+    phone:input.phone?.trim()||'',
+    nationality:'tc',
+    province:'Mugla',
+    district:'Mentese',
+    passwordHash:'',
+    salt:'',
+    kvkkAcceptedAt:now,
+    createdAt:now,
+    verificationMethod:'edevlet',
+    verifiedAt:now,
+    verifiedBadge:'Dogrulanmis Kullanici',
+    panelPath:'/vatandas/panel',
+    apiPath:`/api/vatandas/${id}`,
+    identityReference:input.identityReference,
+    externalProvider:'edevlet',
+    externalId:input.externalId,
+  }
+  localStorage.setItem(USERS,JSON.stringify([...users,user]))
+  localStorage.setItem(SESSION,user.id)
+  window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+  window.dispatchEvent(new Event('mugla-auth-session-changed'))
   return user
 }
 
