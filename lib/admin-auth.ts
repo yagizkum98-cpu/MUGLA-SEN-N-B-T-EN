@@ -164,4 +164,3 @@ export function logoutAdmin() {
 }
 
 export const adminAuthChangeEvent = CHANGE_EVENT
-export const initialSuperAdmin = {email: 'superadmin@mugla.bel.tr', password: 'SuperAdmin123'}
