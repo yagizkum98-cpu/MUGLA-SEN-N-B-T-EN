@@ -17,6 +17,9 @@ export type AdminAccount = {
 const ACCOUNTS_KEY = 'mugla-admin-accounts-v1'
 const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
+const SUPER_ADMIN_EMAIL = 'superadmin@mugla.bel.tr'
+const SUPER_ADMIN_PASSWORD = 'Superadmin123'
+const LEGACY_SUPER_ADMIN_PASSWORD = 'SuperAdmin123'
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = ''
@@ -80,12 +83,27 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
 
 async function ensureSeedAccount() {
   const accounts = readRawAccounts()
-  if (accounts.length) return accounts
+  if (accounts.length) {
+    const superAdmin = accounts.find(account => account.email === SUPER_ADMIN_EMAIL && account.role === 'super-admin')
+    if (!superAdmin) return accounts
+    const legacyHash = await derive(LEGACY_SUPER_ADMIN_PASSWORD, base64ToBytes(superAdmin.salt))
+    if (legacyHash !== superAdmin.passwordHash) return accounts
+    const salt = crypto.getRandomValues(new Uint8Array(16))
+    const passwordHash = await derive(SUPER_ADMIN_PASSWORD, salt)
+    const updated = accounts.map(account => account.id === superAdmin.id ? {
+      ...account,
+      passwordHash,
+      salt: bytesToBase64(salt),
+      passwordPreview: encodePasswordPreview(SUPER_ADMIN_PASSWORD),
+    } : account)
+    saveAccounts(updated)
+    return updated
+  }
   const seed = await createAccount({
     name: 'Super Admin',
-    email: 'superadmin@mugla.bel.tr',
+    email: SUPER_ADMIN_EMAIL,
     role: 'super-admin',
-    password: 'SuperAdmin123',
+    password: SUPER_ADMIN_PASSWORD,
   })
   saveAccounts([seed])
   return [seed]
