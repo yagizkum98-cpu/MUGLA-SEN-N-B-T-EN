@@ -75,8 +75,8 @@ export default function Login(){
       phone:String(data.get('phone')),
       nationality,
       country:nationality==='foreign'?String(data.get('country')):undefined,
-      province:String(data.get('province')),
-      district:String(data.get('district')),
+      province:nationality==='foreign'?'Yurtdisi':String(data.get('province')),
+      district:nationality==='foreign'?'Yurtdisi':String(data.get('district')),
       password,
       botAnswer,
       botExpected:botCheck.answer,
@@ -191,8 +191,8 @@ export default function Login(){
               {nationality==='foreign'&&<label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Yurtdisi ulkesi</span><select required name="country" className={field}>{countryOptions.map(country=><option key={country.code} value={country.name}>{country.name}</option>)}</select></label>}
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ili</span><select required name="province" className={field} value={selectedProvince} onChange={event=>setSelectedProvince(event.target.value)}>{turkiyeProvinces.map(province=><option key={province}>{province}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ilcesi</span><select required name="district" className={field}>{provinceDistricts.map(district=><option key={district}>{district}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ili</span><select required={nationality==='tc'} disabled={nationality==='foreign'} name="province" className={`${field} disabled:cursor-not-allowed disabled:bg-mugla-navy/5 disabled:text-mugla-navy/35`} value={nationality==='foreign'?'Yurtdisi':selectedProvince} onChange={event=>setSelectedProvince(event.target.value)}>{nationality==='foreign'?<option>Yurtdisi</option>:turkiyeProvinces.map(province=><option key={province}>{province}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ilcesi</span><select required={nationality==='tc'} disabled={nationality==='foreign'} name="district" className={`${field} disabled:cursor-not-allowed disabled:bg-mugla-navy/5 disabled:text-mugla-navy/35`}>{nationality==='foreign'?<option>Yurtdisi</option>:provinceDistricts.map(district=><option key={district}>{district}</option>)}</select></label>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Sifre</span><input required name="password" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
