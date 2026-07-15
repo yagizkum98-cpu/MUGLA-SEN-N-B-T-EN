@@ -6,9 +6,9 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {CheckCircle2, Clock3, FolderKanban, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
+import {CheckCircle2, Clock3, Eye, EyeOff, FolderKanban, KeyRound, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
-import {addAdminAccount, getCurrentAdmin, listAdminAccounts, removeAdminAccount, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
+import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
@@ -29,6 +29,9 @@ export default function Admin() {
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [mergeSelection, setMergeSelection] = useState<string[]>([])
+  const [ownPassword, setOwnPassword] = useState<string | null>(null)
+  const [passwordVisible, setPasswordVisible] = useState(false)
+  const [passwordChanging, setPasswordChanging] = useState(false)
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const voteLeaderboard = projects
@@ -39,6 +42,10 @@ export default function Admin() {
     const [current, nextAccounts] = await Promise.all([getCurrentAdmin(), listAdminAccounts()])
     setAdminUser(current)
     setAccounts(nextAccounts)
+    if (current) {
+      const latest = nextAccounts.find(account => account.id === current.id)
+      setAdminUser(latest ?? current)
+    }
   }
 
   useEffect(() => {
@@ -117,6 +124,43 @@ export default function Admin() {
     }
   }
 
+  async function toggleOwnPassword() {
+    if (!adminUser) return
+    if (passwordVisible) {
+      setPasswordVisible(false)
+      return
+    }
+    setOwnPassword(await revealOwnAdminPassword(adminUser))
+    setPasswordVisible(true)
+  }
+
+  async function submitOwnPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!adminUser) return
+    const form = new FormData(event.currentTarget)
+    const currentPassword = String(form.get('currentPassword'))
+    const newPassword = String(form.get('newPassword'))
+    const confirmPassword = String(form.get('confirmPassword'))
+    if (newPassword !== confirmPassword) {
+      setMessage('Yeni sifre tekrari eslesmiyor.')
+      return
+    }
+    setPasswordChanging(true)
+    try {
+      const updated = await changeOwnAdminPassword({actor: adminUser, currentPassword, newPassword})
+      if (updated) setAdminUser(updated)
+      setOwnPassword(newPassword)
+      setPasswordVisible(false)
+      event.currentTarget.reset()
+      setMessage('Sifren guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
+      await refreshAccounts()
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
+    } finally {
+      setPasswordChanging(false)
+    }
+  }
+
   async function deletePerson(id: string) {
     if (!adminUser) return
     try {
@@ -150,6 +194,48 @@ export default function Admin() {
 
     <div className="space-y-7 p-6 lg:p-10">
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
+
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-bold">Kendi hesabim</h2>
+          <p className="text-sm text-mugla-navy/55">Super admin ilk sifreyi tanimlar; admin ve yetkililer kendi sifresini buradan gunceller. Sifre alani yalnizca oturumdaki kullanici icin acilir.</p>
+        </CardHeader>
+        <CardContent className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]">
+          <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-mugla-navy text-white"><KeyRound size={20}/></span>
+              <div>
+                <p className="font-bold">{adminUser?.name ?? 'Yonetici'}</p>
+                <p className="text-sm text-mugla-navy/55">{adminUser?.email ?? 'Oturum kontrol ediliyor'}</p>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 text-sm">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3">
+                <span className="text-mugla-navy/55">Rol</span>
+                <b>{adminUser?.role ?? '-'}</b>
+              </div>
+              <div className="rounded-xl bg-white p-4">
+                <span className="text-sm text-mugla-navy/55">Sifre</span>
+                <div className="mt-2 flex items-center gap-2">
+                  <code className="min-w-0 flex-1 truncate rounded-lg bg-mugla-navy/5 px-3 py-2 text-sm font-bold">
+                    {passwordVisible ? ownPassword ?? 'Sifre once guncellendiginde goruntulenir.' : '••••••••••••'}
+                  </code>
+                  <button type="button" onClick={toggleOwnPassword} aria-label={passwordVisible ? 'Sifreyi gizle' : 'Sifreyi goster'} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-mugla-navy/15 bg-white text-mugla-navy/65 hover:text-mugla-blue">
+                    {passwordVisible ? <EyeOff size={18}/> : <Eye size={18}/>}
+                  </button>
+                </div>
+                {!ownPassword && passwordVisible && <p className="mt-2 text-xs text-mugla-navy/45">Eski hash kayitlari geri cozulmez; sifreni guncelledikten sonra bu alanda yalnizca sen gorebilirsin.</p>}
+              </div>
+            </div>
+          </section>
+          <form onSubmit={submitOwnPassword} className="grid gap-4 md:grid-cols-3">
+            <label><span className="mb-2 block text-sm font-semibold">Mevcut sifre</span><input className={field} name="currentPassword" type="password" required minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input className={field} name="newPassword" type="password" required minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className={field} name="confirmPassword" type="password" required minLength={8}/></label>
+            <div className="md:col-span-3"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Sifremi guncelle'}</Button></div>
+          </form>
+        </CardContent>
+      </Card>
 
       {peopleOpen && <Card>
         <CardHeader>

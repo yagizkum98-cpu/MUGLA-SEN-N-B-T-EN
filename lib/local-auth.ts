@@ -6,6 +6,9 @@ export type LocalUser={
   name:string
   email:string
   phone:string
+  nationality:'tc'|'foreign'
+  country?:string
+  province:string
   district:string
   passwordHash:string
   salt:string
@@ -31,6 +34,9 @@ export function listLocalUsers():LocalUser[]{
       verificationMethod:user.verificationMethod??'email',
       verifiedAt:user.verifiedAt??user.createdAt,
       verifiedBadge:user.verifiedBadge??'Doğrulanmış Kullanıcı',
+      nationality:user.nationality??'tc',
+      country:user.country,
+      province:user.province??'Mugla',
       district:user.district??'Mentese',
         panelPath:user.panelPath??'/vatandas/panel',
         apiPath:user.apiPath??`/api/vatandas/${user.id}`,
@@ -42,7 +48,7 @@ function bytesToBase64(bytes:Uint8Array){let value='';bytes.forEach(byte=>value+
 function base64ToBytes(value:string){return Uint8Array.from(atob(value),char=>char.charCodeAt(0))}
 async function derive(password:string,salt:Uint8Array){const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const saltBuffer=new Uint8Array(salt).buffer;const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:saltBuffer,iterations:120000,hash:'SHA-256'},material,256);return bytesToBase64(new Uint8Array(bits))}
 
-export async function registerUser(input:{name:string;email:string;phone:string;district:string;password:string;verificationMethod:VerificationMethod;verificationCode:string;verificationExpected:string;identityReference?:string;botAnswer:string;botExpected:string;website?:string}){
+export async function registerUser(input:{name:string;email:string;phone:string;nationality:'tc'|'foreign';country?:string;province:string;district:string;password:string;verificationMethod:VerificationMethod;verificationCode:string;verificationExpected:string;identityReference?:string;botAnswer:string;botExpected:string;website?:string}){
   const users=listLocalUsers()
   const email=input.email.trim().toLocaleLowerCase('tr')
   if(users.some(user=>user.email===email))throw new Error('Bu e-posta adresiyle daha önce kayıt oluşturulmuş.')
@@ -50,6 +56,8 @@ export async function registerUser(input:{name:string;email:string;phone:string;
   if(input.botAnswer.trim()!==input.botExpected.trim())throw new Error('Lütfen bot kontrolü sorusunu doğru yanıtlayın.')
   if((input.verificationMethod==='phone'||input.verificationMethod==='email')&&input.verificationCode.trim()!==input.verificationExpected.trim())throw new Error('Doğrulama kodu hatalı.')
   if((input.verificationMethod==='passport'||input.verificationMethod==='international-id')&&String(input.identityReference??'').trim().length<6)throw new Error('Kimlik/pasaport referansı en az 6 karakter olmalıdır.')
+
+  if(input.nationality==='foreign'&&!input.country?.trim())throw new Error('Yabanci uyruklu katilimci icin ulke secimi zorunludur.')
 
   const salt=crypto.getRandomValues(new Uint8Array(16))
   const passwordHash=await derive(input.password,salt)
@@ -60,6 +68,9 @@ export async function registerUser(input:{name:string;email:string;phone:string;
     name:input.name.trim(),
     email,
     phone:input.phone.trim(),
+    nationality:input.nationality,
+    country:input.nationality==='foreign'?input.country?.trim():undefined,
+    province:input.province.trim()||'Mugla',
     district:input.district.trim()||'Mentese',
     passwordHash,
     salt:bytesToBase64(salt),

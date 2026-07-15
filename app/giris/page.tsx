@@ -7,7 +7,8 @@ import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-reac
 import {Button} from '@/components/ui/button'
 import {createClient} from '@/lib/supabase/client'
 import {loginUser,registerUser} from '@/lib/local-auth'
-import {muglaDistricts} from '@/lib/locations'
+import {countries} from '@/lib/locations'
+import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
 
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 
@@ -15,6 +16,9 @@ type PendingRegistration={
   name:string
   email:string
   phone:string
+  nationality:'tc'|'foreign'
+  country?:string
+  province:string
   district:string
   password:string
   botAnswer:string
@@ -48,6 +52,10 @@ export default function Login(){
   const[pendingRegistration,setPendingRegistration]=useState<PendingRegistration|null>(null)
   const[activationMethod,setActivationMethod]=useState<'email'|'phone'|''>('')
   const[activationCode,setActivationCode]=useState('')
+  const[nationality,setNationality]=useState<'tc'|'foreign'>('tc')
+  const[selectedProvince,setSelectedProvince]=useState('Mugla')
+  const provinceDistricts=districtsForProvince(selectedProvince)
+  const countryOptions=countries().filter(country=>country.code!=='TR')
 
   function changeMode(value:'login'|'register'){setMode(value);setError('');setMessage('')}
 
@@ -65,6 +73,9 @@ export default function Login(){
       name:String(data.get('name')),
       email:String(data.get('email')),
       phone:String(data.get('phone')),
+      nationality,
+      country:nationality==='foreign'?String(data.get('country')):undefined,
+      province:String(data.get('province')),
       district:String(data.get('district')),
       password,
       botAnswer,
@@ -171,7 +182,18 @@ export default function Login(){
               <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input required name="email" type="email" autoComplete="email" className={field}/></label>
               <label><span className="mb-2 block text-sm font-semibold">Telefon numarasi</span><input required name="phone" type="tel" autoComplete="tel" className={field} pattern="[0-9+() -]{10,20}"/></label>
             </div>
-            <label className="block"><span className="mb-2 block text-sm font-semibold">Vatandas panel ilcesi</span><select required name="district" className={field}>{muglaDistricts.map(district=><option key={district}>{district}</option>)}</select></label>
+            <fieldset className="rounded-2xl bg-white p-4">
+              <legend className="mb-3 text-sm font-semibold">Uyruk</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={`cursor-pointer rounded-xl border p-3 text-sm font-semibold ${nationality==='tc'?'border-mugla-orange bg-orange-50 text-mugla-navy':'border-mugla-navy/10 text-mugla-navy/60'}`}><input type="radio" name="nationalityChoice" value="tc" checked={nationality==='tc'} onChange={()=>setNationality('tc')} className="mr-2 accent-mugla-orange"/>T.C. vatandasi</label>
+                <label className={`cursor-pointer rounded-xl border p-3 text-sm font-semibold ${nationality==='foreign'?'border-mugla-orange bg-orange-50 text-mugla-navy':'border-mugla-navy/10 text-mugla-navy/60'}`}><input type="radio" name="nationalityChoice" value="foreign" checked={nationality==='foreign'} onChange={()=>setNationality('foreign')} className="mr-2 accent-mugla-orange"/>Yabanci uyruklu</label>
+              </div>
+              {nationality==='foreign'&&<label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Yurtdisi ulkesi</span><select required name="country" className={field}>{countryOptions.map(country=><option key={country.code} value={country.name}>{country.name}</option>)}</select></label>}
+            </fieldset>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ili</span><select required name="province" className={field} value={selectedProvince} onChange={event=>setSelectedProvince(event.target.value)}>{turkiyeProvinces.map(province=><option key={province}>{province}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Vatandas panel ilcesi</span><select required name="district" className={field}>{provinceDistricts.map(district=><option key={district}>{district}</option>)}</select></label>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Sifre</span><input required name="password" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
               <label><span className="mb-2 block text-sm font-semibold">Sifre tekrar</span><input required name="repeat" type="password" autoComplete="new-password" className={field} minLength={8}/></label>

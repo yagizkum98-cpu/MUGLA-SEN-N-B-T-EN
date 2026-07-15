@@ -9,6 +9,7 @@ export type AdminAccount = {
   role: AdminRole
   passwordHash: string
   salt: string
+  passwordPreview?: string
   createdAt: string
   createdBy?: string
 }
@@ -31,6 +32,19 @@ async function derive(password: string, salt: Uint8Array) {
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
   const bits = await crypto.subtle.deriveBits({name: 'PBKDF2', salt: new Uint8Array(salt).buffer, iterations: 120000, hash: 'SHA-256'}, material, 256)
   return bytesToBase64(new Uint8Array(bits))
+}
+
+function encodePasswordPreview(password: string) {
+  return bytesToBase64(new TextEncoder().encode(password))
+}
+
+function decodePasswordPreview(value?: string) {
+  if (!value) return null
+  try {
+    return new TextDecoder().decode(base64ToBytes(value))
+  } catch {
+    return null
+  }
 }
 
 function readRawAccounts(): AdminAccount[] {
@@ -58,6 +72,7 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
     role: input.role,
     passwordHash,
     salt: bytesToBase64(salt),
+    passwordPreview: encodePasswordPreview(input.password),
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy,
   }
@@ -108,6 +123,30 @@ export async function addAdminAccount(input: {name: string; email: string; role:
   const account = await createAccount({...input, email, createdBy: input.actor.email})
   saveAccounts([account, ...accounts])
   return account
+}
+
+export async function changeOwnAdminPassword(input: {actor: AdminAccount; currentPassword: string; newPassword: string}) {
+  if (input.newPassword.length < 8) throw new Error('Yeni sifre en az 8 karakter olmalidir.')
+  const accounts = await ensureSeedAccount()
+  const account = accounts.find(item => item.id === input.actor.id)
+  if (!account) throw new Error('Oturum bulunamadi.')
+  if (await derive(input.currentPassword, base64ToBytes(account.salt)) !== account.passwordHash) throw new Error('Mevcut sifre hatali.')
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const passwordHash = await derive(input.newPassword, salt)
+  const updated = accounts.map(item => item.id === account.id ? {
+    ...item,
+    passwordHash,
+    salt: bytesToBase64(salt),
+    passwordPreview: encodePasswordPreview(input.newPassword),
+  } : item)
+  saveAccounts(updated)
+  return updated.find(item => item.id === account.id) ?? null
+}
+
+export async function revealOwnAdminPassword(actor: AdminAccount) {
+  const accounts = await ensureSeedAccount()
+  const account = accounts.find(item => item.id === actor.id)
+  return decodePasswordPreview(account?.passwordPreview)
 }
 
 export async function removeAdminAccount(id: string, actor: AdminAccount) {

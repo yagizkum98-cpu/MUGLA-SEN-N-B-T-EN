@@ -11,6 +11,9 @@ export type Citizen={
   name:string
   email:string
   phone:string
+  nationality:'tc'|'foreign'
+  country?:string
+  province:string
   district:string
   role:CrmRole
   age:number
@@ -39,6 +42,9 @@ function liveCitizens():Citizen[]{
     name:user.name,
     email:user.email,
     phone:user.phone,
+    nationality:user.nationality,
+    country:user.country,
+    province:user.province,
     district:user.district,
     role:'Vatandaş' as CrmRole,
     age:0,
@@ -56,7 +62,11 @@ function liveCitizens():Citizen[]{
 function mergedCitizens(){
   const manual=read<Citizen>(CITIZENS)
   const manualEmails=new Set(manual.map(citizen=>citizen.email.toLocaleLowerCase('tr')))
-  return [...liveCitizens().filter(citizen=>!manualEmails.has(citizen.email.toLocaleLowerCase('tr'))),...manual]
+  return [...liveCitizens().filter(citizen=>!manualEmails.has(citizen.email.toLocaleLowerCase('tr'))),...manual.map(citizen=>({
+    ...citizen,
+    nationality:citizen.nationality??'tc',
+    province:citizen.province??'Mugla',
+  }))]
 }
 
 export function engagementScore(citizen:Citizen){
