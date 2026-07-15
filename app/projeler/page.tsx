@@ -140,7 +140,11 @@ export default function Projects() {
   const categories = useMemo(() => {
     const formCategories = projectCategories.map(([name]) => name)
     const projectCategoryNames = approved.map(project => project.category).filter(Boolean)
-    return Array.from(new Set([...formCategories, ...projectCategoryNames])).sort((a, b) => a.localeCompare(b, 'tr'))
+    return Array.from(new Set([...formCategories, ...projectCategoryNames])).sort((a, b) => {
+      if (a === 'Diğer') return 1
+      if (b === 'Diğer') return -1
+      return a.localeCompare(b, 'tr')
+    })
   }, [approved])
   const subcategories = useMemo(() => {
     if (categoryFilter === 'all') return []
