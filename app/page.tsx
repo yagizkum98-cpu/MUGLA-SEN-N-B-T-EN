@@ -38,7 +38,7 @@ export default function Home() {
           <span className="text-sm font-bold leading-tight">Mugla Senin<br/><span className="text-mugla-orange">Butcen</span></span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
-          <a href="#nasil">Nasıl işler?</a>
+          <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
@@ -48,6 +48,37 @@ export default function Home() {
         </Link>
       </div>
     </header>
+
+    <section id="mugla-senin-butcen" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
+        <article className="fade-up-card rounded-lg border border-mugla-navy/10 bg-mugla-sand/50 p-6 md:p-8">
+          <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">MUĞLA BÜYÜKŞEHİR BELEDİYESİ</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-mugla-navy md:text-4xl">BÜTÇEM MUĞLA</h2>
+          <div className="mt-7 space-y-5 text-sm leading-7 text-mugla-navy/70 md:text-base">
+            <p><strong className="text-mugla-navy">Değerli Muğlalılar,</strong></p>
+            <p>Muğla Büyükşehir Belediyesi olarak katılımcı, şeffaf ve demokratik yerel yönetim anlayışımız doğrultusunda kentimizin geleceğini sizlerle birlikte şekillendiriyoruz.</p>
+            <p>Bütçem Muğla uygulamasıyla, kentimizin ihtiyaçlarını en iyi bilen Muğlalıların fikirlerini karar alma süreçlerinin merkezine taşıyoruz. Siz de çevreden ulaşıma, kültür ve sanattan gençlik, spor, tarım, kırsal kalkınma ve sosyal hizmetlere kadar birçok alanda yaşam kalitesini artıracak proje önerilerinizle bu sürece katkı sağlayabilirsiniz.</p>
+            <p>Her bir fikir, Muğla'nın daha yaşanabilir, sürdürülebilir, erişilebilir ve güçlü bir kent olmasına katkı sunacaktır. Katılımcı bütçe modeliyle ortak aklı büyütüyor, kaynaklarımızı vatandaşlarımızın öncelikleri doğrultusunda birlikte planlıyoruz.</p>
+            <p>Muğla Büyükşehir Belediyesi olarak; doğasını koruyan, kültürünü yaşatan, üretimi destekleyen ve insan odaklı hizmet anlayışıyla geleceğe güvenle bakan bir Muğla'yı hep birlikte inşa edeceğimize inanıyoruz.</p>
+            <p><strong className="text-mugla-navy">Gelin, Muğla'nın geleceğini birlikte tasarlayalım. Çünkü en değerli fikir sizden gelir.</strong></p>
+            <p><strong className="text-mugla-navy">Saygılarımızla,</strong></p>
+            <p><strong className="text-mugla-navy">Muğla Büyükşehir Belediyesi</strong></p>
+          </div>
+          <div className="mt-8 rounded-lg bg-white p-4 shadow-sm">
+            <Image src="/partners/mugla-buyuksehir.png" alt="Muğla Büyükşehir Belediyesi logosu" width={720} height={721} className="h-auto max-h-28 w-full object-contain"/>
+          </div>
+        </article>
+        <aside className="fade-up-card overflow-hidden rounded-lg border border-mugla-navy/10 bg-white shadow-soft">
+          <div className="relative aspect-[4/5] bg-mugla-sand">
+            <Image src="/partners/ahmet-aras.webp" alt="Ahmet Aras - Muğla Büyükşehir Belediyesi Başkanı" fill className="object-cover"/>
+          </div>
+          <div className="p-5 text-center">
+            <p className="text-lg font-black text-mugla-navy">Ahmet Aras</p>
+            <p className="mt-1 text-sm font-semibold text-mugla-navy/55">Muğla Büyükşehir Belediyesi Başkanı</p>
+          </div>
+        </aside>
+      </div>
+    </section>
 
     <section className="relative overflow-hidden bg-mugla-navy text-white">
       <div className="absolute inset-0 opacity-25">
@@ -120,7 +151,7 @@ export default function Home() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
         <span>Muğla Senin Bütçen MVP</span>
         <div className="flex gap-4">
-          <a href="#nasil">Nasıl işler?</a>
+          <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
