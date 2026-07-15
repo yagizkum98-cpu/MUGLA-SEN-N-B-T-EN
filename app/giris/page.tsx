@@ -5,7 +5,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-react'
 import {Button} from '@/components/ui/button'
-import {createClient} from '@/lib/supabase/client'
 import {loginUser,registerUser} from '@/lib/local-auth'
 import {countries} from '@/lib/locations'
 import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
@@ -119,19 +118,6 @@ export default function Login(){
     finally{setLoading('')}
   }
 
-  async function google(){
-    setError('');setLoading('google')
-    try{
-      if(!process.env.NEXT_PUBLIC_SUPABASE_URL||!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)throw new Error('Google girisi icin Supabase URL ve anon key tanimlanmali.')
-      const next=nextPage()
-      const supabase=createClient()
-      const{error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:`${location.origin}/auth/callback?next=${encodeURIComponent(next)}`}})
-      if(error)throw error
-    }catch(cause){setError(cause instanceof Error?cause.message:'Google girisi baslatilamadi. Supabase baglanti ayarlarini kontrol edin.');setLoading('')}
-  }
-
-  function eDevlet(){setLoading('edevlet');location.href=`/api/auth/edevlet?next=${encodeURIComponent(nextPage())}`}
-
   return <main className="grid min-h-screen bg-mugla-sand lg:grid-cols-[.9fr_1.1fr]">
     <section className="hidden bg-mugla-navy p-16 text-white lg:flex lg:flex-col">
       <Link href="/" className="text-sm text-white/60">Ana sayfa</Link>
@@ -143,7 +129,7 @@ export default function Login(){
         <p className="mt-5 text-lg leading-8 text-white/60">Bot riskini azaltmak icin her hesap en az bir kimlik dogrulama katmanindan gecer.</p>
         <div className="mt-8 grid gap-3 text-sm text-white/70">
           <span className="flex items-center gap-2"><BadgeCheck size={18} className="text-mugla-cyan"/> Dogrulanmis Kullanici rozeti</span>
-          <span className="flex items-center gap-2"><ShieldCheck size={18} className="text-mugla-cyan"/> SMS, e-posta, e-Devlet, Google veya kimlik referansi</span>
+          <span className="flex items-center gap-2"><ShieldCheck size={18} className="text-mugla-cyan"/> E-posta veya telefon aktivasyonu ile guvenli kayit</span>
         </div>
       </div>
       <p className="text-xs text-white/40">Mugla Buyuksehir Belediyesi · Guvenli Katilim Sistemi</p>
@@ -219,12 +205,6 @@ export default function Login(){
           <button onClick={()=>changeMode('register')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Hesabin yok mu? Kayit ol</button>
         </div>}
 
-        <div className="my-7 flex items-center gap-3 text-xs text-mugla-navy/40"><span className="h-px flex-1 bg-mugla-navy/10"/>VEYA<span className="h-px flex-1 bg-mugla-navy/10"/></div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button onClick={google} disabled={!!loading} variant="outline" className="h-13">{loading==='google'?'Yonlendiriliyor...':'Google ile devam et'}</Button>
-          <Button onClick={eDevlet} disabled={!!loading} className="h-13 bg-[#c62828] hover:bg-[#a91e1e]"><ShieldCheck size={18}/>{loading==='edevlet'?'Yonlendiriliyor...':'e-Devlet ile devam et'}</Button>
-        </div>
-        <p className="mt-4 text-center text-xs leading-5 text-mugla-navy/45">Uretimde Apple ve Microsoft hesaplari da OAuth saglayicisi olarak eklenebilir. Yabanci kullanicilar pasaport veya uluslararasi kimlik referansiyla dogrulanir.</p>
       </div>
     </section>
   </main>
