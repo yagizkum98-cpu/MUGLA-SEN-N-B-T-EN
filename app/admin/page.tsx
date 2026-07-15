@@ -21,6 +21,10 @@ const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'yetkili', label: 'Yetkili', note: 'Proje islemlerine erisir'},
 ]
 
+function CategoryBadge({label, color}: {label: string; color: string}) {
+  return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
+}
+
 export default function Admin() {
   const {projects, addProject, mergeProjects, removeProject, reviewProject} = useProjects()
   const [open, setOpen] = useState(false)
@@ -107,7 +111,8 @@ export default function Admin() {
   async function submitPerson(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!adminUser) return
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     try {
       await addAdminAccount({
         name: String(form.get('name')).trim(),
@@ -116,7 +121,7 @@ export default function Admin() {
         password: String(form.get('password')),
         actor: adminUser,
       })
-      event.currentTarget.reset()
+      formElement.reset()
       setMessage('Yetkili hesap tanimlandi.')
       await refreshAccounts()
     } catch (cause) {
@@ -137,7 +142,8 @@ export default function Admin() {
   async function submitOwnPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!adminUser) return
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const currentPassword = String(form.get('currentPassword'))
     const newPassword = String(form.get('newPassword'))
     const confirmPassword = String(form.get('confirmPassword'))
@@ -151,7 +157,7 @@ export default function Admin() {
       if (updated) setAdminUser(updated)
       setOwnPassword(newPassword)
       setPasswordVisible(false)
-      event.currentTarget.reset()
+      formElement.reset()
       setMessage('Sifren guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
       await refreshAccounts()
     } catch (cause) {
@@ -163,6 +169,8 @@ export default function Admin() {
 
   async function deletePerson(id: string) {
     if (!adminUser) return
+    const target = accounts.find(account => account.id === id)
+    if (!target || !confirm(`${target.name} hesabini sistemden kaldirmak istiyor musun? Bu kisi artik admin paneline giremez.`)) return
     try {
       await removeAdminAccount(id, adminUser)
       setMessage('Yetkili hesap silindi.')
@@ -258,7 +266,7 @@ export default function Admin() {
                 <td>{account.email}</td>
                 <td><span className="inline-flex items-center gap-2 rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65"><ShieldCheck size={13}/>{account.role}</span></td>
                 <td className="text-mugla-navy/45">{account.createdBy ?? 'sistem'}</td>
-                <td className="text-right">{adminUser?.role === 'super-admin' && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => deletePerson(account.id)}><Trash2 size={17}/></button> : <span className="text-xs text-mugla-navy/35">-</span>}</td>
+                <td className="text-right">{adminUser?.role === 'super-admin' && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}><span aria-hidden="true">🗑️</span> Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -295,7 +303,7 @@ export default function Admin() {
               <td className="py-4"><span className="inline-grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black text-mugla-navy/65">{index + 1}</span></td>
               <td className="font-semibold">{project.title}</td>
               <td>{project.district}</td>
-              <td>{project.category}</td>
+              <td><CategoryBadge label={project.category} color={project.color}/></td>
               <td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td>
               <td className="text-right text-lg font-black">{project.votes.toLocaleString('tr-TR')}</td>
             </tr>)}</tbody>

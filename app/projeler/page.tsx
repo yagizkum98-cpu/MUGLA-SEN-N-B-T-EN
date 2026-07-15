@@ -73,16 +73,20 @@ function statusClass(status: string) {
   return 'bg-orange-50 text-mugla-orange'
 }
 
+function CategoryBadge({project}:{project:ProjectRecord}) {
+  return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{project.category}</span>
+}
+
 function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDetails}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void; onShowDetails: (project: ProjectRecord) => void}) {
   const status = String(project.status)
   const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
 
-  return <article className="border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
+  return <article className="fade-up-card border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(status)}`}>{status}</span>
-          <span className="text-xs font-semibold text-mugla-navy/45">{project.category}</span>
+          <CategoryBadge project={project}/>
         </div>
         <h2 className="mt-2 truncate text-lg font-black">{project.title}</h2>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-mugla-navy/55">
@@ -228,14 +232,15 @@ export default function Projects() {
             {votingProjects.length ? votingProjects.map(project => {
               const inBasket = basket.includes(project.id)
               const done = confirmed.includes(project.id)
-              return <article key={project.id} className="grid gap-3 rounded-lg border border-mugla-navy/10 bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
+              return <article key={project.id} className="fade-up-card grid gap-3 rounded-lg border border-mugla-navy/10 bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span>
+                    <CategoryBadge project={project}/>
                     {project.mergedFrom?.length ? <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">Birleştirilmiş proje</span> : null}
                   </div>
                   <h3 className="mt-2 font-black">{project.title}</h3>
-                  <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.category} · {project.votes.toLocaleString('tr-TR')} destek</p>
+                  <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => showDetails(project)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
@@ -247,8 +252,8 @@ export default function Projects() {
 
           {participationStep === 'winners' && <div className="mt-4 grid gap-3">
             <p className="text-sm font-bold text-mugla-navy">Kazanan proje ilanları</p>
-            {winnerProjects.length ? winnerProjects.map(project => <article key={project.id} className="rounded-lg border border-mugla-navy/10 bg-white p-4">
-              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span>
+            {winnerProjects.length ? winnerProjects.map(project => <article key={project.id} className="fade-up-card rounded-lg border border-mugla-navy/10 bg-white p-4">
+              <div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span><CategoryBadge project={project}/></div>
               <h3 className="mt-2 font-black">{project.title}</h3>
               <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
             </article>) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Kazanan projeler henüz ilan edilmedi.</div>}
@@ -261,7 +266,7 @@ export default function Projects() {
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>
             <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
-            <p className="mt-1 text-sm text-mugla-navy/55">{selectedProject.district} · {selectedProject.category}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2"><CategoryBadge project={selectedProject}/><span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
           </div>
           <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
         </div>
