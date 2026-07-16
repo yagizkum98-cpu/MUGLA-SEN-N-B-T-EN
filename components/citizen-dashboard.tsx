@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import {useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, CheckCircle2, Database, FileText, Lightbulb, LogOut, Minus, Plus, ShieldCheck, ShoppingCart, UserRound, Vote} from 'lucide-react'
+import {FormEvent, useEffect, useMemo, useState} from 'react'
+import {ArrowUpRight, Bell, CheckCircle2, FileText, KeyRound, Lightbulb, LockKeyhole, LogOut, Minus, Phone, Plus, ShieldCheck, ShoppingCart, UserRound, Vote} from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
-import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
+import {changeCurrentUserPassword, getCurrentUser, logoutUser, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 import {useVoteBasket, VOTE_CREDIT_LIMIT} from '@/lib/vote-basket'
 
@@ -23,6 +23,7 @@ export function CitizenDashboard() {
   const [message, setMessage] = useState('')
   const {projects, voteProject} = useProjects()
   const {basket, confirmed, remaining, add, remove, confirm} = useVoteBasket(user?.id)
+  const [profileTab, setProfileTab] = useState<'profile' | 'security' | 'preferences'>('profile')
 
   useEffect(() => {
     const current = getCurrentUser()
@@ -31,6 +32,10 @@ export function CitizenDashboard() {
       return
     }
     setUser(current)
+    if (!window.location.hash) {
+      window.history.replaceState(null, '', '/vatandas/panel#panelim')
+      window.scrollTo({top: 0})
+    }
   }, [])
 
   const myProjects = useMemo(() => user ? projects.filter(project => project.ownerId === user.id || project.ownerEmail === user.email) : [], [projects, user])
@@ -41,6 +46,11 @@ export function CitizenDashboard() {
   const totalVotes = myProjects.reduce((sum, project) => sum + project.votes, 0)
   const active = myProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const pending = myProjects.filter(project => project.moderationStatus === 'Bekliyor' || String(project.status).startsWith('Ba'))
+  const profileTabs = [
+    {value: 'profile', label: 'Profil bilgileri', icon: UserRound},
+    {value: 'security', label: 'Sifre ve guvenlik', icon: LockKeyhole},
+    {value: 'preferences', label: 'Diger ayarlar', icon: Bell},
+  ] as const
 
   function signOut() {
     logoutUser()
@@ -56,6 +66,44 @@ export function CitizenDashboard() {
     const selected = confirm(activeVoteProjects.map(project => project.id))
     selected.forEach(id => voteProject(id, 1))
     setMessage(selected.length ? `${selected.length} proje icin oyunuz alindi.` : 'Onaylanacak uygun proje bulunmuyor.')
+  }
+
+  function submitProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    try {
+      const updated = updateCurrentUserProfile({
+        name: String(form.get('name')),
+        phone: String(form.get('phone')),
+        province: String(form.get('province')),
+        district: String(form.get('district')),
+      })
+      setUser(updated)
+      setMessage('Profil bilgilerin guncellendi.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Profil guncellenemedi.')
+    }
+  }
+
+  async function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const currentPassword = String(form.get('currentPassword'))
+    const newPassword = String(form.get('newPassword'))
+    const confirmPassword = String(form.get('confirmPassword'))
+    if (newPassword !== confirmPassword) {
+      setMessage('Yeni sifre tekrari eslesmiyor.')
+      return
+    }
+    try {
+      const updated = await changeCurrentUserPassword({currentPassword, newPassword})
+      setUser(updated)
+      formElement.reset()
+      setMessage('Sifren guncellendi.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
+    }
   }
 
   if (!user) return <main className="grid min-h-screen place-items-center bg-mugla-sand"><p className="font-semibold text-mugla-navy/55">Vatandas oturumu kontrol ediliyor...</p></main>
@@ -74,7 +122,7 @@ export function CitizenDashboard() {
     </header>
 
     <div className="space-y-8 p-6 lg:p-10">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section id="panelim" className="scroll-mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Metric label="Basvurularim" value={String(myProjects.length)} note={`${pending.length} basvuru inceleme bekliyor`} icon={FileText}/>
         <Metric label="Aktif fikirlerim" value={String(active.length)} note="Onaylanip oylamaya acilanlar" icon={Vote}/>
         <Metric label="Toplam destek" value={totalVotes.toLocaleString('tr-TR')} note="Fikirlerime gelen oy" icon={ShieldCheck}/>
@@ -112,10 +160,39 @@ export function CitizenDashboard() {
         </CardContent>
       </Card>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_.85fr]">
-        <Card><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAS API</p><h2 className="text-xl font-bold">Kisisel veri servisi</h2></CardHeader><CardContent className="space-y-4"><div className="rounded-2xl bg-mugla-sand p-4"><p className="text-xs text-mugla-navy/50">Panel adresi</p><Link href={user.panelPath} className="mt-1 block break-all font-bold text-mugla-blue">{user.panelPath}</Link></div><div className="rounded-2xl bg-mugla-sand p-4"><p className="text-xs text-mugla-navy/50">API adresi</p><Link href={user.apiPath} className="mt-1 flex items-center gap-2 break-all font-bold text-mugla-blue"><Database size={17}/>{user.apiPath}</Link></div><p className="text-sm leading-6 text-mugla-navy/55">Demo ortaminda hesap verisi tarayicida tutulur. Bu endpoint vatandas panel entegrasyonu icin ayrilmis API sozlesmesini gosterir.</p></CardContent></Card>
-        <Card className="bg-mugla-navy text-white"><CardHeader><UserRound className="text-mugla-cyan"/><p className="text-xs font-bold tracking-widest text-mugla-cyan">KAYIT BILGILERI</p><h2 className="text-xl font-bold">Giris yapan vatandas</h2></CardHeader><CardContent className="space-y-3 text-sm"><div className="rounded-2xl bg-white/10 p-4"><span className="text-white/55">E-posta</span><b className="mt-1 block break-all">{user.email}</b></div><div className="rounded-2xl bg-white/10 p-4"><span className="text-white/55">Telefon</span><b className="mt-1 block">{user.phone}</b></div><div className="rounded-2xl bg-white/10 p-4"><span className="text-white/55">Dogrulama</span><b className="mt-1 block">{user.verificationMethod}</b></div></CardContent></Card>
-      </section>
+      <Card id="profil">
+        <CardHeader>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">PROFIL</p>
+          <h2 className="text-xl font-bold">Profil ve hesap ayarlari</h2>
+          <p className="text-sm text-mugla-navy/55">Iletisim, sifre ve bildirim tercihlerini tek alandan yonet.</p>
+        </CardHeader>
+        <CardContent className="grid gap-6 xl:grid-cols-[260px_1fr]">
+          <nav className="grid content-start gap-2">
+            {profileTabs.map(({value, label, icon: Icon}) => <button key={value} type="button" onClick={() => setProfileTab(value)} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold ${profileTab === value ? 'bg-mugla-navy text-white' : 'bg-mugla-sand text-mugla-navy/65 hover:text-mugla-navy'}`}><Icon size={17}/>{label}</button>)}
+          </nav>
+
+          {profileTab === 'profile' && <form onSubmit={submitProfile} className="grid gap-4 md:grid-cols-2">
+            <label><span className="mb-2 block text-sm font-semibold">Ad Soyad</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="name" defaultValue={user.name} required minLength={3}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Telefon numarasi</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="phone" type="tel" defaultValue={user.phone} required pattern="[0-9+() -]{10,20}"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Il</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="province" defaultValue={user.province} required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Ilce</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="district" defaultValue={user.district} required/></label>
+            <div className="md:col-span-2"><Button type="submit" variant="orange"><Phone size={17}/> Profilimi guncelle</Button></div>
+          </form>}
+
+          {profileTab === 'security' && <form onSubmit={submitPassword} className="grid gap-4 md:grid-cols-3">
+            <label><span className="mb-2 block text-sm font-semibold">Mevcut sifre</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="currentPassword" type="password" required minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="newPassword" type="password" required minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="confirmPassword" type="password" required minLength={8}/></label>
+            <div className="md:col-span-3"><Button type="submit" variant="orange"><KeyRound size={17}/> Sifremi guncelle</Button></div>
+          </form>}
+
+          {profileTab === 'preferences' && <section className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 p-4"><input type="checkbox" defaultChecked className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">Basvuru bildirimleri</b><small className="mt-1 block text-mugla-navy/50">Fikirlerimin onay ve durum degisimlerinden haberdar olmak istiyorum.</small></span></label>
+            <label className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 p-4"><input type="checkbox" defaultChecked className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">Oylama hatirlatmalari</b><small className="mt-1 block text-mugla-navy/50">Kredim ve sepetimde bekleyen projeler icin hatirlatma alabilirim.</small></span></label>
+            <div className="rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60 md:col-span-2"><ShieldCheck className="mb-3 text-mugla-green"/><b className="text-mugla-navy">Dogrulama:</b> {user.verifiedBadge} - {user.verificationMethod}<br/><b className="text-mugla-navy">E-posta:</b> {user.email}</div>
+          </section>}
+        </CardContent>
+      </Card>
 
       <Card id="oylar"><CardHeader className="flex-row items-center justify-between"><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">BASVURULARIM</p><h2 className="mt-1 text-xl font-bold">Kendi fikirlerim ve durumlari</h2></div><Link className="text-sm font-semibold text-mugla-blue" href="/projeler">Projeleri gor <ArrowUpRight className="inline" size={15}/></Link></CardHeader><CardContent className="space-y-3">{myProjects.length ? myProjects.map(project => <div key={project.id} className="fade-up-card flex flex-wrap items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4"><span className="h-14 w-2 rounded-full" style={{background: project.color}}/><div className="min-w-0 flex-1"><p className="font-bold">{project.title}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/50"><span>{project.district}</span><CategoryBadge label={project.category} color={project.color}/>{project.subcategory ? <span>{project.subcategory}</span> : null}<span>{project.moderationStatus}</span></div></div><div className="grid grid-cols-2 gap-3 text-right text-sm"><span><b className="block">{project.votes}</b>destek</span><span><b className="block">{formatBudget(project.budget)}</b>butce</span></div></div>) : <div className="py-14 text-center text-mugla-navy/45"><Lightbulb className="mx-auto mb-3"/><p className="font-semibold">Henuz fikir basvurunuz yok.</p><Link href="/fikir-gonder" className="mt-4 inline-flex"><Button variant="orange">Ilk fikrimi gonder</Button></Link></div>}</CardContent></Card>
     </div>

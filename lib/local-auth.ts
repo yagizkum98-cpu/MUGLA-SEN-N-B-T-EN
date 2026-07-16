@@ -128,10 +128,43 @@ export async function loginUser(emailInput: string, password: string) {
   return user
 }
 
+function saveUsers(users: LocalUser[]) {
+  localStorage.setItem(USERS, JSON.stringify(users))
+  window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+  window.dispatchEvent(new Event('mugla-auth-session-changed'))
+}
+
 export function getCurrentUser() {
   if (typeof window === 'undefined') return null
   const id = localStorage.getItem(SESSION)
   return listLocalUsers().find(user => user.id === id) ?? null
+}
+
+export function updateCurrentUserProfile(input: {name?: string; phone?: string; district?: string; province?: string}) {
+  const current = getCurrentUser()
+  if (!current) throw new Error('Oturum bulunamadi.')
+  const users = listLocalUsers()
+  const updated = {
+    ...current,
+    name: input.name?.trim() || current.name,
+    phone: input.phone?.trim() || current.phone,
+    province: input.province?.trim() || current.province,
+    district: input.district?.trim() || current.district,
+  }
+  saveUsers(users.map(user => user.id === current.id ? updated : user))
+  return updated
+}
+
+export async function changeCurrentUserPassword(input: {currentPassword: string; newPassword: string}) {
+  const current = getCurrentUser()
+  if (!current) throw new Error('Oturum bulunamadi.')
+  if (input.newPassword.length < 8) throw new Error('Yeni sifre en az 8 karakter olmalidir.')
+  if (await derive(input.currentPassword, base64ToBytes(current.salt)) !== current.passwordHash) throw new Error('Mevcut sifre hatali.')
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const passwordHash = await derive(input.newPassword, salt)
+  const updated = {...current, salt: bytesToBase64(salt), passwordHash}
+  saveUsers(listLocalUsers().map(user => user.id === current.id ? updated : user))
+  return updated
 }
 
 export function logoutUser() {

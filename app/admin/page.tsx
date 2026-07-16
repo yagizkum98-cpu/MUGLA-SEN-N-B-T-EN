@@ -1,19 +1,22 @@
 'use client'
 
 import {FormEvent, useEffect, useState} from 'react'
+import Link from 'next/link'
 import {motion} from 'framer-motion'
 import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {CheckCircle2, Clock3, Eye, EyeOff, FolderKanban, KeyRound, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
+import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, KeyRound, LayoutDashboard, LockKeyhole, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
+import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
 const statuses: ProjectStatus[] = ['Başvuru', 'İncelemede', 'Uygun', 'Oylamada', 'Yılın Kazanan Adayı', 'İhale Aşamasında', 'Devam Ediyor', 'Tamamlandı', 'Yapılamadı', 'Ertelendi']
 const field = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan'
+const districtGradients = ['from-cyan-50 via-white to-orange-50', 'from-green-50 via-white to-cyan-50', 'from-orange-50 via-white to-lime-50', 'from-sky-50 via-white to-emerald-50'] as const
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'super-admin', label: 'Super admin', note: 'Tum admin hesaplarini yonetir'},
@@ -288,6 +291,40 @@ export default function Admin() {
       </Card>}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE DASHBOARDLARI</p>
+            <h2 className="mt-1 text-xl font-bold">13 ilcenin panel ve API bilgileri</h2>
+            <p className="mt-1 text-sm text-mugla-navy/55">Bu alan yalnizca admin tarafindadir; vatandas panelinde ilce dashboard adresleri ve kodlari gosterilmez.</p>
+          </div>
+          <Link href="/dashboard" className="hidden text-sm font-semibold text-mugla-blue sm:inline-flex">Tam dashboard <ArrowUpRight className="ml-1" size={15}/></Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {muglaDistrictDashboards.map((item, index) => {
+              const districtProjects = projects.filter(project => project.district === item.name)
+              const active = districtProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && (String(project.status) === 'Oylamada' || String(project.status).includes('Kazanan')))
+              const gradient = districtGradients[index % districtGradients.length]
+              return <div key={item.slug} className={`relative flex min-h-52 flex-col justify-between overflow-hidden rounded-2xl border border-mugla-navy/10 bg-gradient-to-br ${gradient} p-4 shadow-sm`}>
+                <span className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-mugla-cyan via-mugla-green to-mugla-orange"/>
+                <span className="flex items-center justify-between gap-3"><b>{item.name}</b><span className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-mugla-cyan"><LayoutDashboard size={18}/></span></span>
+                <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-mugla-navy/55">
+                  <span><strong className="block text-base text-mugla-navy">{districtProjects.length}</strong>proje</span>
+                  <span><strong className="block text-base text-mugla-navy">{active.length}</strong>aktif</span>
+                  <span><strong className="block text-base text-mugla-navy">{districtProjects.reduce((sum, project) => sum + project.votes, 0).toLocaleString('tr-TR')}</strong>oy</span>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  <Link href={`/dashboard/giris?district=${item.slug}`} className="flex items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-semibold text-white hover:bg-mugla-blue"><LockKeyhole size={15}/> Panel girisi</Link>
+                  <Link href={item.apiPath} className="flex items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white/85 px-4 py-2 text-xs font-semibold text-mugla-navy/60 hover:text-mugla-blue"><Database size={14}/> {item.apiPath}</Link>
+                  <div className="rounded-xl bg-white/75 px-3 py-2 text-xs text-mugla-navy/60"><b className="text-mugla-navy">Kod:</b> {item.accessCode}</div>
+                </div>
+              </div>
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

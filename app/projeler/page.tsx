@@ -188,8 +188,30 @@ export default function Projects() {
       </div>
     </header>
 
+    <section className="relative isolate overflow-hidden bg-mugla-navy text-white">
+      <div className="absolute inset-0 bg-[url('/landing/mugla-hero.png')] bg-cover bg-center"/>
+      <div className="absolute inset-0 bg-gradient-to-b from-mugla-navy/35 via-mugla-navy/45 to-mugla-sand"/>
+      <div className="relative mx-auto grid min-h-[430px] max-w-5xl content-end px-4 pb-10 pt-24">
+        <div className="max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-orange">Projeler</p>
+          <h1 className="mt-3 text-4xl font-black leading-tight md:text-6xl">Muğla için önerilen projeleri keşfet</h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-white/80">Kıyılardan dağ mahallelerine uzanan ortak bütçe fikirlerini ara, filtrele ve oylama takvimi açıldığında sepetine ekle.</p>
+        </div>
+        <div className="mt-8 rounded-2xl border border-white/30 bg-white/20 p-3 shadow-2xl backdrop-blur-xl">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+            <label className="flex h-14 items-center gap-3 rounded-xl border border-white/30 bg-white/85 px-4 text-mugla-navy shadow-sm">
+              <Search size={20} className="text-mugla-navy/45"/>
+              <input value={projectQuery} onChange={event => setProjectQuery(event.target.value)} placeholder="Proje adı, konu veya açıklama ara" className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-mugla-navy/45"/>
+            </label>
+            <p className="rounded-xl bg-white/85 px-4 py-3 text-sm font-black text-mugla-navy shadow-sm">{filtered.length} / {approved.length} proje</p>
+            <Link href={user?'/vatandas/panel#sepetim':'/giris?next=/vatandas/panel'} className="rounded-xl bg-mugla-orange px-4 py-3 text-center text-sm font-black text-white shadow-sm">Sepetim: {basket.length} · Kredi: {remaining}</Link>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section className="mx-auto max-w-5xl px-4 py-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="hidden">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.2em] text-mugla-orange">Projeler</p>
           <h1 className="mt-2 text-3xl font-black md:text-4xl">Proje listesi</h1>
