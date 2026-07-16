@@ -81,7 +81,7 @@ export default function Home() {
       <div className="mx-auto max-w-6xl px-5 pb-12 lg:pb-16">
         <article className="fade-up-card grid overflow-hidden rounded-lg border border-mugla-navy/10 bg-white shadow-soft lg:grid-cols-[.95fr_1.05fr] lg:items-center">
           <div className="relative min-h-72 bg-mugla-sand lg:min-h-[430px]">
-            <Image src="/landing/participatory-budget.svg" alt="Muğla katılımcı bütçe illüstrasyonu" fill className="object-cover"/>
+            <Image src="/landing/participatory-budget.png" alt="Muğla katılımcı bütçe illüstrasyonu" fill className="object-cover"/>
           </div>
           <div className="p-6 md:p-8 lg:p-10">
             <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">Katılımcı Bütçe Nedir?</p>
