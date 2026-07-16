@@ -53,11 +53,11 @@ export default function Home() {
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
         <article className="fade-up-card rounded-lg border border-mugla-navy/10 bg-mugla-sand/50 p-6 md:p-8">
           <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">MUĞLA BÜYÜKŞEHİR BELEDİYESİ</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-mugla-navy md:text-4xl">BÜTÇEM MUĞLA</h2>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-mugla-navy md:text-4xl">SENİN BÜTÇEN</h2>
           <div className="mt-7 space-y-5 text-sm leading-7 text-mugla-navy/70 md:text-base">
             <p><strong className="text-mugla-navy">Değerli Muğlalılar,</strong></p>
             <p>Muğla Büyükşehir Belediyesi olarak katılımcı, şeffaf ve demokratik yerel yönetim anlayışımız doğrultusunda kentimizin geleceğini sizlerle birlikte şekillendiriyoruz.</p>
-            <p>Bütçem Muğla uygulamasıyla, kentimizin ihtiyaçlarını en iyi bilen Muğlalıların fikirlerini karar alma süreçlerinin merkezine taşıyoruz. Siz de çevreden ulaşıma, kültür ve sanattan gençlik, spor, tarım, kırsal kalkınma ve sosyal hizmetlere kadar birçok alanda yaşam kalitesini artıracak proje önerilerinizle bu sürece katkı sağlayabilirsiniz.</p>
+            <p>Senin Bütçen uygulamasıyla, kentimizin ihtiyaçlarını en iyi bilen Muğlalıların fikirlerini karar alma süreçlerinin merkezine taşıyoruz. Siz de çevreden ulaşıma, kültür ve sanattan gençlik, spor, tarım, kırsal kalkınma ve sosyal hizmetlere kadar birçok alanda yaşam kalitesini artıracak proje önerilerinizle bu sürece katkı sağlayabilirsiniz.</p>
             <p>Her bir fikir, Muğla'nın daha yaşanabilir, sürdürülebilir, erişilebilir ve güçlü bir kent olmasına katkı sunacaktır. Katılımcı bütçe modeliyle ortak aklı büyütüyor, kaynaklarımızı vatandaşlarımızın öncelikleri doğrultusunda birlikte planlıyoruz.</p>
             <p>Muğla Büyükşehir Belediyesi olarak; doğasını koruyan, kültürünü yaşatan, üretimi destekleyen ve insan odaklı hizmet anlayışıyla geleceğe güvenle bakan bir Muğla'yı hep birlikte inşa edeceğimize inanıyoruz.</p>
             <p><strong className="text-mugla-navy">Gelin, Muğla'nın geleceğini birlikte tasarlayalım. Çünkü en değerli fikir sizden gelir.</strong></p>
@@ -77,6 +77,20 @@ export default function Home() {
             <p className="mt-1 text-sm font-semibold text-mugla-navy/55">Muğla Büyükşehir Belediyesi Başkanı</p>
           </div>
         </aside>
+      </div>
+      <div className="mx-auto max-w-6xl px-5 pb-12 lg:pb-16">
+        <article className="fade-up-card grid overflow-hidden rounded-lg border border-mugla-navy/10 bg-white shadow-soft lg:grid-cols-[.95fr_1.05fr] lg:items-center">
+          <div className="relative min-h-72 bg-mugla-sand lg:min-h-[430px]">
+            <Image src="/landing/participatory-budget.svg" alt="Muğla katılımcı bütçe illüstrasyonu" fill className="object-cover"/>
+          </div>
+          <div className="p-6 md:p-8 lg:p-10">
+            <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">Katılımcı Bütçe Nedir?</p>
+            <div className="mt-5 space-y-5 text-sm leading-7 text-mugla-navy/70 md:text-base">
+              <p>Katılımcı Bütçe Uygulaması; halkın yerel ölçekte doğrudan bütçe harcamaları ve öncelikleri ile ilgili kararlara aktif katılımı anlamına geliyor. Şeffaflık, hesap verebilirlik ve kaynakların adil bir şekilde tahsis edilmesi gibi hususlar çerçevesinde şekillenen yeni bir yönetim anlayışını destekleyen katılımcı bütçe uygulaması; vatandaşların proje önerme ya da oy verme gibi çeşitli biçimlerle bütçenin tamamının ya da bir kısmının nasıl harcanacağına dair kararlara katıldığı bir süreçtir.</p>
+              <p>Muğla Büyükşehir Belediyesi Katılımcı Bütçe Uygulaması; “Proje Başvurularının Alınması”, “Ön ve Teknik Değerlendirmelerin Yapılması”, “Projelerin Oylamaya Sunulması”, “Oylama Sonuçlarının Açıklanması” ile “Uygulama, İzleme ve Raporlama” aşamalarından oluşmaktadır. Bu yıl dördüncüsünü düzenleyeceğimiz Bütçe Senin uygulamamıza Türkiye’nin ve Dünya'nın her yerinden vatandaşlarımızın Muğla için katılımlarını bekliyoruz.</p>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 

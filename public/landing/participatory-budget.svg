@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
+  <title id="title">Mugla participatory budget illustration</title>
+  <desc id="desc">Citizens in front of Mugla's coast, mountains, olive branches and civic symbols.</desc>
+  <rect width="1200" height="820" fill="#fbfcf8"/>
+  <path d="M91 615c-16-131 11-266 97-366C303 116 470 71 650 77c178 5 351 62 439 188 76 108 72 261 1 363-81 116-233 170-406 176-171 6-345-31-469-98C151 672 101 650 91 615z" fill="#e8f3ed"/>
+  <path d="M76 312c68-76 129-130 195-151 89-29 161 30 232 48 92 23 166-33 262-12 88 20 169 103 254 148v162H76z" fill="#8fb7c5"/>
+  <path d="M79 315c83-90 139-121 210-135 71-15 111 36 179 52 80 19 146-42 229-19 66 18 119 84 194 115v81H79z" fill="#b9d5cd"/>
+  <path d="M0 516c154-38 296-42 426-12 141 33 271 38 411 5 132-31 248-26 363 3v308H0z" fill="#d9ecf0"/>
+  <path d="M0 545c170-20 293-15 413 18 139 38 260 42 391 7 147-40 267-38 396-7v257H0z" fill="#f7f1df"/>
+  <path d="M203 362h48v128h-48z" fill="#fff7e8" stroke="#2b5360" stroke-width="4"/>
+  <path d="M184 361l43-80 43 80z" fill="#a77a45" stroke="#2b5360" stroke-width="4"/>
+  <path d="M231 306l53-28" stroke="#2b5360" stroke-width="4"/>
+  <path d="M231 306l43 44" stroke="#2b5360" stroke-width="4"/>
+  <circle cx="227" cy="414" r="16" fill="#d3a873"/>
+  <path d="M942 378h126v87H942z" fill="#fbfbf4" stroke="#2b5360" stroke-width="4"/>
+  <path d="M930 378h150l-28-37h-94z" fill="#d6e8f1" stroke="#2b5360" stroke-width="4"/>
+  <path d="M974 465v-48h25v48M1022 465v-48h25v48" fill="none" stroke="#2b5360" stroke-width="4"/>
+  <path d="M829 473h162" stroke="#2b5360" stroke-width="4"/>
+  <path d="M856 473v92M965 473v92M830 565h161" stroke="#2b5360" stroke-width="4"/>
+  <path d="M866 473c17-32 39-49 71-49 27 0 50 18 65 49" fill="none" stroke="#2b5360" stroke-width="4"/>
+  <path d="M904 612c-40 0-73 19-73 42 0 22 33 41 73 41s73-19 73-41c0-23-33-42-73-42z" fill="#fff" stroke="#57845a" stroke-width="4"/>
+  <path d="M869 652c18-25 43-34 75-30M890 680c5-32 21-54 48-68M928 681c-8-31-3-56 17-78" fill="none" stroke="#57845a" stroke-width="5" stroke-linecap="round"/>
+  <g stroke="#2b5360" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M171 640c0-72 54-132 125-132s126 60 126 132v102H171z" fill="#ecf7f2"/>
+    <path d="M256 500c-34 0-61-27-61-61v-29c0-34 27-61 61-61s61 27 61 61v29c0 34-27 61-61 61z" fill="#fff5eb"/>
+    <path d="M196 404c14-54 89-72 122-23" fill="#153a52"/>
+    <path d="M224 430h1M287 430h1" stroke-width="8"/>
+    <path d="M232 462c15 12 33 12 48 0"/>
+    <path d="M170 737l-59-168c-8-23 4-48 27-55 23-8 48 4 56 27l58 168" fill="#fff"/>
+    <path d="M335 742l60-173c8-23 33-35 56-27 23 8 35 33 27 56l-58 168" fill="#fff"/>
+    <path d="M500 648c0-69 52-126 116-126s117 57 117 126v103H500z" fill="#f4fbf7"/>
+    <path d="M616 515c-31 0-56-25-56-56v-23c0-31 25-56 56-56s56 25 56 56v23c0 31-25 56-56 56z" fill="#fff5eb"/>
+    <path d="M566 413c21-33 74-44 106 0" fill="#6c8e5e"/>
+    <path d="M589 450h1M642 450h1" stroke-width="8"/>
+    <path d="M599 478c13 10 28 10 41 0"/>
+    <path d="M733 641c0-78 59-143 134-143s135 65 135 143v108H733z" fill="#fff"/>
+    <path d="M867 490c-35 0-63-28-63-63v-31c0-35 28-63 63-63s63 28 63 63v31c0 35-28 63-63 63z" fill="#fff5eb"/>
+    <path d="M805 397c15-55 91-78 129-22" fill="#153a52"/>
+    <path d="M835 421h1M900 421h1" stroke-width="8"/>
+    <path d="M845 455c16 13 36 13 52 0"/>
+    <path d="M946 732l74-181c9-23 35-34 58-25 23 9 34 35 25 58l-73 181" fill="#fff"/>
+    <path d="M403 726c0-65 50-119 112-119s112 54 112 119v58H403z" fill="#d9edf7"/>
+    <path d="M515 604c-31 0-56-25-56-56v-14c0-31 25-56 56-56s56 25 56 56v14c0 31-25 56-56 56z" fill="#fff5eb"/>
+    <path d="M466 524c15-35 70-54 105-8" fill="#b7834e"/>
+    <path d="M491 549h1M539 549h1" stroke-width="8"/>
+    <path d="M500 574c12 9 27 9 39 0"/>
+  </g>
+  <path d="M106 731c68 41 137 67 238 78M1144 662c-76 71-161 112-265 129M723 29c132 3 238 33 337 91" fill="none" stroke="#5e8d59" stroke-width="9" stroke-linecap="round"/>
+  <path d="M95 654c-43 20-66 55-77 107M1055 719c31-21 65-29 106-29" fill="none" stroke="#5e8d59" stroke-width="8" stroke-linecap="round"/>
+  <text x="600" y="784" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="800" fill="#4f7d52">MUGLA</text>
+</svg>
