@@ -2,11 +2,12 @@
 
 import {FormEvent, useEffect, useState} from 'react'
 import {motion} from 'framer-motion'
+import Link from 'next/link'
 import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {CheckCircle2, Clock3, Eye, EyeOff, FolderKanban, KeyRound, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
+import {BarChart3, CheckCircle2, Clock3, Eye, EyeOff, FolderKanban, KeyRound, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 
@@ -195,6 +196,7 @@ export default function Admin() {
         <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
       </div>
       <div className="flex flex-wrap gap-3">
+        <Link href="/admin/dashboard/giris"><Button variant="outline"><BarChart3 size={17}/> Yonetici Dashboard</Button></Link>
         <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kisileri kapat' : 'Yetkili kisiler'}</Button>
         <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Manuel proje ekle'}</Button>
       </div>

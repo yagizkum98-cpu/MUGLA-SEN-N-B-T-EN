@@ -4,10 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {FolderKanban, Home, LogOut, ShieldCheck, ShoppingCart, UsersRound} from 'lucide-react'
+import {BarChart3, FolderKanban, Home, LogOut, ShieldCheck, ShoppingCart, UsersRound} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {logoutAdminDashboard} from '@/lib/admin-dashboard-auth'
 
 const citizen = [
   ['/vatandas/panel', 'Panelim', Home],
@@ -17,6 +18,7 @@ const citizen = [
 
 const admin = [
   ['/admin', 'Belediye Yonetimi', ShieldCheck],
+  ['/admin/dashboard', 'Yonetici Dashboard', BarChart3],
   ['/projeler', 'Proje Verileri', FolderKanban],
   ['/crm', 'CRM', UsersRound],
 ] as const
@@ -43,6 +45,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
 
   function signOut() {
     if (role === 'admin') {
+      logoutAdminDashboard()
       logoutAdmin()
       location.replace('/admin/giris')
       return
