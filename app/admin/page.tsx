@@ -11,6 +11,7 @@ import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban,
 import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
+import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
@@ -39,6 +40,9 @@ export default function Admin() {
   const [ownPassword, setOwnPassword] = useState<string | null>(null)
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [passwordChanging, setPasswordChanging] = useState(false)
+  const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
+  const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
+  const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const voteLeaderboard = projects
@@ -57,6 +61,14 @@ export default function Admin() {
 
   useEffect(() => {
     refreshAccounts()
+    const syncThemes = () => {
+      const settings = listAnnualThemeSettings()
+      setThemeSettings(settings)
+      setThemeDraft(settings.find(setting => setting.year === annualThemeYears[0])?.themes ?? ['all'])
+    }
+    syncThemes()
+    window.addEventListener(annualThemeChangeEvent, syncThemes)
+    return () => window.removeEventListener(annualThemeChangeEvent, syncThemes)
   }, [])
 
   function submitProject(event: FormEvent<HTMLFormElement>) {
@@ -183,6 +195,36 @@ export default function Admin() {
     }
   }
 
+  function themesForYear(year: string) {
+    return themeSettings.find(setting => setting.year === year)?.themes ?? ['all' as AnnualThemeId]
+  }
+
+  function changeThemeYear(year: string) {
+    setThemeYear(year)
+    setThemeDraft(themesForYear(year))
+  }
+
+  function toggleTheme(theme: AnnualThemeId, checked: boolean) {
+    setThemeDraft(current => {
+      if (theme === 'all') return checked ? ['all'] : []
+      const withoutAll = current.filter(item => item !== 'all')
+      const next = checked ? [...withoutAll, theme] : withoutAll.filter(item => item !== theme)
+      return next.length ? next : ['all']
+    })
+  }
+
+  function submitAnnualThemes(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (adminUser?.role !== 'super-admin') {
+      setMessage('Yillik tema ayarlarini sadece super admin guncelleyebilir.')
+      return
+    }
+    const updated = upsertAnnualThemeSetting(themeYear, themeDraft)
+    setThemeSettings(listAnnualThemeSettings())
+    setThemeDraft(updated.themes)
+    setMessage(`${updated.year} yili icin tema kuralı guncellendi.`)
+  }
+
   const stats = [
     ['Toplam proje', projects.length, 'Kayitli tum projeler', FolderKanban],
     ['Onay bekleyen', pendingProjects.length, 'Admin karari bekliyor', Clock3],
@@ -275,6 +317,42 @@ export default function Admin() {
           </div>
         </CardContent>
       </Card>}
+
+      <Card>
+        <CardHeader>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">YILLIK TEMA KURALLARI</p>
+          <h2 className="text-xl font-bold">Vatandas fikir gonderim temalari</h2>
+          <p className="text-sm text-mugla-navy/55">Super admin her yil icin tum temalari acabilir veya Afet, Cevre, Genclik, Sosyal Politikalar gibi birden fazla temayi secerek vatandasin sadece o alanlarda fikir gondermesini saglar.</p>
+        </CardHeader>
+        <CardContent className="grid gap-6 xl:grid-cols-[1fr_1.15fr]">
+          <section className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Yil</th><th>Acik temalar</th><th>Durum</th></tr></thead>
+              <tbody>{annualThemeYears.map(year => {
+                const themes = themesForYear(year)
+                const labels = themes.includes('all') ? ['Tum temalar'] : themes.map(theme => annualThemeOptions.find(option => option.id === theme)?.label ?? theme)
+                return <tr key={year} className="border-t border-mugla-navy/10">
+                  <td className="py-4 font-black">{year}</td>
+                  <td><div className="flex flex-wrap gap-2">{labels.map(label => <span key={label} className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65">{label}</span>)}</div></td>
+                  <td><span className={`rounded-full px-3 py-1 text-xs font-bold ${themes.includes('all') ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-mugla-orange'}`}>{themes.includes('all') ? 'Serbest' : 'Tema sinirli'}</span></td>
+                </tr>
+              })}</tbody>
+            </table>
+          </section>
+
+          <form onSubmit={submitAnnualThemes} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
+            <label><span className="mb-2 block text-sm font-semibold">Yil</span><select className={field} value={themeYear} onChange={event => changeThemeYear(event.target.value)} required>{annualThemeYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {annualThemeOptions.map(theme => <label key={theme.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3">
+                <input type="checkbox" value={theme.id} checked={themeDraft.includes(theme.id)} onChange={event => toggleTheme(theme.id, event.target.checked)} className="mt-1 h-4 w-4 accent-mugla-orange"/>
+                <span><b className="block text-sm">{theme.label}</b><small className="mt-1 block leading-5 text-mugla-navy/50">{theme.note}</small></span>
+              </label>)}
+            </div>
+            {adminUser?.role !== 'super-admin' && <p className="mt-4 rounded-xl bg-white p-3 text-sm font-semibold text-mugla-navy/55">Bu ayari yalnizca super admin degistirebilir. Diger roller mevcut kurallari gorur.</p>}
+            <div className="mt-5"><Button type="submit" variant="orange" disabled={adminUser?.role !== 'super-admin'}><ShieldCheck size={17}/> Tema kuralini kaydet</Button></div>
+          </form>
+        </CardContent>
+      </Card>
 
       {open && <Card>
         <CardHeader><h2 className="text-xl font-bold">Yeni proje kaydi</h2><p className="text-sm text-mugla-navy/55">Kaydedilen proje dogrudan onayli olarak proje listesine yansir.</p></CardHeader>
@@ -369,13 +447,13 @@ export default function Admin() {
             <div className="flex items-end gap-2"><Button type="submit" variant="orange"><CheckCircle2 size={16}/> Birleştir ve onayla</Button><Button type="button" variant="outline" onClick={() => setMergeSelection([])}>Seçimi temizle</Button></div>
           </form>}
 
-          {pendingProjects.length ? pendingProjects.map(project => <div key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4"><div className="flex flex-wrap items-start justify-between gap-4"><label className="flex min-w-0 flex-1 items-start gap-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" checked={mergeSelection.includes(project.id)} onChange={() => toggleMergeSelection(project.id)} /><span className="min-w-0"><p className="font-bold">{project.title}</p><p className="mt-1 text-sm text-mugla-navy/55">{project.district} - {project.category} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>{project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}</span></label><div className="flex shrink-0 gap-2"><Button size="sm" variant="orange" onClick={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje onaylandi ve oylamaya acildi.')}}><CheckCircle2 size={15}/>Onayla</Button><Button size="sm" variant="outline" onClick={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje reddedildi.')}}><XCircle size={15}/>Reddet</Button></div></div></div>) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
+          {pendingProjects.length ? pendingProjects.map(project => <div key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4"><div className="flex flex-wrap items-start justify-between gap-4"><label className="flex min-w-0 flex-1 items-start gap-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" checked={mergeSelection.includes(project.id)} onChange={() => toggleMergeSelection(project.id)} /><span className="min-w-0"><p className="font-bold">{project.title}</p><p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>{project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}</span></label><div className="flex shrink-0 gap-2"><Button size="sm" variant="orange" onClick={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje onaylandi ve oylamaya acildi.')}}><CheckCircle2 size={15}/>Onayla</Button><Button size="sm" variant="outline" onClick={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje reddedildi.')}}><XCircle size={15}/>Reddet</Button></div></div></div>) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
         </CardContent>
       </Card>
 
       <Card id="projeler">
         <CardHeader><h2 className="text-xl font-bold">Proje kayitlari</h2></CardHeader>
-        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[860px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Proje</th><th>Ilce</th><th>Butce</th><th>Durum</th><th>Onay</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-4 font-semibold">{project.title}</td><td>{project.district}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeProject(project.id)}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henuz proje girilmedi.</p><p className="mt-1 text-sm">Ilk kayitla birlikte sayaclar otomatik artar.</p></div>}</CardContent>
+        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[940px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Butce</th><th>Durum</th><th>Onay</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeProject(project.id)}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henuz proje girilmedi.</p><p className="mt-1 text-sm">Ilk kayitla birlikte sayaclar otomatik artar.</p></div>}</CardContent>
       </Card>
     </div>
   </AppShell></AdminAuthGate>

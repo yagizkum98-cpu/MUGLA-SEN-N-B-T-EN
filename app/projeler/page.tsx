@@ -61,6 +61,7 @@ const projectStatusOptions = [
   { value: 'Yapılamadı', label: 'Yapılamadı', description: 'Proje teknik, hukuki, mali veya saha koşulları nedeniyle uygulanamamıştır; gerekçe bilgisi açıklanır.' },
   { value: 'Ertelendi', label: 'Ertelendi', description: 'Proje mevcut dönemde uygulanmamış, sonraki takvim veya bütçe değerlendirmesine bırakılmıştır.' },
 ] as const
+const projectYearOptions = ['2026', '2027', '2028', '2029', '2030', '2031', '2032'] as const
 
 function statusClass(status: string) {
   if (status === 'Oylamada') return 'bg-green-50 text-green-700'
@@ -77,6 +78,11 @@ function CategoryBadge({project}:{project:ProjectRecord}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{project.category}</span>
 }
 
+function applicationYear(project: ProjectRecord) {
+  const year = new Date(project.createdAt).getFullYear()
+  return Number.isFinite(year) ? String(year) : ''
+}
+
 function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDetails}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void; onShowDetails: (project: ProjectRecord) => void}) {
   const status = String(project.status)
   const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
@@ -85,12 +91,14 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(status)}`}>{status}</span>
           <CategoryBadge project={project}/>
         </div>
         <h2 className="mt-2 truncate text-lg font-black">{project.title}</h2>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-mugla-navy/55">
           <span className="flex items-center gap-1.5"><MapPin size={14}/>{project.district}</span>
+          <span>Başvuru yılı: {applicationYear(project) || '-'}</span>
           <span>{formatBudget(project.budget)}</span>
           <span>{project.votes.toLocaleString('tr-TR')} destek</span>
         </div>
@@ -127,6 +135,7 @@ export default function Projects() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [yearFilter, setYearFilter] = useState('all')
   const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null)
   const [message, setMessage] = useState('')
@@ -152,17 +161,19 @@ export default function Projects() {
   }, [categoryFilter])
   const selectedStatus = projectStatusOptions.find(option => option.value === statusFilter) ?? projectStatusOptions[0]
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
-  const votingProjects = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
-  const winnerProjects = approved.filter(project => ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
+  const matchesYear = (project: ProjectRecord) => yearFilter === 'all' || applicationYear(project) === yearFilter
+  const votingProjects = approved.filter(project => matchesYear(project) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const winnerProjects = approved.filter(project => matchesYear(project) && ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
   const filtered = approved.filter(project => {
     const status = String(project.status)
     const matchesStatus = statusFilter === 'all' || status === statusFilter || (statusFilter === 'Tamamlandı' && status.startsWith('Tamamland'))
+    const matchesApplicationYear = matchesYear(project)
     const projectText = `${project.title} ${project.summary ?? ''}`.toLocaleLowerCase('tr')
     const matchesProject = projectText.includes(projectQuery.toLocaleLowerCase('tr'))
     const matchesDistrict = districtFilter === 'all' || project.district === districtFilter
     const matchesCategory = categoryFilter === 'all' || project.category === categoryFilter
     const matchesSubcategory = subcategoryFilter === 'all' || project.subcategory === subcategoryFilter
-    return matchesStatus && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory
+    return matchesStatus && matchesApplicationYear && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory
   })
 
   function addToBasket(id: string) {
@@ -292,7 +303,7 @@ export default function Projects() {
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>
             <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2"><CategoryBadge project={selectedProject}/><span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/><span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
           </div>
           <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
         </div>
@@ -316,11 +327,15 @@ export default function Projects() {
       </section>}
 
       <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_160px_180px_180px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_130px_150px_160px_170px_170px]">
           <label className="flex h-11 items-center gap-2 rounded-lg border border-mugla-navy/10 px-3">
             <Search size={17} className="text-mugla-navy/45"/>
             <input value={projectQuery} onChange={event => setProjectQuery(event.target.value)} placeholder="Proje ara" className="w-full bg-transparent text-sm outline-none"/>
           </label>
+          <select value={yearFilter} onChange={event => setYearFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            <option value="all">Tüm yıllar</option>
+            {projectYearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+          </select>
           <select value={districtFilter} onChange={event => setDistrictFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
             <option value="all">Tüm ilçeler</option>
             {districts.map(district => <option key={district} value={district}>{district}</option>)}
@@ -343,9 +358,9 @@ export default function Projects() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Proje durumu</p>
               <h2 className="mt-1 text-lg font-black">{selectedStatus.label}</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{selectedStatus.description}</p>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-mugla-navy/60">{selectedStatus.description} Yıl filtresi, projenin başvurulduğu yıl olan kayıt tarihine göre çalışır.</p>
             </div>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/55">{filtered.length} proje</span>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/55">{yearFilter === 'all' ? 'Tüm yıllar' : yearFilter} · {filtered.length} proje</span>
           </div>
         </div>
       </div>

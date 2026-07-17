@@ -7,6 +7,7 @@ export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
 
 export type ProjectRecord={
   id:string
+  projectCode:string
   title:string
   category:string
   subcategory?:string
@@ -36,7 +37,7 @@ export type ProjectRecord={
   mergeNote?:string
 }
 
-export type NewProject=Omit<ProjectRecord,'id'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}
+export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}
 
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
@@ -49,8 +50,34 @@ function readProjects():ProjectRecord[]{
   }catch{return []}
 }
 
+function projectYear(project:{createdAt?:string}){
+  const year=new Date(project.createdAt??'').getFullYear()
+  return Number.isFinite(year)?year:new Date().getFullYear()
+}
+
+function fallbackProjectCode(project:{id:string;createdAt?:string}){
+  return `MSB-${projectYear(project)}-${project.id.replace(/[^a-z0-9]/gi,'').slice(0,6).toLocaleUpperCase('tr').padEnd(6,'0')}`
+}
+
+function nextProjectCode(projects:ProjectRecord[],createdAt:string){
+  const year=projectYear({createdAt})
+  const prefix=`MSB-${year}-`
+  const used=new Set(projects.map(project=>project.projectCode??fallbackProjectCode(project)))
+  let index=projects.filter(project=>(project.projectCode??fallbackProjectCode(project)).startsWith(prefix)).length+1
+  let code=`${prefix}${String(index).padStart(4,'0')}`
+  while(used.has(code)){
+    index+=1
+    code=`${prefix}${String(index).padStart(4,'0')}`
+  }
+  return code
+}
+
 function withDefaults(project:ProjectRecord):ProjectRecord{
   return {...project,moderationStatus:project.moderationStatus??'Onaylandı'}
+}
+
+function normalizeProject(project:ProjectRecord):ProjectRecord{
+  return {...project,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus:project.moderationStatus??'Onaylandı'}
 }
 
 function isPublished(project:ProjectRecord){
@@ -62,7 +89,7 @@ export function useProjects(){
   const[ready,setReady]=useState(false)
 
   useEffect(()=>{
-    const sync=()=>{setProjects(readProjects().map(withDefaults));setReady(true)}
+    const sync=()=>{setProjects(readProjects().map(normalizeProject));setReady(true)}
     sync()
     window.addEventListener('storage',sync)
     window.addEventListener(CHANGE_EVENT,sync)
@@ -76,19 +103,22 @@ export function useProjects(){
   },[])
 
   const addProject=useCallback((input:NewProject)=>{
-    const project:ProjectRecord={...input,moderationStatus:input.moderationStatus??'Bekliyor',id:crypto.randomUUID(),votes:0,progress:input.status==='Tamamlandı'?100:0,createdAt:new Date().toISOString()}
-    save([project,...readProjects()])
+    const current=readProjects().map(normalizeProject)
+    const createdAt=new Date().toISOString()
+    const project:ProjectRecord={...input,projectCode:nextProjectCode(current,createdAt),moderationStatus:input.moderationStatus??'Bekliyor',id:crypto.randomUUID(),votes:0,progress:input.status==='Tamamlandı'?100:0,createdAt}
+    save([project,...current])
     return project
   },[save])
 
   const removeProject=useCallback((id:string)=>save(readProjects().filter(project=>project.id!==id)),[save])
   const mergeProjects=useCallback((ids:string[],input:NewProject&{mergeNote?:string})=>{
     const uniqueIds=Array.from(new Set(ids))
-    const current=readProjects()
+    const current=readProjects().map(normalizeProject)
     const sources=current.filter(project=>uniqueIds.includes(project.id))
-    if(sources.length<2)throw new Error('Birleştirmek için en az iki başvuru seçin.')
+    if(sources.length<2)throw new Error('BirleÅŸtirmek iÃ§in en az iki baÅŸvuru seÃ§in.')
     const project:ProjectRecord={
       ...input,
+      projectCode:nextProjectCode(current,new Date().toISOString()),
       moderationStatus:'Onaylandı',
       id:crypto.randomUUID(),
       votes:0,

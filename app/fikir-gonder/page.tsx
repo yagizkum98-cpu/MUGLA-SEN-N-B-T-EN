@@ -9,7 +9,8 @@ import {useProjects} from '@/lib/projects-store'
 import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
 import {getCurrentUser} from '@/lib/local-auth'
 import {createClient} from '@/lib/supabase/client'
-import {projectCategories,subcategoriesFor,type ProjectCategory} from '@/lib/project-taxonomy'
+import {projectCategories,type ProjectCategory} from '@/lib/project-taxonomy'
+import {allowedCategoriesForYear,allowedSubcategoriesForYear,annualThemeChangeEvent,annualThemeOptions,getAnnualThemeSetting,isAllThemesOpen,isProjectThemeAllowed} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
@@ -36,6 +37,12 @@ export default function IdeaForm(){
   const total=files.reduce((sum,file)=>sum+file.size,0)
   const currentUser=getCurrentUser()
   const currentYear=new Date().getFullYear()
+  const currentYearKey=String(currentYear)
+  const[themeVersion,setThemeVersion]=useState(0)
+  const categoryOptions=useMemo(()=>allowedCategoriesForYear(currentYearKey),[currentYearKey,themeVersion])
+  const subcategoryOptions=useMemo(()=>allowedSubcategoriesForYear(currentYearKey,category),[currentYearKey,category,themeVersion])
+  const activeThemeSetting=getAnnualThemeSetting(currentYearKey)
+  const activeThemeLabels=isAllThemesOpen(currentYearKey)?['Tum temalar']:activeThemeSetting.themes.map(theme=>annualThemeOptions.find(option=>option.id===theme)?.label??theme)
   const yearlyIdeaCount=useMemo(()=>{
     if(!currentUser)return 0
     return projects.filter(project=>{
@@ -59,6 +66,16 @@ export default function IdeaForm(){
     check()
   },[])
 
+  useEffect(()=>{
+    const sync=()=>setThemeVersion(value=>value+1)
+    window.addEventListener(annualThemeChangeEvent,sync)
+    return()=>window.removeEventListener(annualThemeChangeEvent,sync)
+  },[])
+
+  useEffect(()=>{
+    if(categoryOptions.length&&!categoryOptions.some(([name])=>name===category))setCategory(categoryOptions[0][0])
+  },[categoryOptions,category])
+
   function addFiles(list:FileList|null){
     if(!list)return
     setError('')
@@ -78,6 +95,12 @@ export default function IdeaForm(){
     const data=new FormData(form)
     const selectedCountry=countryOptions.find(x=>x.code===countryCode)?.name??countryCode
     const selectedCategory=String(data.get('category'))
+    const selectedSubcategory=String(data.get('subcategory'))
+    if(!isProjectThemeAllowed(currentYearKey,selectedCategory,selectedSubcategory)){
+      setError(`${currentYear} yili icin bu tema basvuruya acik degil. Lutfen acik temalardan bir kategori secin.`)
+      setSubmitting(false)
+      return
+    }
     const user=getCurrentUser()
     if(user){
       const sentThisYear=projects.filter(project=>{
@@ -103,7 +126,7 @@ export default function IdeaForm(){
       province:String(data.get('province')).trim(),
       district:String(data.get('district')).trim(),
       category:selectedCategory,
-      subcategory:String(data.get('subcategory')),
+      subcategory:selectedSubcategory,
       applicantType:String(data.get('applicantType')),
       budget:0,
       status:'Başvuru',
@@ -117,10 +140,10 @@ export default function IdeaForm(){
     })
     try{
       await saveProjectFiles(project.id,files)
-      setSuccess(project.id)
+      setSuccess(project.projectCode)
       setFiles([])
       form.reset()
-      setCategory('Ulaşım')
+      setCategory(categoryOptions[0]?.[0]??'Ulaşım')
     }catch{
       removeProject(project.id)
       setError('Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
@@ -136,6 +159,7 @@ export default function IdeaForm(){
       <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-green-50 text-mugla-green"><CheckCircle2 size={38}/></span>
       <p className="mt-7 text-xs font-bold tracking-[.2em] text-mugla-orange">BASVURU ALINDI</p>
       <h1 className="mt-2 text-3xl font-bold">Fikriniz admin onayina gonderildi.</h1>
+      <div className="mx-auto mt-5 inline-flex rounded-full bg-mugla-sand px-4 py-2 text-sm font-black text-mugla-navy/70">Proje kodu: {success}</div>
       <p className="mt-4 leading-7 text-mugla-navy/55">Basvurunuz Bekliyor durumuyla kaydedildi. Admin onayladiginda proje kesfet alaninda oylamaya acilacak.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/projeler"><Button variant="orange">Projeleri goruntule</Button></Link>
@@ -161,6 +185,11 @@ export default function IdeaForm(){
         <div className="mt-6 rounded-2xl bg-white p-4 text-sm shadow-soft">
           <p className="font-bold text-mugla-navy">Yıllık fikir hakkı</p>
           <p className="mt-1 text-mugla-navy/60">{currentYear} döneminde {yearlyIdeaCount}/{YEARLY_IDEA_LIMIT} fikir gönderdiniz. Kalan hakkınız: {remainingIdeas}</p>
+        </div>
+        <div className="mt-4 rounded-2xl bg-white p-4 text-sm shadow-soft">
+          <p className="font-bold text-mugla-navy">{currentYear} açık temaları</p>
+          <div className="mt-3 flex flex-wrap gap-2">{activeThemeLabels.map(label=><span key={label} className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65">{label}</span>)}</div>
+          <p className="mt-3 text-mugla-navy/55">Bu yil fikirler yalnizca super admin tarafindan acilan tema alanlarindan gonderilebilir.</p>
         </div>
         <div className="mt-8 space-y-4 text-sm text-mugla-navy/65">{['Tum zorunlu alanlari doldurun.','Bir yıl dönemi içinde en fazla 5 proje fikri gönderebilirsiniz.','Kategori ve alt kategori basvuruyu ilgili birime yonlendirir.','PDF, Word, PowerPoint ve Excel dosyalari ekleyebilirsiniz.','Dosyalarin toplam boyutu en fazla 100 MB olabilir.'].map((text,index)=><div key={text} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white font-bold text-mugla-cyan">{index+1}</span><p className="pt-1">{text}</p></div>)}</div>
       </aside>
@@ -190,10 +219,10 @@ export default function IdeaForm(){
 
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <legend className="px-2 font-bold">Proje siniflandirmasi</legend>
-            <p className="mb-4 text-sm text-mugla-navy/50">Kategori secildiginde yalnizca o kategoriye ait alt kategoriler acilir.</p>
+            <p className="mb-4 text-sm text-mugla-navy/50">Kategori secildiginde yalnizca {currentYear} yili icin acik tema ve alt kategoriler acilir.</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>setCategory(e.target.value as ProjectCategory)} required>{projectCategories.map(([name])=><option key={name}>{name}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoriesFor(category).map(name=><option key={name}>{name}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>setCategory(e.target.value as ProjectCategory)} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoryOptions.map(name=><option key={name}>{name}</option>)}</select></label>
             </div>
             {category==='Diğer'&&<p className="mt-3 rounded-2xl bg-white p-4 text-sm text-mugla-navy/55">Bu kategori altinda yeni bir alan onerilebilir. Alt kategori olarak Diger secerseniz oneriyi proje ozeti icinde belirtin.</p>}
           </fieldset>
@@ -212,7 +241,7 @@ export default function IdeaForm(){
 
           {error&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
           <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yuklediginiz belgelerde kisisel veya hassas bilgi bulunmadigindan emin olun. Basvuru gonderildiginde proje havuzuna kaydedilir.</p></div>
-          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
+          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length||!subcategoryOptions.length} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length||!subcategoryOptions.length?'Bu yil icin acik tema yok':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
