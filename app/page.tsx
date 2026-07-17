@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, Vote} from 'lucide-react'
+import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, UserRound, Vote} from 'lucide-react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -40,12 +40,18 @@ export default function Home() {
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
           <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
+          <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
         </nav>
-        <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">
-          Fikir gonder <ArrowRight size={16}/>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/giris?next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
+            Panel <UserRound size={16}/>
+          </Link>
+          <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">
+            Fikir gonder <ArrowRight size={16}/>
+          </Link>
+        </div>
       </div>
     </header>
 
@@ -105,6 +111,7 @@ export default function Home() {
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">İlk aşamada hedef basit: vatandaş fikir göndersin, belediye projeleri yayınlasın, herkes durumu kolayca takip etsin.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-5 py-3 font-bold text-white"><Lightbulb size={18}/> Fikir gonder</Link>
+            <Link href="/giris?next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full bg-mugla-cyan px-5 py-3 font-bold text-mugla-navy"><UserRound size={18}/> Vatandaş Paneli</Link>
             <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy"><FolderKanban size={18}/> Projeleri gör</Link>
           </div>
         </div>
@@ -130,7 +137,7 @@ export default function Home() {
     </section>
 
     <section className="border-y border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-4">
         <Link href="/projeler" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FolderKanban className="text-mugla-orange"/>
           <h3 className="mt-4 text-xl font-bold">Projeler</h3>
@@ -140,6 +147,11 @@ export default function Home() {
           <Lightbulb className="text-mugla-cyan"/>
           <h3 className="mt-4 text-xl font-bold">Fikir Gönder</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Muğla için önerini kısa bir başvuru formuyla ilet.</p>
+        </Link>
+        <Link href="/giris?next=/vatandas/panel" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
+          <LockKeyhole className="text-mugla-blue"/>
+          <h3 className="mt-4 text-xl font-bold">Vatandaş Paneli</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kayıt ol, aktivasyon koduyla doğrula, giriş yap ve başvurularını panelden takip et.</p>
         </Link>
         <Link href="/kitapcik" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FileText className="text-mugla-green"/>
@@ -155,8 +167,8 @@ export default function Home() {
           <p className="text-sm font-bold text-mugla-cyan">{completed.length} tamamlanan proje</p>
           <h2 className="mt-2 text-2xl font-black">İlk sürüm için odak: az ekran, net yol, gerçek veri.</h2>
         </div>
-        <Link href="/giris?next=/fikir-gonder" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy md:mt-0">
-          Basla <CheckCircle2 size={18}/>
+        <Link href="/giris?next=/vatandas/panel" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy md:mt-0">
+          Panele basla <CheckCircle2 size={18}/>
         </Link>
       </div>
     </section>
@@ -169,7 +181,7 @@ export default function Home() {
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
-          <Link href="/giris?next=/dashboard">Dashboard</Link>
+          <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
           <Link href="/admin/giris">Admin</Link>
         </div>
       </div>
