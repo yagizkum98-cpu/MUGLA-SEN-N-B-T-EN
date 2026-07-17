@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
       <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60"><ArrowLeft size={16}/> Ana sayfa</Link>
       <div className="my-auto max-w-xl">
         <span className="grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-mugla-cyan"><ShieldCheck size={32}/></span>
-        <h1 className="mt-8 text-5xl font-bold leading-tight">Admin alani yalnizca tanimli yetkililere aciktir.</h1>
+        <h1 className="mt-8 text-5xl font-bold leading-tight">Belediye paneli yalnizca tanimli yetkililere aciktir.</h1>
         <p className="mt-5 text-lg leading-8 text-white/60">Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.</p>
       </div>
     </section>
@@ -41,13 +41,13 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-mugla-navy/55 lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YETKILI GIRISI</p>
-        <h2 className="mt-2 text-3xl font-bold">Admin paneli</h2>
+        <h2 className="mt-2 text-3xl font-bold">Belediye Paneli</h2>
         <p className="mt-3 text-sm leading-6 text-mugla-navy/55">Tanimli yetkili hesabinin e-posta ve sifresiyle giris yap.</p>
         <form onSubmit={submit} className="mt-7 space-y-4">
           <label className="block"><span className="mb-2 block text-sm font-semibold">E-posta</span><input name="email" type="email" required className={field}/></label>
           <label className="block"><span className="mb-2 block text-sm font-semibold">Sifre</span><input name="password" type="password" required className={field}/></label>
           {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
-          <Button type="submit" variant="orange" disabled={loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading ? 'Giris yapiliyor...' : 'Admin paneline gir'}</Button>
+          <Button type="submit" variant="orange" disabled={loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading ? 'Giris yapiliyor...' : 'Belediye paneline gir'}</Button>
         </form>
       </div>
     </section>

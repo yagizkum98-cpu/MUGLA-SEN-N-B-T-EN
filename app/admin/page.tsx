@@ -185,7 +185,7 @@ export default function Admin() {
   async function deletePerson(id: string) {
     if (!adminUser) return
     const target = accounts.find(account => account.id === id)
-    if (!target || !confirm(`${target.name} hesabini sistemden kaldirmak istiyor musun? Bu kisi artik admin paneline giremez.`)) return
+    if (!target || !confirm(`${target.name} hesabini sistemden kaldirmak istiyor musun? Bu kisi artik belediye paneline giremez.`)) return
     try {
       await removeAdminAccount(id, adminUser)
       setMessage('Yetkili hesap silindi.')
@@ -227,7 +227,7 @@ export default function Admin() {
 
   const stats = [
     ['Toplam proje', projects.length, 'Kayitli tum projeler', FolderKanban],
-    ['Onay bekleyen', pendingProjects.length, 'Admin karari bekliyor', Clock3],
+    ['Onay bekleyen', pendingProjects.length, 'Belediye karari bekliyor', Clock3],
     ['Oylamada', projects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(p.status))).length, 'Projeler sekmesinde', CheckCircle2],
     ['Yetkili kisi', accounts.length, 'Tanimli admin hesaplari', ShieldCheck],
   ] as const
@@ -236,7 +236,7 @@ export default function Admin() {
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
       <div>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YONETIM MERKEZI</p>
-        <h1 className="text-2xl font-bold">Admin Paneli</h1>
+        <h1 className="text-2xl font-bold">Belediye Paneli</h1>
         <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -293,7 +293,7 @@ export default function Admin() {
       {peopleOpen && <Card>
         <CardHeader>
           <h2 className="text-xl font-bold">Yetkili kisiler</h2>
-          <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar admin paneline girebilir. Birden fazla yetkili kisi eklenebilir.</p>
+          <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar belediye paneline girebilir. Birden fazla yetkili kisi eklenebilir.</p>
         </CardHeader>
         <CardContent className="space-y-5">
           {adminUser?.role !== 'yetkili' && <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -375,7 +375,7 @@ export default function Admin() {
           <div>
             <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE DASHBOARDLARI</p>
             <h2 className="mt-1 text-xl font-bold">13 ilcenin panel ve API bilgileri</h2>
-            <p className="mt-1 text-sm text-mugla-navy/55">Bu alan yalnizca admin tarafindadir; vatandas panelinde ilce dashboard adresleri ve kodlari gosterilmez.</p>
+            <p className="mt-1 text-sm text-mugla-navy/55">Bu alan yalnizca belediye panelindedir; vatandas panelinde ilce dashboard adresleri ve kodlari gosterilmez.</p>
           </div>
           <Link href="/dashboard" className="hidden text-sm font-semibold text-mugla-blue sm:inline-flex">Tam dashboard <ArrowUpRight className="ml-1" size={15}/></Link>
         </CardHeader>

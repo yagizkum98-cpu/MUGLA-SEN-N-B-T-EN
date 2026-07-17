@@ -105,7 +105,7 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
   ]
 
   const statusCards = [
-    ['Bekleyen', pendingProjects.length, 'Admin onayı bekleyen başvurular', Clock3, 'text-mugla-orange'],
+    ['Bekleyen', pendingProjects.length, 'Belediye onayı bekleyen başvurular', Clock3, 'text-mugla-orange'],
     ['Onaylanan', approvedProjects.length, 'Yayına ve rapora alınan projeler', CheckCircle2, 'text-green-600'],
     ['Reddedilen', rejectedProjects.length, 'Uygun bulunmayan başvurular', ShieldCheck, 'text-red-600'],
     ['Tamamlanan', completedProjects.length, 'Uygulaması biten projeler', BarChart3, 'text-mugla-blue'],
@@ -116,7 +116,7 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
       <div>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">{district ? 'İLÇE YÖNETİCİ ALANI' : 'CANLI BELEDİYE VERİ ALANI'}</p>
         <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu dashboard admin paneliyle aynı canlı verileri okur. Veri girişi yoksa tüm göstergeler 0’dan başlar; belediye proje, vatandaş ve oylama verisi girdikçe otomatik dolar.</p>
+        <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu dashboard belediye paneliyle aynı canlı verileri okur. Veri girişi yoksa tüm göstergeler 0’dan başlar; belediye proje, vatandaş ve oylama verisi girdikçe otomatik dolar.</p>
       </div>
       <div className="flex flex-wrap gap-3">
         <Link href="/admin"><Button variant="orange"><Plus size={17}/> Veri girişi</Button></Link>
@@ -134,7 +134,7 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
           <CardHeader>
             <p className="text-xs font-bold tracking-widest text-mugla-cyan">YÖNETİCİ ÖZETİ</p>
             <h2 className="text-xl font-bold">Canlı veri durumu</h2>
-            <p className="text-sm text-mugla-navy/55">Belediyenin admin panelinden girdiği proje kayıtları, vatandaş başvuruları, oylar ve CRM kayıtları bu alana yansır.</p>
+            <p className="text-sm text-mugla-navy/55">Belediyenin belediye panelinden girdiği proje kayıtları, vatandaş başvuruları, oylar ve CRM kayıtları bu alana yansır.</p>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {statusCards.map(([label, value, note, Icon, color]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 p-4">
@@ -153,7 +153,7 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
             <h2 className="text-xl font-bold">Bilgi alanı</h2>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">Yönetici; projeyi, başvuru durumunu, bütçeyi, ilçe bilgisini ve vatandaş kayıtlarını admin panelinden girer. Dashboard bu kayıtları ayrı bir işlem yapmadan canlı gösterir.</p>
+            <p className="text-sm leading-6 text-white/65">Yönetici; projeyi, başvuru durumunu, bütçeyi, ilçe bilgisini ve vatandaş kayıtlarını belediye panelinden girer. Dashboard bu kayıtları ayrı bir işlem yapmadan canlı gösterir.</p>
             <div className="grid gap-3">
               <Link href="/admin" className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold text-mugla-navy"><span className="flex items-center gap-2"><FileText size={16}/> Proje ve onay girişi</span><ArrowUpRight size={16}/></Link>
               <Link href="/crm" className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold text-white"><span className="flex items-center gap-2"><UsersRound size={16}/> Vatandaş / CRM verisi</span><ArrowUpRight size={16}/></Link>
@@ -199,7 +199,7 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/55"><span className="inline-flex items-center gap-1"><MapPin size={12}/>{project.district}</span><span>{project.moderationStatus}</span><span>{formatBudget(project.budget)}</span></div>
               </div>
               <div className="text-right"><strong>{project.votes.toLocaleString('tr-TR')}</strong><p className="text-xs text-mugla-navy/45">oy</p></div>
-            </Link>) : <EmptyState title="Henüz veri girişi yok." text="Admin panelinden ilk proje girildiğinde bu alan canlı olarak dolacak."/>}
+            </Link>) : <EmptyState title="Henüz veri girişi yok." text="Belediye panelinden ilk proje girildiğinde bu alan canlı olarak dolacak."/>}
           </CardContent>
         </Card>
       </section>

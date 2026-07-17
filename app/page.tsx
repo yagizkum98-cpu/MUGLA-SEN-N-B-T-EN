@@ -40,7 +40,6 @@ export default function Home() {
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
           <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
-          <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
         </nav>
@@ -116,7 +115,7 @@ export default function Home() {
           </div>
         </div>
         <div className="grid content-end gap-3">
-          <Stat label="Yayındaki proje" value={String(approved.length)} note="Admin onayından geçen kayıtlar"/>
+          <Stat label="Yayındaki proje" value={String(approved.length)} note="Belediye onayından geçen kayıtlar"/>
           <Stat label="Aktif oylama" value={String(active.length)} note="Vatandasin oy verebildigi projeler"/>
           <Stat label="Görünen bütçe" value={formatBudget(totalBudget)} note="Onaylı proje portföyü"/>
         </div>
@@ -182,7 +181,7 @@ export default function Home() {
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
           <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
-          <Link href="/admin/giris">Admin</Link>
+          <Link href="/admin/giris">Belediye Paneli</Link>
         </div>
       </div>
     </footer>

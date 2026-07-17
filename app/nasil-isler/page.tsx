@@ -144,7 +144,7 @@ function stageIndex(status: ProjectRecord['status']) {
 }
 
 function stageNote(project: ProjectRecord) {
-  if (project.moderationStatus === 'Bekliyor') return 'Admin onayı bekleniyor.'
+  if (project.moderationStatus === 'Bekliyor') return 'Belediye onayı bekleniyor.'
   if (project.moderationStatus === 'Reddedildi') return 'Yayın dışı bırakıldı.'
   if (project.status === 'Başvuru') return 'Başvuru kaydı alındı.'
   if (project.status === 'İncelemede') return 'Uzman ekip ön inceleme yapıyor.'

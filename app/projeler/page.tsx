@@ -369,7 +369,7 @@ export default function Projects() {
         {filtered.length ? filtered.map(project => <ProjectRow key={project.id} project={project} inBasket={basket.includes(project.id)} confirmed={confirmed.includes(project.id)} votingOpen={votingOpen} onAdd={addToBasket} onShowDetails={showDetails}/>) : <div className="p-10 text-center">
           <CheckCircle2 className="mx-auto text-mugla-orange"/>
           <h2 className="mt-3 text-xl font-bold">Proje bulunamadi.</h2>
-          <p className="mt-2 text-sm text-mugla-navy/55">Filtreyi temizleyebilir veya admin panelinden yeni proje yayinlayabilirsin.</p>
+          <p className="mt-2 text-sm text-mugla-navy/55">Filtreyi temizleyebilir veya belediye panelinden yeni proje yayinlayabilirsin.</p>
         </div>}
       </section>
     </section>
