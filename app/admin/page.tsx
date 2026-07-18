@@ -7,11 +7,12 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, KeyRound, LayoutDashboard, LockKeyhole, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
+import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
+import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
@@ -29,8 +30,13 @@ function CategoryBadge({label, color}: {label: string; color: string}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
 }
 
+function topicLabel(topic: ContactRecord['topic']) {
+  return topic === 'Gorus' ? 'Gorus' : topic === 'Oneri' ? 'Oneri' : 'Soru'
+}
+
 export default function Admin() {
   const {projects, addProject, mergeProjects, removeProject, reviewProject} = useProjects()
+  const {records: contactRecords, removeContactRecord} = useContactRecords()
   const [open, setOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(true)
   const [message, setMessage] = useState('')
@@ -232,6 +238,12 @@ export default function Admin() {
     ['Yetkili kisi', accounts.length, 'Tanimli admin hesaplari', ShieldCheck],
   ] as const
 
+  const contactGroups = [
+    ['Vatandas verileri', contactRecords, 'Formu dolduran kisilerin iletisim bilgileri'],
+    ['Gorus ve oneriler', contactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
+    ['Sorular', contactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
+  ] as const
+
   return <AdminAuthGate><AppShell role="admin">
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
       <div>
@@ -369,6 +381,44 @@ export default function Admin() {
       </Card>}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
+
+      <Card id="iletisim">
+        <CardHeader>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">KATILIMCI BUTCE ILETISIM</p>
+          <h2 className="text-xl font-bold">Vatandas iletisim talepleri</h2>
+          <p className="text-sm text-mugla-navy/55">Bu alan super admin, admin ve yetkili hesaplar icin canli calisir. Form baslangicta bostur; vatandas form doldurdukca kayitlar otomatik gorunur.</p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 lg:grid-cols-3">
+            {contactGroups.map(([label, items, note]) => <section key={label} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div><h3 className="font-bold">{label}</h3><p className="mt-1 text-xs leading-5 text-mugla-navy/50">{note}</p></div>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-mugla-cyan"><Mail size={18}/></span>
+              </div>
+              <p className="mt-5 text-3xl font-black">{items.length}</p>
+            </section>)}
+          </div>
+
+          {contactRecords.length ? <div className="overflow-x-auto">
+            <table className="w-full min-w-[1040px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Tarih</th><th>Vatandas verileri</th><th>Alan</th><th>Konu</th><th>Mesaj</th><th>KVKK</th><th className="text-right">Islem</th></tr></thead>
+              <tbody>{contactRecords.map(record => <tr key={record.id} className="border-t border-mugla-navy/10 align-top">
+                <td className="py-4 text-mugla-navy/55">{new Date(record.createdAt).toLocaleString('tr-TR')}</td>
+                <td className="py-4">
+                  <b className="block">{record.name}</b>
+                  <span className="mt-1 block text-xs text-mugla-navy/55">{record.phone}</span>
+                  <span className="mt-1 block text-xs text-mugla-navy/55">{record.email}</span>
+                </td>
+                <td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65">{topicLabel(record.topic)}</span></td>
+                <td className="py-4 font-semibold">{record.subject}</td>
+                <td className="py-4"><p className="max-w-md whitespace-pre-wrap leading-6 text-mugla-navy/65">{record.message}</p></td>
+                <td className="py-4"><span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">{record.kvkkAccepted ? 'Onayli' : 'Yok'}</span></td>
+                <td className="py-4 text-right"><button aria-label={`${record.name} iletisim kaydini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeContactRecord(record.id)}><Trash2 size={17}/></button></td>
+              </tr>)}</tbody>
+            </table>
+          </div> : <div className="py-12 text-center text-mugla-navy/50"><Mail className="mx-auto mb-3"/><p className="font-semibold">Henuz iletisim talebi yok.</p><p className="mt-1 text-sm">Vatandaslar iletisim formunu doldurdugunda bu alan otomatik guncellenir.</p></div>}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">

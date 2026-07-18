@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, UserRound, Vote} from 'lucide-react'
+import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, Mail, UserRound, Vote} from 'lucide-react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -42,6 +42,7 @@ export default function Home() {
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
+          <Link href="/iletisim">İletişim</Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/giris?next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
@@ -136,7 +137,7 @@ export default function Home() {
     </section>
 
     <section className="border-y border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-5">
         <Link href="/projeler" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FolderKanban className="text-mugla-orange"/>
           <h3 className="mt-4 text-xl font-bold">Projeler</h3>
@@ -156,6 +157,11 @@ export default function Home() {
           <FileText className="text-mugla-green"/>
           <h3 className="mt-4 text-xl font-bold">Muğla Senin Bütçen Kitapçığı</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kitapçık PDF’i hazır olduğunda bu sekmede yayınlanır.</p>
+        </Link>
+        <Link href="/iletisim" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
+          <Mail className="text-mugla-orange"/>
+          <h3 className="mt-4 text-xl font-bold">İletişim</h3>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Katılımcı bütçe süreciyle ilgili görüş, öneri ve sorularını ilet.</p>
         </Link>
       </div>
     </section>
@@ -180,6 +186,7 @@ export default function Home() {
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
+          <Link href="/iletisim">İletişim</Link>
           <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
           <Link href="/admin/giris">Belediye Paneli</Link>
         </div>

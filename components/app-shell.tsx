@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {FolderKanban, Home, LogOut, ShieldCheck, ShoppingCart, UserRound, UsersRound} from 'lucide-react'
+import {FolderKanban, Home, LogOut, Mail, ShieldCheck, ShoppingCart, UserRound, UsersRound} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, type AdminAccount} from '@/lib/admin-auth'
@@ -20,6 +20,7 @@ const admin = [
   ['/admin', 'Belediye Yonetimi', ShieldCheck],
   ['/dashboard', 'Ilce Dashboardlari', Home],
   ['/projeler', 'Proje Verileri', FolderKanban],
+  ['/admin#iletisim', 'Iletisim Talepleri', Mail],
   ['/crm', 'CRM', UsersRound],
 ] as const
 
