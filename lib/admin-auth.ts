@@ -18,8 +18,8 @@ const ACCOUNTS_KEY = 'mugla-admin-accounts-v1'
 const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'superadmin@mugla.bel.tr'
-const SUPER_ADMIN_PASSWORD = 'Superadmin123'
-const LEGACY_SUPER_ADMIN_PASSWORD = 'SuperAdmin123'
+const SUPER_ADMIN_PASSWORD = 'Superadmin1234567890'
+const LEGACY_SUPER_ADMIN_PASSWORDS = ['Superadmin123', 'SuperAdmin123']
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = ''
@@ -86,8 +86,8 @@ async function ensureSeedAccount() {
   if (accounts.length) {
     const superAdmin = accounts.find(account => account.email === SUPER_ADMIN_EMAIL && account.role === 'super-admin')
     if (!superAdmin) return accounts
-    const legacyHash = await derive(LEGACY_SUPER_ADMIN_PASSWORD, base64ToBytes(superAdmin.salt))
-    if (legacyHash !== superAdmin.passwordHash) return accounts
+    const legacyHashes = await Promise.all(LEGACY_SUPER_ADMIN_PASSWORDS.map(password => derive(password, base64ToBytes(superAdmin.salt))))
+    if (!legacyHashes.includes(superAdmin.passwordHash)) return accounts
     const salt = crypto.getRandomValues(new Uint8Array(16))
     const passwordHash = await derive(SUPER_ADMIN_PASSWORD, salt)
     const updated = accounts.map(account => account.id === superAdmin.id ? {
