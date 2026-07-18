@@ -179,7 +179,7 @@ export default function Admin() {
       setOwnPassword(newPassword)
       setPasswordVisible(false)
       formElement.reset()
-      setMessage('Sifren guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
+      setMessage('Sifren kendi sectigin yeni sifreyle guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
       await refreshAccounts()
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
@@ -263,7 +263,7 @@ export default function Admin() {
       <Card>
         <CardHeader>
           <h2 className="text-xl font-bold">Kendi hesabim</h2>
-          <p className="text-sm text-mugla-navy/55">Super admin ilk sifreyi tanimlar; admin ve yetkililer kendi sifresini buradan gunceller. Sifre alani yalnizca oturumdaki kullanici icin acilir.</p>
+          <p className="text-sm text-mugla-navy/55">Super admin, admin ve yetkili rollerinin tamami kendi hesabinin sifresini buradan istedigi yeni sifreyle guncelleyebilir. Sifre alani yalnizca oturumdaki kullanici icin acilir.</p>
         </CardHeader>
         <CardContent className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]">
           <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
@@ -295,9 +295,10 @@ export default function Admin() {
           </section>
           <form onSubmit={submitOwnPassword} className="grid gap-4 md:grid-cols-3">
             <label><span className="mb-2 block text-sm font-semibold">Mevcut sifre</span><input className={field} name="currentPassword" type="password" required minLength={8}/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input className={field} name="newPassword" type="password" required minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Istediğiniz yeni sifre</span><input className={field} name="newPassword" type="password" required minLength={8}/></label>
             <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className={field} name="confirmPassword" type="password" required minLength={8}/></label>
-            <div className="md:col-span-3"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Sifremi guncelle'}</Button></div>
+            <p className="text-sm leading-6 text-mugla-navy/50 md:col-span-3">Yeni sifre en az 8 karakter olabilir; kaydedildikten sonra yalnizca ilgili kullanici kendi hesabinda gorup tekrar degistirebilir.</p>
+            <div className="md:col-span-3"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Kendi sifremi guncelle'}</Button></div>
           </form>
         </CardContent>
       </Card>
