@@ -1,6 +1,6 @@
 'use client'
 
-import {FormEvent,useState} from 'react'
+import {FormEvent,useEffect,useState} from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-react'
@@ -41,8 +41,13 @@ function nextPage(){
   return requested.startsWith('/')&&!requested.startsWith('//')?requested:'/vatandas/panel'
 }
 
+function initialMode(){
+  if(typeof location==='undefined')return 'register'
+  return new URLSearchParams(location.search).get('mode')==='login'?'login':'register'
+}
+
 export default function Login(){
-  const[mode,setMode]=useState<'login'|'register'>('register')
+  const[mode,setMode]=useState<'login'|'register'>(initialMode)
   const[loading,setLoading]=useState('')
   const[error,setError]=useState('')
   const[message,setMessage]=useState('')
@@ -55,6 +60,10 @@ export default function Login(){
   const[selectedProvince,setSelectedProvince]=useState('Mugla')
   const provinceDistricts=districtsForProvince(selectedProvince)
   const countryOptions=countries().filter(country=>country.code!=='TR')
+
+  useEffect(()=>{
+    setMode(initialMode())
+  },[])
 
   function changeMode(value:'login'|'register'){setMode(value);setError('');setMessage('')}
 
