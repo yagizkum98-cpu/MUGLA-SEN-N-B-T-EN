@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {FormEvent, useEffect, useState} from 'react'
 import Link from 'next/link'
@@ -8,7 +8,7 @@ import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
-import {formatBudget, ProjectStatus, useProjects} from '@/lib/projects-store'
+import {formatBudget, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
@@ -34,6 +34,69 @@ function topicLabel(topic: ContactRecord['topic']) {
   return topic === 'Gorus' ? 'Gorus' : topic === 'Oneri' ? 'Oneri' : 'Soru'
 }
 
+function ProjectDetailBlock({project}: {project: ProjectRecord}) {
+  const details = [
+    ['Proje kodu', project.projectCode],
+    ['Başvuru sahibi', project.ownerName || project.ownerEmail || 'Belirtilmedi'],
+    ['Başvuru türü', project.applicantType ?? 'Bireysel'],
+    ['Başvuru konumu', `${project.country ?? 'Türkiye'} / ${project.province ?? 'Muğla'} / ${project.applicantDistrict ?? project.district}`],
+    ['Projenin uygulanacağı ilçe', project.district],
+    ['Kategori', `${project.category}${project.subcategory ? ` / ${project.subcategory}` : ''}`],
+    ['Tahmini bütçe', formatBudget(project.budget)],
+    ['Amaç', project.purpose],
+    ['Özet', project.summary],
+    ['Faaliyetler', project.activities],
+    ['Beklenen sonuçlar', project.expectedResults],
+    ['Ek dosyalar', project.attachments?.length ? project.attachments.map(file => `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`).join(', ') : 'Ek dosya yok'],
+  ]
+
+  return <div className="mt-4 grid gap-3 rounded-2xl border border-mugla-cyan/20 bg-cyan-50/35 p-4">
+    {details.map(([label, value]) => <div key={label} className="rounded-xl bg-white/80 p-3">
+      <p className="text-xs font-black uppercase tracking-wider text-mugla-cyan">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-mugla-navy/70">{value || 'Belirtilmedi'}</p>
+    </div>)}
+  </div>
+}
+
+function PendingProjectCard({
+  project,
+  selected,
+  expanded,
+  onToggleMerge,
+  onToggleDetails,
+  onApprove,
+  onReject,
+}: {
+  project: ProjectRecord
+  selected: boolean
+  expanded: boolean
+  onToggleMerge: () => void
+  onToggleDetails: () => void
+  onApprove: () => void
+  onReject: () => void
+}) {
+  return <div className="rounded-2xl border border-mugla-navy/10 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <label className="flex min-w-0 flex-1 items-start gap-3">
+        <input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" checked={selected} onChange={onToggleMerge} />
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <p className="font-bold">{project.title}</p>
+            <Button size="sm" variant="outline" type="button" onClick={onToggleDetails}><Eye size={15}/>Detaylı Proje Bilgisi</Button>
+          </span>
+          <p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>
+          {project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}
+        </span>
+      </label>
+      <div className="flex shrink-0 gap-2">
+        <Button size="sm" variant="orange" onClick={onApprove}><CheckCircle2 size={15}/>Onayla</Button>
+        <Button size="sm" variant="outline" onClick={onReject}><XCircle size={15}/>Reddet</Button>
+      </div>
+    </div>
+    {expanded && <ProjectDetailBlock project={project}/>}
+  </div>
+}
+
 export default function Admin() {
   const {projects, addProject, mergeProjects, removeProject, reviewProject} = useProjects()
   const {records: contactRecords, removeContactRecord} = useContactRecords()
@@ -43,6 +106,7 @@ export default function Admin() {
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [mergeSelection, setMergeSelection] = useState<string[]>([])
+  const [expandedProjectDetails, setExpandedProjectDetails] = useState<string | null>(null)
   const [ownPassword, setOwnPassword] = useState<string | null>(null)
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [passwordChanging, setPasswordChanging] = useState(false)
@@ -498,7 +562,16 @@ export default function Admin() {
             <div className="flex items-end gap-2"><Button type="submit" variant="orange"><CheckCircle2 size={16}/> Birleştir ve onayla</Button><Button type="button" variant="outline" onClick={() => setMergeSelection([])}>Seçimi temizle</Button></div>
           </form>}
 
-          {pendingProjects.length ? pendingProjects.map(project => <div key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4"><div className="flex flex-wrap items-start justify-between gap-4"><label className="flex min-w-0 flex-1 items-start gap-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" checked={mergeSelection.includes(project.id)} onChange={() => toggleMergeSelection(project.id)} /><span className="min-w-0"><p className="font-bold">{project.title}</p><p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>{project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}</span></label><div className="flex shrink-0 gap-2"><Button size="sm" variant="orange" onClick={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje onaylandi ve oylamaya acildi.')}}><CheckCircle2 size={15}/>Onayla</Button><Button size="sm" variant="outline" onClick={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setMessage('Proje reddedildi.')}}><XCircle size={15}/>Reddet</Button></div></div></div>) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
+          {pendingProjects.length ? pendingProjects.map(project => <PendingProjectCard
+            key={project.id}
+            project={project}
+            selected={mergeSelection.includes(project.id)}
+            expanded={expandedProjectDetails === project.id}
+            onToggleMerge={() => toggleMergeSelection(project.id)}
+            onToggleDetails={() => setExpandedProjectDetails(value => value === project.id ? null : project.id)}
+            onApprove={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje onaylandi ve oylamaya acildi.')}}
+            onReject={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje reddedildi.')}}
+          />) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
         </CardContent>
       </Card>
 
@@ -509,3 +582,4 @@ export default function Admin() {
     </div>
   </AppShell></AdminAuthGate>
 }
+

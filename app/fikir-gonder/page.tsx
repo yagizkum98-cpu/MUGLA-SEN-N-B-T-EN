@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from 'react'
@@ -19,6 +19,7 @@ const allowed=['pdf','doc','docx','ppt','pptx','xls','xlsx']
 const countryOptions=countries()
 const applicantTypes=['Bireysel','Tüzel','Grup'] as const
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
+const projectDistrictOptions=['Tüm İlçeler',...muglaDistricts].sort((a,b)=>a==='Tüm İlçeler'?-1:b==='Tüm İlçeler'?1:a.localeCompare(b,'tr'))
 
 function size(value:number){
   return value<1024*1024?`${(value/1024).toFixed(0)} KB`:`${(value/1024/1024).toFixed(1)} MB`
@@ -134,6 +135,7 @@ export default function IdeaForm(){
       country:selectedCountry,
       countryCode,
       province:String(data.get('province')).trim(),
+      applicantDistrict:String(data.get('applicantDistrict')).trim(),
       district:String(data.get('district')).trim(),
       category:selectedCategory,
       subcategory:selectedSubcategory,
@@ -223,7 +225,7 @@ export default function IdeaForm(){
             <div className="grid gap-4">
               <label><span className="mb-2 block text-sm font-semibold">Ulke <span className="text-red-500">*</span></span><select name="country" className={field} value={countryCode} onChange={e=>{setCountryCode(e.target.value);if(e.target.value==='TR')setProvince('Muğla');else setProvince('')}} required>{countryOptions.map(x=><option key={x.code} value={x.code}>{x.name}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Il / eyalet / bolge <span className="text-red-500">*</span></span>{countryCode==='TR'?<select name="province" className={field} value={province} onChange={e=>setProvince(e.target.value)} required>{turkiyeProvinces.map(x=><option key={x}>{x}</option>)}</select>:<input name="province" className={field} required value={province} onChange={e=>setProvince(e.target.value)} placeholder="Il, eyalet veya bolge adi"/>}</label>
-              <label><span className="mb-2 block text-sm font-semibold">Ilce / sehir <span className="text-red-500">*</span></span>{countryCode==='TR'&&province==='Muğla'?<select name="district" className={field} required>{muglaDistricts.map(x=><option key={x}>{x}</option>)}</select>:<input name="district" className={field} required list="district-options" placeholder="Ilce veya sehir adini yazin/secin"/>}<datalist id="district-options"><option value="Merkez"/><option value="Kuzey"/><option value="Guney"/><option value="Dogu"/><option value="Bati"/></datalist></label>
+              <label><span className="mb-2 block text-sm font-semibold">Ilce / sehir <span className="text-red-500">*</span></span>{countryCode==='TR'&&province==='Muğla'?<select name="applicantDistrict" className={field} required>{muglaDistricts.map(x=><option key={x}>{x}</option>)}</select>:<input name="applicantDistrict" className={field} required list="district-options" placeholder="Ilce veya sehir adini yazin/secin"/>}<datalist id="district-options"><option value="Merkez"/><option value="Kuzey"/><option value="Guney"/><option value="Dogu"/><option value="Bati"/></datalist></label>
             </div>
           </fieldset>
 
@@ -232,7 +234,7 @@ export default function IdeaForm(){
             <p className="mb-4 text-sm text-mugla-navy/50">Kategori secildiginde yalnizca {currentYear} yili icin acik tema ve alt kategoriler acilir.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>setCategory(e.target.value as ProjectCategory)} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoryOptions.map(name=><option key={name}>{name}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoryOptions.map(name=><option key={name}>{name}</option>)}</select></label><label className="sm:col-span-2"><span className="mb-2 block text-sm font-semibold">Projenin uygulanacağı ilçe <span className="text-red-500">*</span></span><select name="district" className={field} required>{projectDistrictOptions.map(district=><option key={district}>{district}</option>)}</select></label>
             </div>
             {category==='Diğer'&&<p className="mt-3 rounded-2xl bg-white p-4 text-sm text-mugla-navy/55">Bu kategori altinda yeni bir alan onerilebilir. Alt kategori olarak Diger secerseniz oneriyi proje ozeti icinde belirtin.</p>}
           </fieldset>
@@ -257,3 +259,4 @@ export default function IdeaForm(){
     </div>
   </main>
 }
+

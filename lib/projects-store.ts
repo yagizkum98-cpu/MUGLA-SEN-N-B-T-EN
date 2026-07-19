@@ -15,6 +15,7 @@ export type ProjectRecord={
   country?:string
   countryCode?:string
   province?:string
+  applicantDistrict?:string
   budget:number
   votes:number
   progress:number
