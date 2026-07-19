@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, Mail, UserPlus, UserRound, Vote} from 'lucide-react'
+import {CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, Mail, UserRound, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
@@ -167,12 +167,6 @@ export default function Home() {
           <Link href="/giris?mode=login&next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
             Giriş yap <UserRound size={16}/>
           </Link>
-          <Link href="/giris?mode=register&next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full border border-mugla-orange/35 bg-white px-4 py-2 text-sm font-bold text-mugla-orange hover:bg-orange-50">
-            Üye ol <UserPlus size={16}/>
-          </Link>
-          <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">
-            Fikir gonder <ArrowRight size={16}/>
-          </Link>
         </div>
       </div>
     </header>
@@ -235,9 +229,7 @@ export default function Home() {
           <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-6xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">İlk aşamada hedef basit: vatandaş fikir göndersin, belediye projeleri yayınlasın, herkes durumu kolayca takip etsin.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/giris?next=/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-5 py-3 font-bold text-white"><Lightbulb size={18}/> Fikir gonder</Link>
             <Link href="/giris?next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full bg-mugla-cyan px-5 py-3 font-bold text-mugla-navy"><UserRound size={18}/> Vatandaş Paneli</Link>
-            <Link href="/admin/giris" className="inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-3 font-bold text-white ring-1 ring-white/25 hover:bg-white hover:text-mugla-navy"><LockKeyhole size={18}/> Belediye Paneli</Link>
             <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy"><FolderKanban size={18}/> Projeleri gör</Link>
           </div>
         </div>
@@ -263,16 +255,11 @@ export default function Home() {
     </section>
 
     <section className="border-y border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-4">
         <Link href="/projeler" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FolderKanban className="text-mugla-orange"/>
           <h3 className="mt-4 text-xl font-bold">Projeler</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Tüm onaylı projeleri ara, filtrele, oy ver ve durumlarını gör.</p>
-        </Link>
-        <Link href="/giris?next=/fikir-gonder" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
-          <Lightbulb className="text-mugla-cyan"/>
-          <h3 className="mt-4 text-xl font-bold">Fikir Gönder</h3>
-          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Muğla için önerini kısa bir başvuru formuyla ilet.</p>
         </Link>
         <Link href="/giris?next=/vatandas/panel" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <LockKeyhole className="text-mugla-blue"/>
@@ -306,7 +293,7 @@ export default function Home() {
 
     <footer className="border-t border-mugla-navy/10 bg-white px-5 py-8">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
-        <span>Muğla Senin Bütçen MVP</span>
+        <span>© 2026 Muğla Büyükşehir Belediyesi</span>
         <div className="flex gap-4">
           <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
@@ -314,9 +301,9 @@ export default function Home() {
           <Link href="/kitapcik">Kitapçık</Link>
           <Link href="/iletisim">İletişim</Link>
           <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
-          <Link href="/admin/giris">Belediye Paneli</Link>
         </div>
       </div>
     </footer>
   </main>
 }
+

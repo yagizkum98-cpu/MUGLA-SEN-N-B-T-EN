@@ -5,9 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-react'
 import {Button} from '@/components/ui/button'
-import {loginUser,registerUser} from '@/lib/local-auth'
+import {createCitizenSessionTransfer, loginUser, registerUser} from '@/lib/local-auth'
 import {countries} from '@/lib/locations'
 import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
+import {citizenUrl, isCitizenDomain} from '@/lib/domain-routing'
 
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 
@@ -42,8 +43,8 @@ function nextPage(){
 }
 
 function initialMode(){
-  if(typeof location==='undefined')return 'register'
-  return new URLSearchParams(location.search).get('mode')==='login'?'login':'register'
+  if(typeof location==='undefined')return 'login'
+  return new URLSearchParams(location.search).get('mode')==='register'?'register':'login'
 }
 
 export default function Login(){
@@ -65,7 +66,14 @@ export default function Login(){
     setMode(initialMode())
   },[])
 
-  function changeMode(value:'login'|'register'){setMode(value);setError('');setMessage('')}
+  function changeMode(value:'login'|'register'){
+    setMode(value);setError('');setMessage('')
+    if(typeof history!=='undefined'){
+      const params=new URLSearchParams(location.search)
+      params.set('mode',value)
+      history.replaceState(null,'',`${location.pathname}?${params.toString()}`)
+    }
+  }
 
   function register(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setError('');setMessage('')
@@ -113,7 +121,7 @@ export default function Login(){
       setPendingRegistration(null)
       setActivationMethod('')
       setActivationCode('')
-      setMode('login')
+      changeMode('login')
       setMessage('Kayit tamamlandi. ✔ Dogrulanmis Kullanici rozeti tanimlandi. Simdi e-posta ve sifrenizle giris yapin.')
     }catch(cause){setError(cause instanceof Error?cause.message:'Kayit olusturulamadi.')}
     finally{setLoading('')}
@@ -122,7 +130,16 @@ export default function Login(){
   async function login(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setError('');setMessage('');setLoading('login')
     const data=new FormData(event.currentTarget)
-    try{await loginUser(String(data.get('email')),String(data.get('password')));location.href=nextPage()}
+    try{
+      const user=await loginUser(String(data.get('email')),String(data.get('password')))
+      const target=nextPage()
+      if((target.startsWith('/vatandas')||target.startsWith('/fikir-gonder'))&&!isCitizenDomain()){
+        const separator=target.includes('?')?'&':'?'
+        location.href=citizenUrl(`${target}${separator}auth_transfer=${encodeURIComponent(createCitizenSessionTransfer(user))}`)
+        return
+      }
+      location.href=target
+    }
     catch(cause){setError(cause instanceof Error?cause.message:'Giris yapilamadi.')}
     finally{setLoading('')}
   }
@@ -147,11 +164,6 @@ export default function Login(){
     <section className="grid place-items-center p-6 py-10">
       <div className="w-full max-w-xl">
         <Link href="/" className="mb-8 flex items-center gap-2 text-sm lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
-        <div className="mb-7 grid grid-cols-2 rounded-2xl bg-white p-1 shadow-sm">
-          <button onClick={()=>changeMode('register')} className={`rounded-xl px-4 py-3 text-sm font-bold ${mode==='register'?'bg-mugla-navy text-white':'text-mugla-navy/55'}`}>Kayit Ol</button>
-          <button onClick={()=>changeMode('login')} className={`rounded-xl px-4 py-3 text-sm font-bold ${mode==='login'?'bg-mugla-navy text-white':'text-mugla-navy/55'}`}>Giris Yap</button>
-        </div>
-
         {mode==='register'?(pendingRegistration?<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">AKTIVASYON KODU</p>
           <h2 className="mt-2 text-3xl font-bold">Kaydini dogrula</h2>
@@ -200,6 +212,7 @@ export default function Login(){
             {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
             <Button type="submit" variant="orange" disabled={!!loading} className="h-14 w-full"><UserPlus size={18}/>{loading==='register'?'Kayit olusturuluyor...':'Kayit Ol ve Dogrula'}</Button>
           </form>
+          <button type="button" onClick={()=>changeMode('login')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Hesabınız var mı? Giriş yap</button>
         </div>):<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">GUVENLI GIRIS</p>
           <h2 className="mt-2 text-3xl font-bold">Hesabina giris yap</h2>
@@ -211,7 +224,7 @@ export default function Login(){
             {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
             <Button type="submit" disabled={!!loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading==='login'?'Giris yapiliyor...':'Giris Yap'}</Button>
           </form>
-          <button onClick={()=>changeMode('register')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Hesabin yok mu? Kayit ol</button>
+          <button type="button" onClick={()=>changeMode('register')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Hesabınız yok mu? Üye ol</button>
         </div>}
 
       </div>

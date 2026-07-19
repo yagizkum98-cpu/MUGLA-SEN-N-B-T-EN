@@ -26,6 +26,7 @@ export type LocalUser = {
 const USERS = 'mugla-auth-users-v1'
 const SESSION = 'mugla-auth-session-v1'
 export const AUTH_USERS_CHANGED_EVENT = 'mugla-auth-users-changed'
+const TRANSFER_TTL_MS = 2 * 60 * 1000
 
 export function listLocalUsers(): LocalUser[] {
   try {
@@ -126,6 +127,34 @@ export async function loginUser(emailInput: string, password: string) {
   window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
   window.dispatchEvent(new Event('mugla-auth-session-changed'))
   return user
+}
+
+export function createCitizenSessionTransfer(user: LocalUser) {
+  const payload = {
+    version: 1,
+    expiresAt: Date.now() + TRANSFER_TTL_MS,
+    sessionId: user.id,
+    user,
+  }
+  return bytesToBase64(new TextEncoder().encode(JSON.stringify(payload)))
+}
+
+export function consumeCitizenSessionTransfer(value: string | null) {
+  if (!value) return false
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(base64ToBytes(value)))
+    if (payload?.version !== 1 || typeof payload.expiresAt !== 'number' || payload.expiresAt < Date.now()) return false
+    const user = payload.user as LocalUser
+    if (!user?.id || !user?.email || payload.sessionId !== user.id) return false
+    const users = listLocalUsers()
+    localStorage.setItem(USERS, JSON.stringify([user, ...users.filter(item => item.id !== user.id && item.email !== user.email)]))
+    localStorage.setItem(SESSION, user.id)
+    window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
+    window.dispatchEvent(new Event('mugla-auth-session-changed'))
+    return true
+  } catch {
+    return false
+  }
 }
 
 function saveUsers(users: LocalUser[]) {

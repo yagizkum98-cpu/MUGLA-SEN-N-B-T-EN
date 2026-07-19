@@ -195,7 +195,7 @@ export default function Projects() {
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/70 hover:text-mugla-navy">
           <ArrowLeft size={16}/> Ana sayfa
         </Link>
-        <Link href="/giris?next=/fikir-gonder" className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Fikir gonder</Link>
+        <Link href="/giris?mode=login&next=/vatandas/panel" className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Vatandaş Paneli</Link>
       </div>
     </header>
 

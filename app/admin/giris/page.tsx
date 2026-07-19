@@ -1,16 +1,21 @@
 'use client'
 
-import {FormEvent, useState} from 'react'
+import {FormEvent, useEffect, useState} from 'react'
 import Link from 'next/link'
 import {ArrowLeft, LockKeyhole, ShieldCheck} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {loginAdmin} from '@/lib/admin-auth'
+import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
 
 const field = 'w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 
 export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isMunicipalityDomain()) location.replace(municipalityUrl('/admin/giris'))
+  }, [])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

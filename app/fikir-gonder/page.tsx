@@ -7,7 +7,8 @@ import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
 import {useProjects} from '@/lib/projects-store'
 import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
-import {getCurrentUser} from '@/lib/local-auth'
+import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
+import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,type ProjectCategory} from '@/lib/project-taxonomy'
 import {allowedCategoriesForYear,allowedSubcategoriesForYear,annualThemeChangeEvent,annualThemeOptions,getAnnualThemeSetting,isAllThemesOpen,isProjectThemeAllowed} from '@/lib/annual-themes'
@@ -56,12 +57,21 @@ export default function IdeaForm(){
 
   useEffect(()=>{
     async function check(){
+      if(!isCitizenDomain()){
+        location.replace(citizenUrl(`${location.pathname}${location.search}`))
+        return
+      }
+      const params=new URLSearchParams(location.search)
+      if(consumeCitizenSessionTransfer(params.get('auth_transfer'))){
+        params.delete('auth_transfer')
+        history.replaceState(null,'',`${location.pathname}${params.toString()?`?${params.toString()}`:''}`)
+      }
       if(getCurrentUser()){setAuthorized(true);return}
       try{
         const{data}=await createClient().auth.getSession()
         if(data.session){setAuthorized(true);return}
       }catch{}
-      location.replace('/giris?next=/fikir-gonder')
+      location.replace(publicUrl('/giris?mode=login&next=/fikir-gonder'))
     }
     check()
   },[])

@@ -5,12 +5,18 @@ import {useEffect, useState} from 'react'
 import {LockKeyhole} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {getCurrentAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
 
 export function AdminAuthGate({children}: {children: React.ReactNode}) {
   const [admin, setAdmin] = useState<AdminAccount | null>(null)
   const [checked, setChecked] = useState(false)
 
   useEffect(() => {
+    if (!isMunicipalityDomain()) {
+      location.replace(municipalityUrl(`${location.pathname}${location.search}`))
+      return
+    }
+
     getCurrentAdmin().then(current => {
       setAdmin(current)
       setChecked(true)
