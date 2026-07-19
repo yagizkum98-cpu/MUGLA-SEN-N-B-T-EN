@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, UserRound, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {isMunicipalityDomain} from '@/lib/domain-routing'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -144,6 +145,20 @@ export default function Home() {
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
   const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
+  const [municipalityRedirecting, setMunicipalityRedirecting] = useState(false)
+
+  useEffect(() => {
+    if (isMunicipalityDomain()) {
+      setMunicipalityRedirecting(true)
+      location.replace('/admin/giris')
+    }
+  }, [])
+
+  if (municipalityRedirecting) return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6 text-mugla-navy">
+    <section className="rounded-3xl bg-white p-8 text-center shadow-soft">
+      <p className="text-sm font-bold text-mugla-orange">Belediye paneline yönlendiriliyorsunuz...</p>
+    </section>
+  </main>
 
   return <main className="relative min-h-screen overflow-hidden bg-mugla-sand text-mugla-navy">
     <DecorativeLogoBackground/>

@@ -1,8 +1,7 @@
 'use client'
 
 import {FormEvent, useEffect, useState} from 'react'
-import Link from 'next/link'
-import {ArrowLeft, LockKeyhole, ShieldCheck} from 'lucide-react'
+import {LockKeyhole, ShieldCheck} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {loginAdmin} from '@/lib/admin-auth'
 import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
@@ -34,7 +33,7 @@ export default function AdminLoginPage() {
 
   return <main className="grid min-h-screen bg-mugla-sand lg:grid-cols-[.9fr_1.1fr]">
     <section className="hidden bg-mugla-navy p-14 text-white lg:flex lg:flex-col">
-      <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60"><ArrowLeft size={16}/> Ana sayfa</Link>
+      <span className="text-sm font-semibold text-white/60">Muğla Büyükşehir Belediyesi</span>
       <div className="my-auto max-w-xl">
         <span className="grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-mugla-cyan"><ShieldCheck size={32}/></span>
         <h1 className="mt-8 text-5xl font-bold leading-tight">Belediye paneli yalnizca tanimli yetkililere aciktir.</h1>
@@ -44,7 +43,7 @@ export default function AdminLoginPage() {
 
     <section className="grid place-items-center p-6">
       <div className="w-full max-w-md">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-mugla-navy/55 lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
+        <p className="mb-8 text-sm font-semibold text-mugla-navy/55 lg:hidden">Muğla Büyükşehir Belediyesi</p>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YETKILI GIRISI</p>
         <h2 className="mt-2 text-3xl font-bold">Belediye Paneli</h2>
         <p className="mt-3 text-sm leading-6 text-mugla-navy/55">Tanimli yetkili hesabinin e-posta ve sifresiyle giris yap.</p>
