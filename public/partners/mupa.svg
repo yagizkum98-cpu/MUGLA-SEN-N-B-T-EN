@@ -1,19 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 280" role="img" aria-labelledby="title desc">
   <title id="title">MUPA</title>
   <desc id="desc">Mugla Planlama Ajansi logo</desc>
-  <rect width="640" height="420" fill="#fff"/>
-  <g transform="translate(198 54)" fill="none" stroke="#a47b3c" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M24 166V88c0-38 27-64 66-64h64c39 0 66 26 66 64v78"/>
-    <path d="M80 166V92c0-10 7-18 18-18h50c11 0 18 8 18 18v74"/>
-    <path d="M136 166V78"/>
-    <path d="M222 166V24"/>
+  <g fill="none" fill-rule="evenodd">
+    <g transform="translate(72 42)" stroke="#A47B3C" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 126V68c0-32 23-52 56-52h45c33 0 56 20 56 52v58" stroke-width="18"/>
+      <path d="M60 126V72c0-12 8-20 21-20h29c13 0 21 8 21 20v54" stroke-width="15"/>
+      <path d="M108 126V52" stroke-width="15"/>
+      <path d="M174 126V16" stroke-width="18"/>
+      <path d="M10 138h52M62 138h52M114 138h52M166 138h52" stroke-width="18"/>
+    </g>
+    <text x="355" y="134" fill="#151515" font-family="Georgia, 'Times New Roman', serif" font-size="88" font-weight="700" letter-spacing="14">MUPA</text>
+    <text x="357" y="178" fill="#4A4A4A" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="3">MUGLA PLANLAMA AJANSI</text>
+    <path d="M354 198h300" stroke="#A47B3C" stroke-width="5" stroke-linecap="round"/>
   </g>
-  <g transform="translate(198 54)" fill="#a47b3c">
-    <rect x="12" y="154" width="56" height="24" rx="5"/>
-    <rect x="68" y="154" width="56" height="24" rx="5"/>
-    <rect x="124" y="154" width="56" height="24" rx="5"/>
-    <rect x="180" y="154" width="56" height="24" rx="5"/>
-  </g>
-  <text x="320" y="300" fill="#161616" font-family="Georgia, 'Times New Roman', serif" font-size="78" letter-spacing="22" text-anchor="middle">MUPA</text>
-  <text x="320" y="334" fill="#3f3f3f" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="3" text-anchor="middle">MUGLA PLANLAMA AJANSI</text>
 </svg>

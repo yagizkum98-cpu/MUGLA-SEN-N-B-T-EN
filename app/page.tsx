@@ -280,8 +280,8 @@ export default function Home() {
           <Image src="/partners/mugla-buyuksehir.png" alt="Muğla Büyükşehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
         </div>
         <div className="relative hidden h-16 w-px bg-mugla-navy/15 sm:block"/>
-        <div className="relative flex h-24 w-full max-w-[250px] items-center justify-center rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-[2px]">
-          <Image src="/partners/mupa.svg" alt="Muğla Planlama Ajansı MUPA" width={260} height={120} className="h-full w-full object-contain"/>
+        <div className="relative flex h-24 w-full max-w-[320px] items-center justify-center rounded-2xl bg-white/85 p-4 shadow-sm backdrop-blur-[2px]">
+          <Image src="/partners/mupa.svg" alt="Muğla Planlama Ajansı MUPA" width={760} height={280} className="h-full w-full object-contain"/>
         </div>
       </div>
     </section>
