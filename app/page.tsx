@@ -273,12 +273,14 @@ export default function Home() {
     </section>
 
     <section className="mx-auto max-w-6xl px-5 py-14">
-      <div className="flex flex-col items-center justify-center gap-8 rounded-lg border border-mugla-navy/10 bg-white px-6 py-9 shadow-soft sm:flex-row sm:gap-14">
-        <div className="flex h-24 w-full max-w-[250px] items-center justify-center">
+      <div className="relative flex min-h-[260px] flex-col items-center justify-center gap-8 overflow-hidden rounded-lg border border-mugla-navy/10 bg-white px-6 py-10 shadow-soft sm:flex-row sm:gap-14">
+        <Image src="/landing/mugla-skyline-lineart.png" alt="" fill sizes="(max-width: 1180px) 100vw, 1180px" className="object-cover object-center opacity-75"/>
+        <div className="absolute inset-0 bg-white/35"/>
+        <div className="relative flex h-24 w-full max-w-[250px] items-center justify-center rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-[2px]">
           <Image src="/partners/mugla-buyuksehir.png" alt="Muğla Büyükşehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
         </div>
-        <div className="hidden h-16 w-px bg-mugla-navy/10 sm:block"/>
-        <div className="flex h-24 w-full max-w-[250px] items-center justify-center">
+        <div className="relative hidden h-16 w-px bg-mugla-navy/15 sm:block"/>
+        <div className="relative flex h-24 w-full max-w-[250px] items-center justify-center rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-[2px]">
           <Image src="/partners/mupa.svg" alt="Muğla Planlama Ajansı MUPA" width={260} height={120} className="h-full w-full object-contain"/>
         </div>
       </div>
