@@ -115,6 +115,7 @@ export default function Admin() {
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
+  const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
   const voteLeaderboard = projects
     .filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
     .sort((a, b) => b.votes - a.votes)
@@ -163,6 +164,17 @@ export default function Admin() {
 
   function toggleMergeSelection(id: string) {
     setMergeSelection(value => value.includes(id) ? value.filter(item => item !== id) : [...value, id])
+  }
+
+  function toggleAllPendingSelection() {
+    setMergeSelection(allPendingSelected ? [] : pendingProjects.map(project => project.id))
+  }
+
+  function reviewMany(ids: string[], moderationStatus: 'Onaylandı' | 'Reddedildi') {
+    ids.forEach(id => reviewProject(id, moderationStatus))
+    setMergeSelection(value => value.filter(id => !ids.includes(id)))
+    setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
+    setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
   }
 
   function submitMergedProject(event: FormEvent<HTMLFormElement>) {
@@ -544,6 +556,20 @@ export default function Admin() {
       <Card>
         <CardHeader><h2 className="text-xl font-bold">Onay bekleyen basvurular</h2><p className="text-sm text-mugla-navy/55">Onaylanan projeler proje listesinde oylamaya acilir.</p></CardHeader>
         <CardContent className="space-y-4">
+          {pendingProjects.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+            <label className="flex items-center gap-3 text-sm font-bold text-mugla-navy">
+              <input type="checkbox" className="h-4 w-4 accent-mugla-orange" checked={allPendingSelected} onChange={toggleAllPendingSelection}/>
+              Tüm onay kutularını seç
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" type="button" onClick={() => setMergeSelection([])} disabled={!mergeSelection.length}>Seçimi temizle</Button>
+              <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(mergeSelection, 'Onaylandı')} disabled={!mergeSelection.length}><CheckCircle2 size={15}/> Seçilenleri onayla</Button>
+              <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(mergeSelection, 'Reddedildi')} disabled={!mergeSelection.length}><XCircle size={15}/> Seçilenleri reddet</Button>
+              <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Onaylandı')}><CheckCircle2 size={15}/> Tümünü onayla</Button>
+              <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Reddedildi')}><XCircle size={15}/> Tümünü reddet</Button>
+            </div>
+            {mergeSelection.length >= 2 && <p className="w-full text-xs font-semibold text-mugla-navy/55">{mergeSelection.length} başvuru seçildi. Aynı proje başvuruları için aşağıdaki birleştirme alanını kullanabilirsiniz.</p>}
+          </div>}
           {selectedMergeProjects.length >= 2 && <form onSubmit={submitMergedProject} className="grid gap-4 rounded-2xl border border-mugla-cyan/30 bg-cyan-50/40 p-4 md:grid-cols-2 xl:grid-cols-3">
             <div className="md:col-span-2 xl:col-span-3">
               <p className="text-xs font-bold tracking-[.18em] text-mugla-cyan">BIRLESTIRILMIS PROJE</p>
