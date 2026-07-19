@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {FormEvent, useMemo, useState} from 'react'
-import {ArrowLeft, CheckCircle2, Mail, Send} from 'lucide-react'
+import {ArrowLeft, Building2, CheckCircle2, Mail, MapPin, Phone, Send} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {type ContactTopic, useContactRecords} from '@/lib/contact-store'
 
@@ -17,6 +17,44 @@ function createSecurityQuestion() {
   const left = Math.floor(Math.random() * 8) + 2
   const right = Math.floor(Math.random() * 7) + 1
   return {text: `${left} + ${right}`, answer: left + right}
+}
+
+function ContactInfoCard() {
+  return <div className="fade-up-card relative mt-5 overflow-hidden rounded-2xl border border-mugla-navy/10 bg-white p-5 shadow-soft">
+    <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-mugla-cyan/10"/>
+    <div className="absolute -bottom-14 left-10 h-28 w-28 rounded-full bg-mugla-orange/10"/>
+    <div className="relative">
+      <div className="flex items-center gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mugla-navy text-white shadow-sm">
+          <Building2 size={23}/>
+        </span>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.2em] text-mugla-orange">Adres</p>
+          <h2 className="mt-1 text-lg font-black text-mugla-navy">Muğla Büyükşehir Belediyesi</h2>
+        </div>
+      </div>
+      <div className="mt-5 space-y-3">
+        <div className="group flex gap-3 rounded-2xl bg-mugla-sand/70 p-4 transition hover:-translate-y-0.5 hover:bg-mugla-sand">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-mugla-cyan shadow-sm transition group-hover:scale-105">
+            <MapPin size={18}/>
+          </span>
+          <p className="text-sm font-semibold leading-6 text-mugla-navy/70">
+            Müştakbey Mahallesi, Belediye Sokak, No:6<br/>
+            48000 Menteşe/Muğla
+          </p>
+        </div>
+        <a href="tel:4444801" className="group flex items-center gap-3 rounded-2xl bg-mugla-navy p-4 text-white transition hover:-translate-y-0.5 hover:bg-mugla-blue">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/12 text-mugla-cyan transition group-hover:scale-105">
+            <Phone size={18}/>
+          </span>
+          <span>
+            <span className="block text-xs font-bold text-white/55">Telefon</span>
+            <strong className="text-xl tracking-wide">444 48 01</strong>
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
 }
 
 export default function ContactPage() {
@@ -85,6 +123,7 @@ export default function ContactPage() {
           <p className="font-bold text-mugla-navy">Muğla Büyükşehir Belediyesi Katılımcı Bütçe Programı</p>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/55">Gorus ve onerileriniz, ilgili birimler tarafindan degerlendirilecektir.</p>
         </div>
+        <ContactInfoCard/>
       </aside>
 
       <section className="rounded-[30px] bg-white p-6 shadow-soft sm:p-9">
