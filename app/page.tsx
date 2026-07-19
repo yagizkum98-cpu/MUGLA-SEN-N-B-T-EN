@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import {ArrowRight, CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, Mail, UserPlus, UserRound, Vote} from 'lucide-react'
+import {useEffect, useState} from 'react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -21,6 +22,123 @@ function Step({icon: Icon, title, text}: {icon: typeof Lightbulb; title: string;
   </div>
 }
 
+type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
+
+const worldCityLabels: Record<DecorativeLanguage, {top: string; bottom: string}> = {
+  tr: {top: 'DÜNYA KENTİ', bottom: 'MUĞLA'},
+  en: {top: 'WORLD CITY', bottom: 'MUĞLA'},
+  ru: {top: 'МИРОВОЙ ГОРОД', bottom: 'МУГЛА'},
+  'zh-CN': {top: '世界城市', bottom: '穆拉'},
+}
+
+function resolveDecorativeLanguage(value: string | null | undefined): DecorativeLanguage {
+  if (value === 'en' || value === 'ru' || value === 'zh-CN') return value
+  return 'tr'
+}
+
+function WorldCityMark({className = ''}: {className?: string}) {
+  const [language, setLanguage] = useState<DecorativeLanguage>('tr')
+  const label = worldCityLabels[language]
+
+  useEffect(() => {
+    setLanguage(resolveDecorativeLanguage(document.documentElement.lang))
+
+    const handleLanguageChange = (event: Event) => {
+      const detail = (event as CustomEvent<{language?: string}>).detail
+      setLanguage(resolveDecorativeLanguage(detail?.language))
+    }
+
+    window.addEventListener('mugla-language-change', handleLanguageChange)
+    return () => window.removeEventListener('mugla-language-change', handleLanguageChange)
+  }, [])
+
+  return <div className={`notranslate relative aspect-square ${className}`}>
+    <div
+      className="absolute inset-0 rounded-full shadow-[0_22px_70px_rgba(14,58,102,.22)]"
+      style={{
+        backgroundImage: "url('/landing/mugla-hero.png')",
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+        WebkitMaskImage: 'radial-gradient(circle, transparent 0 34%, #000 35% 100%)',
+        maskImage: 'radial-gradient(circle, transparent 0 34%, #000 35% 100%)',
+      }}
+    />
+    <span className="absolute inset-[11%] rounded-full border-[11px] border-white/90"/>
+    <span className="absolute inset-[29%] rounded-full border-[9px] border-white/95 bg-white/88 shadow-inner"/>
+    <span className="absolute inset-[40%] rounded-full bg-white shadow-[0_8px_28px_rgba(14,58,102,.18)]"/>
+    <span className="absolute inset-[36%] grid place-items-center rounded-full text-center font-black leading-none text-[#b3202c]">
+      <span className="block text-[clamp(7px,1.3vw,13px)] tracking-wide">{label.top}</span>
+      <span className="mt-1 block text-[clamp(7px,1.1vw,12px)] tracking-wide text-mugla-navy">{label.bottom}</span>
+    </span>
+  </div>
+}
+
+function DecorativeLogoBackground() {
+  const [scrollY, setScrollY] = useState(0)
+
+  useEffect(() => {
+    let frame = 0
+    const syncScroll = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => setScrollY(window.scrollY))
+    }
+
+    syncScroll()
+    window.addEventListener('scroll', syncScroll, {passive: true})
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', syncScroll)
+    }
+  }, [])
+
+  return <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[1] overflow-hidden">
+    <div
+      className="absolute -left-28 top-[10vh] h-56 w-56 opacity-[.14] mix-blend-multiply blur-[.15px] sm:h-72 sm:w-72 lg:h-[420px] lg:w-[420px]"
+      style={{transform: `translate3d(0, ${scrollY * 0.09}px, 0) rotate(-12deg)`}}
+    >
+      <WorldCityMark/>
+    </div>
+    <div
+      className="absolute -right-32 top-[52vh] h-60 w-60 opacity-[.12] mix-blend-multiply blur-[.15px] sm:h-80 sm:w-80 lg:h-[460px] lg:w-[460px]"
+      style={{transform: `translate3d(0, ${scrollY * -0.075}px, 0) rotate(10deg)`}}
+    >
+      <WorldCityMark/>
+    </div>
+  </div>
+}
+
+const projectStages = [
+  ['1', 'Proje', 'Başvurularının', 'Alınması'],
+  ['2', 'Ön ve Teknik', 'Değerlendirmelerin', 'Yapılması'],
+  ['3', 'Projelerin', 'Oylamaya', 'Sunulması'],
+  ['4', 'Oylama', 'Sonuçlarının', 'Açıklanması'],
+  ['5', 'Uygulama', 'İzleme ve', 'Raporlama'],
+]
+
+function ProjectRoadmap() {
+  return <section className="fade-up-card rounded-lg border border-mugla-navy/10 bg-white p-6 shadow-soft md:p-8">
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">Yol Haritası</p>
+      <h2 className="mt-3 text-3xl font-black tracking-tight text-mugla-navy md:text-4xl">Projenin Aşamaları Nelerdir?</h2>
+    </div>
+    <div className="relative mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="pointer-events-none absolute left-8 right-8 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-mugla-orange/0 via-mugla-orange/35 to-mugla-orange/0 lg:block"/>
+      {projectStages.map(([number, ...lines], index) => (
+        <div key={number} className="relative flex justify-center" style={{'--fade-delay': `${index * 70}ms`} as Record<string, string>}>
+          <div className="relative grid aspect-square w-full max-w-[178px] place-items-center px-5 text-center text-white shadow-soft transition-transform hover:-translate-y-1">
+            <span className="absolute inset-0 bg-mugla-navy [clip-path:polygon(25%_5%,75%_5%,100%_50%,75%_95%,25%_95%,0_50%)]"/>
+            <span className="absolute inset-[5px] bg-gradient-to-br from-mugla-blue via-mugla-cyan to-mugla-green [clip-path:polygon(25%_5%,75%_5%,100%_50%,75%_95%,25%_95%,0_50%)]"/>
+            <span className="absolute -top-2 grid h-10 w-10 place-items-center rounded-full border-4 border-white bg-mugla-orange text-lg font-black text-white shadow-md">{number}</span>
+            <span className="relative mt-4 block text-sm font-black leading-5 md:text-[15px]">
+              {lines.map(line => <span key={line} className="block">{line}</span>)}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+}
+
 export default function Home() {
   const {projects} = useProjects()
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
@@ -28,7 +146,8 @@ export default function Home() {
   const completed = approved.filter(project => String(project.status).startsWith('Tamamland'))
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
 
-  return <main className="min-h-screen bg-mugla-sand text-mugla-navy">
+  return <main className="relative min-h-screen overflow-hidden bg-mugla-sand text-mugla-navy">
+    <DecorativeLogoBackground/>
     <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
         <Link href="/" className="flex items-center gap-3">
@@ -100,6 +219,9 @@ export default function Home() {
             </div>
           </div>
         </article>
+        <div className="mt-8">
+          <ProjectRoadmap/>
+        </div>
       </div>
     </section>
 

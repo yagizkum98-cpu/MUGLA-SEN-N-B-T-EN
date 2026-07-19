@@ -37,6 +37,10 @@ function clearTranslateCookie() {
   document.cookie = `${COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${location.hostname}`
 }
 
+function broadcastLanguageChange(language: LanguageCode) {
+  window.dispatchEvent(new CustomEvent('mugla-language-change', { detail: { language } }))
+}
+
 export function LanguageToggle() {
   const [language, setLanguage] = useState<LanguageCode>('tr')
 
@@ -45,6 +49,7 @@ export function LanguageToggle() {
       LANGUAGES.find(item => item.cookie && document.cookie.includes(`${COOKIE_NAME}=${item.cookie}`))?.code ?? 'tr'
     setLanguage(current)
     document.documentElement.lang = current
+    broadcastLanguageChange(current)
 
     window.googleTranslateElementInit = () => {
       if (!window.google?.translate?.TranslateElement) return
@@ -66,6 +71,7 @@ export function LanguageToggle() {
   function changeLanguage(next: LanguageCode) {
     setLanguage(next)
     document.documentElement.lang = next
+    broadcastLanguageChange(next)
 
     if (next === 'tr') {
       clearTranslateCookie()
