@@ -143,7 +143,6 @@ export default function Home() {
   const {projects} = useProjects()
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
   const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
-  const completed = approved.filter(project => String(project.status).startsWith('Tamamland'))
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
 
   return <main className="relative min-h-screen overflow-hidden bg-mugla-sand text-mugla-navy">
@@ -274,10 +273,13 @@ export default function Home() {
     </section>
 
     <section className="mx-auto max-w-6xl px-5 py-14">
-      <div className="rounded-lg bg-mugla-navy p-7 text-white md:flex md:items-center md:justify-between md:gap-8">
-        <div>
-          <p className="text-sm font-bold text-mugla-cyan">{completed.length} tamamlanan proje</p>
-          <h2 className="mt-2 text-2xl font-black">İlk sürüm için odak: az ekran, net yol, gerçek veri.</h2>
+      <div className="flex flex-col items-center justify-center gap-8 rounded-lg border border-mugla-navy/10 bg-white px-6 py-9 shadow-soft sm:flex-row sm:gap-14">
+        <div className="flex h-24 w-full max-w-[250px] items-center justify-center">
+          <Image src="/partners/mugla-buyuksehir.png" alt="Muğla Büyükşehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
+        </div>
+        <div className="hidden h-16 w-px bg-mugla-navy/10 sm:block"/>
+        <div className="flex h-24 w-full max-w-[250px] items-center justify-center">
+          <Image src="/partners/mupa.svg" alt="Muğla Planlama Ajansı MUPA" width={260} height={120} className="h-full w-full object-contain"/>
         </div>
       </div>
     </section>
