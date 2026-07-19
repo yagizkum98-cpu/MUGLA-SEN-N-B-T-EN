@@ -123,8 +123,8 @@ export async function getCurrentAdmin() {
 }
 
 export async function addAdminAccount(input: {name: string; email: string; role: AdminRole; password: string; actor: AdminAccount}) {
-  if (input.actor.role === 'yetkili') throw new Error('Yetkili kullanici yeni admin hesabi tanimlayamaz.')
-  if (input.actor.role === 'admin' && input.role === 'super-admin') throw new Error('Admin, super admin hesabi tanimlayamaz.')
+  if (input.actor.role !== 'super-admin') throw new Error('Sadece super admin admin ve yetkili hesabi tanimlayabilir.')
+  if (input.role === 'super-admin') throw new Error('Yeni super admin hesabi tanimlanamaz.')
   const accounts = await ensureSeedAccount()
   const email = input.email.trim().toLocaleLowerCase('tr')
   if (accounts.some(account => account.email === email)) throw new Error('Bu e-posta zaten tanimli.')

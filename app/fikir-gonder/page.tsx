@@ -10,7 +10,7 @@ import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
 import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
-import {projectCategories,type ProjectCategory} from '@/lib/project-taxonomy'
+import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
 import {allowedCategoriesForYear,allowedSubcategoriesForYear,annualThemeChangeEvent,annualThemeOptions,getAnnualThemeSetting,isAllThemesOpen,isProjectThemeAllowed} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
@@ -139,6 +139,7 @@ export default function IdeaForm(){
       district:String(data.get('district')).trim(),
       category:selectedCategory,
       subcategory:selectedSubcategory,
+      targetGroup:String(data.get('targetGroup')),
       applicantType:String(data.get('applicantType')),
       budget:0,
       status:'Başvuru',
@@ -234,7 +235,9 @@ export default function IdeaForm(){
             <p className="mb-4 text-sm text-mugla-navy/50">Kategori secildiginde yalnizca {currentYear} yili icin acik tema ve alt kategoriler acilir.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>setCategory(e.target.value as ProjectCategory)} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoryOptions.map(name=><option key={name}>{name}</option>)}</select></label><label className="sm:col-span-2"><span className="mb-2 block text-sm font-semibold">Projenin uygulanacağı ilçe <span className="text-red-500">*</span></span><select name="district" className={field} required>{projectDistrictOptions.map(district=><option key={district}>{district}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Alt Kategori <span className="text-red-500">*</span></span><select name="subcategory" className={field} required>{subcategoryOptions.map(name=><option key={name}>{name}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Hedef Grup <span className="text-red-500">*</span></span><select name="targetGroup" className={field} required>{targetGroups.map(group=><option key={group}>{group}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Projenin uygulanacağı ilçe <span className="text-red-500">*</span></span><select name="district" className={field} required>{projectDistrictOptions.map(district=><option key={district}>{district}</option>)}</select></label>
             </div>
             {category==='Diğer'&&<p className="mt-3 rounded-2xl bg-white p-4 text-sm text-mugla-navy/55">Bu kategori altinda yeni bir alan onerilebilir. Alt kategori olarak Diger secerseniz oneriyi proje ozeti icinde belirtin.</p>}
           </fieldset>

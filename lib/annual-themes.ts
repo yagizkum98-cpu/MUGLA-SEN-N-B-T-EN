@@ -4,7 +4,7 @@ import {projectCategories, subcategoriesFor} from '@/lib/project-taxonomy'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'egitim' | 'kultur-sanat' | 'spor' | 'turizm'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'egitim' | 'kultur-sanat' | 'spor' | 'turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim' | 'kulturel-miras-essiz-yasam'
 
 export type AnnualThemeSetting = {
   year: string
@@ -14,8 +14,8 @@ export type AnnualThemeSetting = {
 
 export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string; categories?: string[]; subcategories?: Record<string, string[]>}[] = [
   {id: 'all', label: 'Tüm temalar', note: 'Vatandaşlar o yıl tüm kategori ve alt kategorilerden fikir gönderebilir.'},
-  {id: 'afet', label: 'Afet', note: 'Afet, acil durum ve afet yönetimi fikirleri.', subcategories: {'Sosyal Yaşam': ['Afet ve Acil Durum'], 'Diğer': ['Afet Yönetimi']}},
-  {id: 'cevre', label: 'Çevre', note: 'İklim, çevre, atık, enerji, su ve yeşil alan fikirleri.', categories: ['İklim ve Çevre']},
+  {id: 'afet', label: 'Afet ve Risk Yönetimi', note: 'Afet hazırlığı, risk azaltma ve kriz koordinasyonu fikirleri.', categories: ['Afet ve Risk Yönetimi']},
+  {id: 'cevre', label: 'Çevre ve İklim Değişikliği', note: 'İklim, çevre, atık, enerji, su ve yeşil alan fikirleri.', categories: ['Çevre ve İklim Değişikliği']},
   {id: 'genclik', label: 'Gençlik', note: 'Gençlik, eğitim, spor ve gençlik odaklı sosyal fikirler.', subcategories: {'Sosyal Yaşam': ['Gençlik'], 'Eğitim': ['Gençlik Akademileri'], 'Spor': ['Gençlik Sporları', 'E-Spor']}},
   {id: 'sosyal-politikalar', label: 'Sosyal politikalar', note: 'Kadın, çocuk, yaşlı, engelli, aile ve sosyal destek fikirleri.', subcategories: {'Sosyal Yaşam': ['Kadın Hizmetleri', 'Çocuk Hizmetleri', 'Yaşlı Destek Hizmetleri', 'Engelli Hizmetleri', 'Aile Destek Programları', 'Sosyal Yardımlar', 'Halk Sağlığı', 'Psikolojik Destek', 'Gıda Destekleri', 'Toplum Merkezleri']}},
   {id: 'ulasim', label: 'Ulaşım', note: 'Ulaşım, trafik, yaya, bisiklet ve erişilebilirlik fikirleri.', categories: ['Ulaşım']},
@@ -23,6 +23,9 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
   {id: 'kultur-sanat', label: 'Kültür ve sanat', note: 'Kültür, sanat, festival, rota ve yerel miras fikirleri.', categories: ['Kültür ve Sanat']},
   {id: 'spor', label: 'Spor', note: 'Spor tesisleri, etkinlikler ve açık spor alanları fikirleri.', categories: ['Spor']},
   {id: 'turizm', label: 'Turizm', note: 'Turizm, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Turizm']},
+  {id: 'yapay-zeka-dijitallesme', label: 'Yapay Zeka ve Dijitalleşme', note: 'Akıllı şehir, açık veri, dijital katılım ve yapay zeka fikirleri.', categories: ['Yapay Zeka ve Dijitalleşme']},
+  {id: 'katilimci-yenilikci-yonetim', label: 'Katılımcı ve Yenilikçi Yönetim', note: 'Katılımcı bütçe, ortak akıl, şeffaflık ve yenilikçi hizmet fikirleri.', categories: ['Katılımcı ve Yenilikçi Yönetim']},
+  {id: 'kulturel-miras-essiz-yasam', label: 'Kültürel Miras ve Eşsiz Yaşam', note: 'Yerel bellek, kültürel miras, rota ve eşsiz yaşam deneyimi fikirleri.', categories: ['Kültürel Miras ve Eşsiz Yaşam']},
 ]
 
 const STORAGE_KEY = 'mugla-annual-theme-settings-v1'

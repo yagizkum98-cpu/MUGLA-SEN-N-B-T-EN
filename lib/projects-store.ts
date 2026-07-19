@@ -11,6 +11,7 @@ export type ProjectRecord={
   title:string
   category:string
   subcategory?:string
+  targetGroup?:string
   district:string
   country?:string
   countryCode?:string

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {useMemo, useState} from 'react'
 import {ArrowLeft, CheckCircle2, FileText, MapPin, Search, ShoppingCart} from 'lucide-react'
 import {getCurrentUser} from '@/lib/local-auth'
-import {projectCategories, subcategoriesFor} from '@/lib/project-taxonomy'
+import {projectCategories, subcategoriesFor, targetGroups} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
@@ -98,6 +98,7 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
         <h2 className="mt-2 truncate text-lg font-black">{project.title}</h2>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-mugla-navy/55">
           <span className="flex items-center gap-1.5"><MapPin size={14}/>{project.district}</span>
+          {project.targetGroup && <span>Hedef grup: {project.targetGroup}</span>}
           <span>Başvuru yılı: {applicationYear(project) || '-'}</span>
           <span>{formatBudget(project.budget)}</span>
           <span>{project.votes.toLocaleString('tr-TR')} destek</span>
@@ -134,6 +135,7 @@ export default function Projects() {
   const [districtFilter, setDistrictFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
+  const [targetGroupFilter, setTargetGroupFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [yearFilter, setYearFilter] = useState('all')
   const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
@@ -173,7 +175,8 @@ export default function Projects() {
     const matchesDistrict = districtFilter === 'all' || project.district === districtFilter
     const matchesCategory = categoryFilter === 'all' || project.category === categoryFilter
     const matchesSubcategory = subcategoryFilter === 'all' || project.subcategory === subcategoryFilter
-    return matchesStatus && matchesApplicationYear && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory
+    const matchesTargetGroup = targetGroupFilter === 'all' || project.targetGroup === targetGroupFilter
+    return matchesStatus && matchesApplicationYear && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory && matchesTargetGroup
   })
 
   function addToBasket(id: string) {
@@ -303,7 +306,7 @@ export default function Projects() {
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>
             <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/><span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/>{selectedProject.targetGroup && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">{selectedProject.targetGroup}</span>}<span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
           </div>
           <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
         </div>
@@ -327,7 +330,7 @@ export default function Projects() {
       </section>}
 
       <div className="sticky top-0 z-20 mt-6 rounded-lg border border-mugla-navy/10 bg-white p-3 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_130px_150px_160px_170px_170px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_120px_135px_150px_155px_155px_145px]">
           <label className="flex h-11 items-center gap-2 rounded-lg border border-mugla-navy/10 px-3">
             <Search size={17} className="text-mugla-navy/45"/>
             <input value={projectQuery} onChange={event => setProjectQuery(event.target.value)} placeholder="Proje ara" className="w-full bg-transparent text-sm outline-none"/>
@@ -347,6 +350,10 @@ export default function Projects() {
           <select value={subcategoryFilter} onChange={event => setSubcategoryFilter(event.target.value)} disabled={categoryFilter === 'all'} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none disabled:bg-mugla-sand/70 disabled:text-mugla-navy/40">
             <option value="all">Tüm alt kategoriler</option>
             {subcategories.map(subcategory => <option key={subcategory} value={subcategory}>{subcategory}</option>)}
+          </select>
+          <select value={targetGroupFilter} onChange={event => setTargetGroupFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
+            <option value="all">Tüm hedef gruplar</option>
+            {targetGroups.map(group => <option key={group} value={group}>{group}</option>)}
           </select>
           <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-11 rounded-lg border border-mugla-navy/10 bg-white px-3 text-sm font-semibold text-mugla-navy/70 outline-none">
             {projectStatusOptions.map(status => <option key={status.value} value={status.value}>{status.label}</option>)}

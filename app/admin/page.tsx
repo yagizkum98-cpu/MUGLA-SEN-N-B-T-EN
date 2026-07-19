@@ -13,18 +13,20 @@ import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccou
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
+import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
-const categories = [['Ulasim', '#ef7d00'], ['Iklim ve Cevre', '#6a9d3b'], ['Sosyal Yasam', '#00a6c8'], ['Egitim', '#7c5bcc'], ['Diger', '#64748b']] as const
+const categories = projectCategories
 const statuses: ProjectStatus[] = ['Başvuru', 'İncelemede', 'Uygun', 'Oylamada', 'Yılın Kazanan Adayı', 'İhale Aşamasında', 'Devam Ediyor', 'Tamamlandı', 'Yapılamadı', 'Ertelendi']
 const field = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan'
 const districtGradients = ['from-cyan-50 via-white to-orange-50', 'from-green-50 via-white to-cyan-50', 'from-orange-50 via-white to-lime-50', 'from-sky-50 via-white to-emerald-50'] as const
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'super-admin', label: 'Super admin', note: 'Tum admin hesaplarini yonetir'},
-  {value: 'admin', label: 'Admin', note: 'Proje ve yetkili hesaplarini yonetir'},
+  {value: 'admin', label: 'Admin', note: 'Proje islemlerini yonetir'},
   {value: 'yetkili', label: 'Yetkili', note: 'Proje islemlerine erisir'},
 ]
+const assignableRoles = roles.filter(role => role.value !== 'super-admin')
 
 function CategoryBadge({label, color}: {label: string; color: string}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
@@ -42,6 +44,7 @@ function ProjectDetailBlock({project}: {project: ProjectRecord}) {
     ['Başvuru konumu', `${project.country ?? 'Türkiye'} / ${project.province ?? 'Muğla'} / ${project.applicantDistrict ?? project.district}`],
     ['Projenin uygulanacağı ilçe', project.district],
     ['Kategori', `${project.category}${project.subcategory ? ` / ${project.subcategory}` : ''}`],
+    ['Hedef Grup', project.targetGroup ?? 'Herkes'],
     ['Tahmini bütçe', formatBudget(project.budget)],
     ['Amaç', project.purpose],
     ['Özet', project.summary],
@@ -84,7 +87,7 @@ function PendingProjectCard({
             <p className="font-bold">{project.title}</p>
             <Button size="sm" variant="outline" type="button" onClick={onToggleDetails}><Eye size={15}/>Detaylı Proje Bilgisi</Button>
           </span>
-          <p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>
+          <p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.targetGroup ?? 'Herkes'} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>
           {project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}
         </span>
       </label>
@@ -113,6 +116,7 @@ export default function Admin() {
   const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
+  const canManagePeople = adminUser?.role === 'super-admin'
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
@@ -150,6 +154,7 @@ export default function Admin() {
       title: String(form.get('title')).trim(),
       district: String(form.get('district')),
       category,
+      targetGroup: String(form.get('targetGroup')),
       budget: Number(form.get('budget')),
       status: String(form.get('status')) as ProjectStatus,
       lat: Number(form.get('lat')) || 37.08,
@@ -186,6 +191,7 @@ export default function Admin() {
         title: String(form.get('title')).trim(),
         district: String(form.get('district')),
         category,
+        targetGroup: String(form.get('targetGroup')),
         budget: Number(form.get('budget')) || 0,
         status: 'Oylamada',
         lat: Number(form.get('lat')) || 37.08,
@@ -382,16 +388,16 @@ export default function Admin() {
       {peopleOpen && <Card>
         <CardHeader>
           <h2 className="text-xl font-bold">Yetkili kisiler</h2>
-          <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar belediye paneline girebilir. Birden fazla yetkili kisi eklenebilir.</p>
+          <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar belediye paneline girebilir. Admin ve yetkili hesaplarini yalnizca super admin ekleyip silebilir.</p>
         </CardHeader>
         <CardContent className="space-y-5">
-          {adminUser?.role !== 'yetkili' && <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {canManagePeople ? <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label><span className="mb-2 block text-sm font-semibold">Ad Soyad</span><input className={field} name="name" required minLength={3}/></label>
             <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input className={field} name="email" type="email" required/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Rol</span><select className={field} name="role" required>{roles.filter(role => adminUser?.role === 'super-admin' || role.value !== 'super-admin').map(role => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Rol</span><select className={field} name="role" required>{assignableRoles.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Gecici sifre</span><input className={field} name="password" type="password" required minLength={8}/></label>
             <div className="md:col-span-2 xl:col-span-4"><Button type="submit" variant="orange"><UserPlus size={17}/> Yetkili tanimla</Button></div>
-          </form>}
+          </form> : <p className="rounded-2xl bg-mugla-sand/70 p-4 text-sm font-semibold text-mugla-navy/55">Hesap ekleme ve silme yetkisi sadece super admin hesabindadir.</p>}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Kisi</th><th>E-posta</th><th>Rol</th><th>Tanimlayan</th><th className="text-right">Islem</th></tr></thead>
@@ -400,7 +406,7 @@ export default function Admin() {
                 <td>{account.email}</td>
                 <td><span className="inline-flex items-center gap-2 rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65"><ShieldCheck size={13}/>{account.role}</span></td>
                 <td className="text-mugla-navy/45">{account.createdBy ?? 'sistem'}</td>
-                <td className="text-right">{adminUser?.role === 'super-admin' && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}><span aria-hidden="true">🗑️</span> Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
+                <td className="text-right">{canManagePeople && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}>Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -449,6 +455,7 @@ export default function Admin() {
           <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Proje adi</span><input className={field} name="title" required/></label>
           <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} name="district" required>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
           <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+          <label><span className="mb-2 block text-sm font-semibold">Hedef Grup</span><select className={field} name="targetGroup" required>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
           <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" required>{statuses.map(x => <option key={x}>{x}</option>)}</select></label>
           <label><span className="mb-2 block text-sm font-semibold">Butce (TL)</span><input className={field} name="budget" type="number" min="0" step="1" required/></label>
           <label><span className="mb-2 block text-sm font-semibold">Enlem</span><input className={field} name="lat" type="number" step="any" placeholder="37.08"/></label>
@@ -579,6 +586,7 @@ export default function Admin() {
             <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirilmiş proje adı</span><input className={field} name="title" required defaultValue={selectedMergeProjects[0]?.title ?? ''}/></label>
             <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} name="district" required defaultValue={selectedMergeProjects[0]?.district}>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required defaultValue={selectedMergeProjects[0]?.category}>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Hedef Grup</span><select className={field} name="targetGroup" required defaultValue={selectedMergeProjects[0]?.targetGroup ?? 'Herkes'}>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Tahmini butce (TL)</span><input className={field} name="budget" type="number" min="0" step="1" required defaultValue={selectedMergeProjects.reduce((sum, project) => sum + project.budget, 0)}/></label>
             <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Amaç</span><textarea className={`${field} min-h-24`} name="purpose" defaultValue={selectedMergeProjects.map(project => project.purpose).filter(Boolean).join('\n\n')} required/></label>
             <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirilmiş açıklama</span><textarea className={`${field} min-h-32`} name="summary" defaultValue={selectedMergeProjects.map(project => project.summary).filter(Boolean).join('\n\n')} required/></label>
@@ -603,7 +611,7 @@ export default function Admin() {
 
       <Card id="projeler">
         <CardHeader><h2 className="text-xl font-bold">Proje kayitlari</h2></CardHeader>
-        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[940px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Butce</th><th>Durum</th><th>Onay</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeProject(project.id)}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henuz proje girilmedi.</p><p className="mt-1 text-sm">Ilk kayitla birlikte sayaclar otomatik artar.</p></div>}</CardContent>
+        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeProject(project.id)}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henuz proje girilmedi.</p><p className="mt-1 text-sm">Ilk kayitla birlikte sayaclar otomatik artar.</p></div>}</CardContent>
       </Card>
     </div>
   </AppShell></AdminAuthGate>
