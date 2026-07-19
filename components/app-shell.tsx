@@ -19,7 +19,6 @@ const citizen = [
 const admin = [
   ['/admin', 'Belediye Yonetimi', ShieldCheck],
   ['/dashboard', 'Ilce Dashboardlari', Home],
-  ['/projeler', 'Proje Verileri', FolderKanban],
   ['/admin#iletisim', 'Iletisim Talepleri', Mail],
   ['/crm', 'CRM', UsersRound],
 ] as const

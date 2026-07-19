@@ -2,6 +2,7 @@
 
 import {useCallback,useEffect,useState} from 'react'
 import {categoryColor, normalizeProjectCategory} from '@/lib/project-taxonomy'
+import {createClient} from '@/lib/supabase/client'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
@@ -44,6 +45,7 @@ export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|
 
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
+const REMOTE_TABLE='project_records'
 
 function readProjects():ProjectRecord[]{
   if(typeof window==='undefined')return []
@@ -51,6 +53,45 @@ function readProjects():ProjectRecord[]{
     const value=JSON.parse(localStorage.getItem(STORAGE_KEY)??'[]')
     return Array.isArray(value)?value:[]
   }catch{return []}
+}
+
+function mergeProjectsById(local:ProjectRecord[],remote:ProjectRecord[]){
+  const map=new Map<string,ProjectRecord>()
+  local.map(normalizeProject).forEach(project=>map.set(project.id,project))
+  remote.map(normalizeProject).forEach(project=>map.set(project.id,project))
+  return Array.from(map.values()).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
+}
+
+function saveLocalProjects(projects:ProjectRecord[]){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(projects))
+  window.dispatchEvent(new Event(CHANGE_EVENT))
+}
+
+async function readRemoteProjects(){
+  if(typeof window==='undefined')return null
+  try{
+    const{data,error}=await createClient().from(REMOTE_TABLE).select('data')
+    if(error||!Array.isArray(data))return null
+    return data.map(row=>row.data).filter(Boolean) as ProjectRecord[]
+  }catch{return null}
+}
+
+async function upsertRemoteProjects(projects:ProjectRecord[]){
+  if(typeof window==='undefined'||!projects.length)return
+  try{
+    await createClient().from(REMOTE_TABLE).upsert(projects.map(project=>({
+      id:project.id,
+      data:project,
+      updated_at:new Date().toISOString(),
+    })),{onConflict:'id'})
+  }catch{}
+}
+
+async function deleteRemoteProject(id:string){
+  if(typeof window==='undefined')return
+  try{
+    await createClient().from(REMOTE_TABLE).delete().eq('id',id)
+  }catch{}
 }
 
 function projectYear(project:{createdAt?:string}){
@@ -95,16 +136,28 @@ export function useProjects(){
 
   useEffect(()=>{
     const sync=()=>{setProjects(readProjects().map(normalizeProject));setReady(true)}
+    const syncRemote=async()=>{
+      const local=readProjects().map(normalizeProject)
+      const remote=await readRemoteProjects()
+      if(!remote){setProjects(local);setReady(true);return}
+      const merged=mergeProjectsById(local,remote)
+      saveLocalProjects(merged)
+      setProjects(merged)
+      setReady(true)
+      if(local.length)void upsertRemoteProjects(merged)
+    }
     sync()
+    void syncRemote()
     window.addEventListener('storage',sync)
     window.addEventListener(CHANGE_EVENT,sync)
     return()=>{window.removeEventListener('storage',sync);window.removeEventListener(CHANGE_EVENT,sync)}
   },[])
 
   const save=useCallback((next:ProjectRecord[])=>{
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(next))
-    setProjects(next)
-    window.dispatchEvent(new Event(CHANGE_EVENT))
+    const normalized=next.map(normalizeProject)
+    saveLocalProjects(normalized)
+    setProjects(normalized)
+    void upsertRemoteProjects(normalized)
   },[])
 
   const addProject=useCallback((input:NewProject)=>{
@@ -115,7 +168,7 @@ export function useProjects(){
     return project
   },[save])
 
-  const removeProject=useCallback((id:string)=>save(readProjects().filter(project=>project.id!==id)),[save])
+  const removeProject=useCallback((id:string)=>{save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id)},[save])
   const mergeProjects=useCallback((ids:string[],input:NewProject&{mergeNote?:string})=>{
     const uniqueIds=Array.from(new Set(ids))
     const current=readProjects().map(normalizeProject)
