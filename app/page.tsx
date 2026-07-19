@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {CheckCircle2, FileText, FolderKanban, Lightbulb, LockKeyhole, Mail, UserRound, Vote} from 'lucide-react'
+import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, UserRound, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
@@ -229,7 +229,6 @@ export default function Home() {
           <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-6xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">İlk aşamada hedef basit: vatandaş fikir göndersin, belediye projeleri yayınlasın, herkes durumu kolayca takip etsin.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/giris?next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full bg-mugla-cyan px-5 py-3 font-bold text-mugla-navy"><UserRound size={18}/> Vatandaş Paneli</Link>
             <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy"><FolderKanban size={18}/> Projeleri gör</Link>
           </div>
         </div>
@@ -255,16 +254,11 @@ export default function Home() {
     </section>
 
     <section className="border-y border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 py-12 md:grid-cols-3">
         <Link href="/projeler" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FolderKanban className="text-mugla-orange"/>
           <h3 className="mt-4 text-xl font-bold">Projeler</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Tüm onaylı projeleri ara, filtrele, oy ver ve durumlarını gör.</p>
-        </Link>
-        <Link href="/giris?next=/vatandas/panel" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
-          <LockKeyhole className="text-mugla-blue"/>
-          <h3 className="mt-4 text-xl font-bold">Vatandaş Paneli</h3>
-          <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kayıt ol, aktivasyon koduyla doğrula, giriş yap ve başvurularını panelden takip et.</p>
         </Link>
         <Link href="/kitapcik" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FileText className="text-mugla-green"/>
@@ -285,9 +279,6 @@ export default function Home() {
           <p className="text-sm font-bold text-mugla-cyan">{completed.length} tamamlanan proje</p>
           <h2 className="mt-2 text-2xl font-black">İlk sürüm için odak: az ekran, net yol, gerçek veri.</h2>
         </div>
-        <Link href="/giris?next=/vatandas/panel" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy md:mt-0">
-          Panele basla <CheckCircle2 size={18}/>
-        </Link>
       </div>
     </section>
 
@@ -300,7 +291,6 @@ export default function Home() {
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
           <Link href="/iletisim">İletişim</Link>
-          <Link href="/giris?next=/vatandas/panel">Vatandaş Paneli</Link>
         </div>
       </div>
     </footer>
