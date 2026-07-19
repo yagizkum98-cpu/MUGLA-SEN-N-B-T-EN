@@ -18,9 +18,9 @@ const ACCOUNTS_KEY = 'mugla-admin-accounts-v1'
 const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
-const SUPER_ADMIN_PASSWORD = '1234567890'
-const LEGACY_SUPER_ADMIN_EMAILS = ['superadmin@mugla.bel.tr']
-const LEGACY_SUPER_ADMIN_PASSWORDS = ['Superadmin123', 'Superadmin1234567890', 'SuperAdmin123']
+const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
+const LEGACY_SUPER_ADMIN_EMAILS: string[] = []
+const LEGACY_SUPER_ADMIN_PASSWORDS: string[] = []
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = ''
