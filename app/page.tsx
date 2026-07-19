@@ -153,7 +153,7 @@ export default function Home() {
           <span className="grid h-12 w-12 place-items-center rounded-full bg-white p-1 shadow-sm">
             <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
           </span>
-          <span className="text-sm font-bold leading-tight">Mugla Senin<br/><span className="text-mugla-orange">Butcen</span></span>
+          <span className="text-sm font-bold leading-tight">Muğla Senin<br/><span className="text-mugla-orange">Bütçen</span></span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
           <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
