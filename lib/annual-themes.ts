@@ -4,7 +4,7 @@ import {projectCategories, subcategoriesFor} from '@/lib/project-taxonomy'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'egitim' | 'kultur-sanat' | 'spor' | 'turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim' | 'kulturel-miras-essiz-yasam'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'egitim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
 
 export type AnnualThemeSetting = {
   year: string
@@ -22,16 +22,16 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
   {id: 'egitim', label: 'Eğitim', note: 'Eğitim, kütüphane, meslek, teknoloji ve akademi fikirleri.', categories: ['Eğitim']},
   {id: 'kultur-sanat', label: 'Kültür ve sanat', note: 'Kültür, sanat, festival, rota ve yerel miras fikirleri.', categories: ['Kültür ve Sanat']},
   {id: 'spor', label: 'Spor', note: 'Spor tesisleri, etkinlikler ve açık spor alanları fikirleri.', categories: ['Spor']},
-  {id: 'turizm', label: 'Turizm', note: 'Turizm, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Turizm']},
+  {id: 'kulturel-miras-turizm', label: 'Kültürel Miras ve Turizm', note: 'Kültürel miras, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Kültürel Miras ve Turizm']},
   {id: 'yapay-zeka-dijitallesme', label: 'Yapay Zeka ve Dijitalleşme', note: 'Akıllı şehir, açık veri, dijital katılım ve yapay zeka fikirleri.', categories: ['Yapay Zeka ve Dijitalleşme']},
   {id: 'katilimci-yenilikci-yonetim', label: 'Katılımcı ve Yenilikçi Yönetim', note: 'Katılımcı bütçe, ortak akıl, şeffaflık ve yenilikçi hizmet fikirleri.', categories: ['Katılımcı ve Yenilikçi Yönetim']},
-  {id: 'kulturel-miras-essiz-yasam', label: 'Kültürel Miras ve Eşsiz Yaşam', note: 'Yerel bellek, kültürel miras, rota ve eşsiz yaşam deneyimi fikirleri.', categories: ['Kültürel Miras ve Eşsiz Yaşam']},
 ]
 
 const STORAGE_KEY = 'mugla-annual-theme-settings-v1'
 export const annualThemeChangeEvent = 'mugla-annual-themes-changed'
 
 function normalizeThemeId(value: string): AnnualThemeId | null {
+  if (value === 'turizm' || value === 'kulturel-miras-essiz-yasam') return 'kulturel-miras-turizm'
   return annualThemeOptions.some(theme => theme.id === value) ? value as AnnualThemeId : null
 }
 

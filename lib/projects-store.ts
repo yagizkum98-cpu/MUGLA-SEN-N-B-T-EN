@@ -1,6 +1,7 @@
 'use client'
 
 import {useCallback,useEffect,useState} from 'react'
+import {categoryColor, normalizeProjectCategory} from '@/lib/project-taxonomy'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
@@ -79,7 +80,9 @@ function withDefaults(project:ProjectRecord):ProjectRecord{
 }
 
 function normalizeProject(project:ProjectRecord):ProjectRecord{
-  return {...project,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus:project.moderationStatus??'Onaylandı'}
+  const category=normalizeProjectCategory(project.category)
+  const color=project.category===category&&project.color?project.color:categoryColor(category)
+  return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus:project.moderationStatus??'Onaylandı'}
 }
 
 function isPublished(project:ProjectRecord){

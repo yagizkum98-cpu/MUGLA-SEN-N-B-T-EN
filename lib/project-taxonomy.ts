@@ -5,11 +5,10 @@ export const projectCategories=[
   ['Eğitim','#7c5bcc'],
   ['Kültür ve Sanat','#d946ef'],
   ['Spor','#2563eb'],
-  ['Turizm','#0891b2'],
+  ['Kültürel Miras ve Turizm','#0891b2'],
   ['Afet ve Risk Yönetimi','#dc2626'],
   ['Yapay Zeka ve Dijitalleşme','#0ea5e9'],
   ['Katılımcı ve Yenilikçi Yönetim','#14b8a6'],
-  ['Kültürel Miras ve Eşsiz Yaşam','#a16207'],
   ['Diğer','#64748b'],
 ] as const
 
@@ -25,14 +24,22 @@ export const projectSubcategories:Record<ProjectCategory,string[]>={
   'Eğitim':['Okul Destekleri','Kütüphaneler','Etüt Merkezleri','Dijital Eğitim','Meslek Edindirme','Yaşam Boyu Eğitim','STEM Eğitimleri','Yaz Okulları','Kodlama','Yapay Zeka','Robotik','Girişimcilik','Kariyer Destekleri','Burs Programları','Eğitim Teknolojileri','Çocuk Atölyeleri','Gençlik Akademileri','Diğer'],
   'Kültür ve Sanat':['Kültür Merkezleri','Müzeler','Kütüphaneler','Sanat Galerileri','Tiyatro','Sinema','Konser','Festival','Sergi','Halk Dansları','Yerel Kültür','Somut Kültürel Miras','Dijital Kültür','Sokak Sanatları','Sanat Atölyeleri','Kültür Rotaları','Turizm Entegrasyonu','Diğer'],
   'Spor':['Spor Tesisleri','Açık Spor Alanları','Yüzme Havuzları','Fitness Alanları','Bisiklet Sporları','Koşu Parkurları','Yürüyüş Rotaları','Çocuk Spor Alanları','Amatör Spor Kulüpleri','Su Sporları','Engelli Sporları','Gençlik Sporları','Turnuvalar','E-Spor','Spor Etkinlikleri','Diğer'],
-  'Turizm':['Tanıtım Faaliyetleri','Dijital Turizm','Turizm Rotaları','Gastronomi','Kırsal Turizm','Ekoturizm','Kültür Turizmi','Deniz Turizmi','Kamp ve Karavan','Bisiklet Turizmi','Yürüyüş Rotaları','Likya Yolu','Akıllı Turizm','QR Rehber Sistemleri','Ziyaretçi Deneyimi','Turizm Etkinlikleri','Konaklama','Yat Limanları','Diğer'],
+  'Kültürel Miras ve Turizm':['Kültürel Mirasın Korunması','Somut Olmayan Kültürel Miras','Yerel Bellek','Tarihi Yapılar','Kültür Rotaları','Gastronomi Mirası','Yerel Üretim','Ege ve Akdeniz Yaşamı','Doğa ve Kültür Deneyimi','Müze ve Arşiv','Tanıtım Faaliyetleri','Dijital Turizm','Turizm Rotaları','Gastronomi','Kırsal Turizm','Ekoturizm','Kültür Turizmi','Deniz Turizmi','Kamp ve Karavan','Bisiklet Turizmi','Yürüyüş Rotaları','Likya Yolu','Akıllı Turizm','QR Rehber Sistemleri','Ziyaretçi Deneyimi','Turizm Etkinlikleri','Konaklama','Yat Limanları','Diğer'],
   'Afet ve Risk Yönetimi':['Afet Hazırlığı','Risk Azaltma','Acil Durum Toplanma Alanları','Deprem Güvenliği','Yangınla Mücadele','Sel ve Taşkın Yönetimi','Erken Uyarı Sistemleri','Kriz Koordinasyonu','Gönüllü Afet Ekipleri','İklim Afetleri','Diğer'],
   'Yapay Zeka ve Dijitalleşme':['Yapay Zeka Uygulamaları','Akıllı Şehir Sistemleri','Açık Veri','Dijital Katılım','Mobil Uygulamalar','Veri Analitiği','Dijital Eğitim','Siber Güvenlik','Sensör ve IoT','Dijital Erişilebilirlik','Diğer'],
   'Katılımcı ve Yenilikçi Yönetim':['Katılımcı Bütçe','Mahalle Meclisleri','Ortak Akıl Çalışmaları','Şeffaflık ve Hesap Verebilirlik','Gönüllülük','Sivil Toplum İş Birliği','Sosyal İnovasyon','Hizmet Tasarımı','Yerel Demokrasi','Vatandaş Deneyimi','Diğer'],
-  'Kültürel Miras ve Eşsiz Yaşam':['Kültürel Mirasın Korunması','Somut Olmayan Kültürel Miras','Yerel Bellek','Tarihi Yapılar','Kültür Rotaları','Gastronomi Mirası','Yerel Üretim','Ege ve Akdeniz Yaşamı','Doğa ve Kültür Deneyimi','Müze ve Arşiv','Diğer'],
   'Diğer':['Teknoloji','Akıllı Şehir','Ekonomi','İstihdam','Tarım','Hayvancılık','Balıkçılık','Kentsel Tasarım','İmar','Kentsel Dönüşüm','Afet Yönetimi','Sağlık','Kamu Hizmetleri','Belediye Hizmetleri','Enerji','Dijital Dönüşüm','Girişimcilik','İnovasyon','Yerel Kalkınma','Diğer'],
 }
 
+export function normalizeProjectCategory(category:string){
+  return ['Turizm','Kültürel Miras ve Eşsiz Yaşam'].includes(category) ? 'Kültürel Miras ve Turizm' : category
+}
+
+export function categoryColor(category:string){
+  const normalized=normalizeProjectCategory(category)
+  return projectCategories.find(item=>item[0]===normalized)?.[1]??'#64748b'
+}
+
 export function subcategoriesFor(category:string){
-  return projectSubcategories[category as ProjectCategory]??projectSubcategories['Diğer']
+  return projectSubcategories[normalizeProjectCategory(category) as ProjectCategory]??projectSubcategories['Diğer']
 }
