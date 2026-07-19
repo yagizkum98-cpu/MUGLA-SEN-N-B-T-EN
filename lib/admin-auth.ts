@@ -19,8 +19,6 @@ const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
-const LEGACY_SUPER_ADMIN_EMAILS: string[] = []
-const LEGACY_SUPER_ADMIN_PASSWORDS: string[] = []
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = ''
@@ -84,31 +82,20 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
 
 async function ensureSeedAccount() {
   const accounts = readRawAccounts()
-  if (accounts.length) {
-    const superAdmin = accounts.find(account => account.role === 'super-admin' && (account.email === SUPER_ADMIN_EMAIL || LEGACY_SUPER_ADMIN_EMAILS.includes(account.email)))
-    if (!superAdmin) return accounts
-    const legacyHashes = await Promise.all(LEGACY_SUPER_ADMIN_PASSWORDS.map(password => derive(password, base64ToBytes(superAdmin.salt))))
-    const shouldUpdateEmail = superAdmin.email !== SUPER_ADMIN_EMAIL
-    const shouldUpdatePassword = legacyHashes.includes(superAdmin.passwordHash)
-    if (!shouldUpdateEmail && !shouldUpdatePassword) return accounts
-    const salt = crypto.getRandomValues(new Uint8Array(16))
-    const passwordHash = await derive(SUPER_ADMIN_PASSWORD, salt)
-    const updated = accounts.map(account => account.id === superAdmin.id ? {
-      ...account,
-      email: SUPER_ADMIN_EMAIL,
-      passwordHash,
-      salt: bytesToBase64(salt),
-      passwordPreview: encodePasswordPreview(SUPER_ADMIN_PASSWORD),
-    } : account)
-    saveAccounts(updated)
-    return updated
-  }
   const seed = await createAccount({
     name: 'Super Admin',
     email: SUPER_ADMIN_EMAIL,
     role: 'super-admin',
     password: SUPER_ADMIN_PASSWORD,
   })
+  if (accounts.length) {
+    const superAdmin = accounts.find(account => account.role === 'super-admin')
+    const updated = superAdmin
+      ? accounts.map(account => account.id === superAdmin.id ? {...seed, id: account.id, createdAt: account.createdAt} : account)
+      : [seed, ...accounts]
+    saveAccounts(updated)
+    return updated
+  }
   saveAccounts([seed])
   return [seed]
 }
