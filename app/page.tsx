@@ -174,7 +174,7 @@ export default function Home() {
           <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
-          <Link href="/kitapcik">Muğla Senin Bütçen Kitapçığı</Link>
+          <Link href="/kitapcik">Kitapçık</Link>
           <Link href="/iletisim">İletişim</Link>
         </nav>
         <div className="flex items-center gap-2">
