@@ -256,8 +256,8 @@ export default function Home() {
 
     <section id="nasil" className="mx-auto max-w-6xl px-5 py-14">
       <div className="max-w-2xl">
-        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Basit akış</p>
-        <h2 className="mt-3 text-3xl font-black md:text-4xl">MVP deneyimi dört adımda ilerler.</h2>
+        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Proje akışı</p>
+        <h2 className="mt-3 text-3xl font-black md:text-4xl">Katılımcı bütçe bölümü dört adımda ilerler.</h2>
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-4">
         <Step icon={Lightbulb} title="Fikir al" text="Vatandaş giriş yapar ve fikrini kısa bir formla iletir."/>
