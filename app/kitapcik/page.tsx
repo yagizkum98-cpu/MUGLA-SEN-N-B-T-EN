@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import {ArrowLeft, FileText} from 'lucide-react'
+import {SiteUserMenu} from '@/components/site-user-menu'
 
 const pdfPath = '/kitapcik/mugla-senin-butcen-kitapcigi.pdf'
 
@@ -9,6 +10,7 @@ export default function BookletPage() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/65 hover:text-mugla-navy"><ArrowLeft size={16}/> Ana sayfa</Link>
         <span className="text-sm font-bold text-mugla-orange">PDF Kitapçık</span>
+        <SiteUserMenu/>
       </div>
     </header>
 

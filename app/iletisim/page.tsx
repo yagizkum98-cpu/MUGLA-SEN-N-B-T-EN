@@ -4,6 +4,7 @@ import Link from 'next/link'
 import {FormEvent, useMemo, useState} from 'react'
 import {ArrowLeft, Building2, CheckCircle2, Mail, MapPin, Phone, Send} from 'lucide-react'
 import {Button} from '@/components/ui/button'
+import {SiteUserMenu} from '@/components/site-user-menu'
 import {type ContactTopic, useContactRecords} from '@/lib/contact-store'
 
 const field = 'w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
@@ -109,7 +110,7 @@ export default function ContactPage() {
     <header className="border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-mugla-navy/60 hover:text-mugla-navy"><ArrowLeft size={17}/> Ana sayfaya don</Link>
-        <span className="hidden text-xs font-bold tracking-[.18em] text-mugla-orange sm:block">MUGLA SENIN BUTCEN</span>
+        <div className="flex items-center gap-3"><span className="hidden text-xs font-bold tracking-[.18em] text-mugla-orange sm:block">MUGLA SENIN BUTCEN</span><SiteUserMenu/></div>
       </div>
     </header>
 

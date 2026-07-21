@@ -2,10 +2,11 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, UserRound, Vote} from 'lucide-react'
+import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
 import {formatBudget, useProjects} from '@/lib/projects-store'
+import {SiteUserMenu} from '@/components/site-user-menu'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
   return <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
@@ -189,11 +190,7 @@ export default function Home() {
           <Link href="/kitapcik">Kitapçık</Link>
           <Link href="/iletisim">İletişim</Link>
         </nav>
-        <div className="flex items-center gap-2">
-          <Link href={citizenUrl('/')} className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
-            Giriş yap <UserRound size={16}/>
-          </Link>
-        </div>
+        <div className="flex items-center gap-2"><SiteUserMenu showLogin/></div>
       </div>
     </header>
 

@@ -23,6 +23,7 @@ export type LocalUser = {
   verifiedBadge: string
   panelPath: string
   apiPath: string
+  avatarUrl?: string
   identityReference?: string
 }
 
@@ -45,6 +46,7 @@ export function normalizeLocalUser(user: LocalUser): LocalUser {
     district: user.district ?? 'Mentese',
     panelPath: user.panelPath ?? '/vatandas/panel',
     apiPath: user.apiPath ?? `/api/vatandas/${user.id}`,
+    avatarUrl: user.avatarUrl,
   }
 }
 
@@ -206,7 +208,7 @@ export function getCurrentUser() {
   return listLocalUsers().find(user => user.id === id) ?? null
 }
 
-export function updateCurrentUserProfile(input: {name?: string; phone?: string; district?: string; province?: string}) {
+export function updateCurrentUserProfile(input: {name?: string; phone?: string; district?: string; province?: string; avatarUrl?: string}) {
   const current = getCurrentUser()
   if (!current) throw new Error('Oturum bulunamadi.')
   const users = listLocalUsers()
@@ -216,6 +218,7 @@ export function updateCurrentUserProfile(input: {name?: string; phone?: string; 
     phone: input.phone?.trim() || current.phone,
     province: input.province?.trim() || current.province,
     district: input.district?.trim() || current.district,
+    avatarUrl: input.avatarUrl !== undefined ? input.avatarUrl : current.avatarUrl,
   }
   saveUsers(users.map(user => user.id === current.id ? updated : user))
   return updated

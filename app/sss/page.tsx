@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import {ArrowLeft, ChevronDown, HelpCircle} from 'lucide-react'
+import {SiteUserMenu} from '@/components/site-user-menu'
 
 const sections = [
   {
@@ -53,7 +54,7 @@ export default function FAQPage() {
     <header className="border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/65 hover:text-mugla-navy"><ArrowLeft size={16}/> Ana sayfa</Link>
-        <span className="text-sm font-bold text-mugla-orange">S.S.S.</span>
+        <div className="flex items-center gap-3"><span className="text-sm font-bold text-mugla-orange">S.S.S.</span><SiteUserMenu/></div>
       </div>
     </header>
 

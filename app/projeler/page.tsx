@@ -8,6 +8,7 @@ import {getCurrentUser} from '@/lib/local-auth'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
+import {SiteUserMenu} from '@/components/site-user-menu'
 
 const votingSchedule = {
   start: '2026-05-01T00:00:00+03:00',
@@ -255,7 +256,7 @@ export default function Projects() {
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/70 hover:text-mugla-navy">
           <ArrowLeft size={16}/> Ana sayfa
         </Link>
-        <Link href={citizenUrl('/')} className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Vatandaş Paneli</Link>
+        <SiteUserMenu/>
       </div>
     </header>
 

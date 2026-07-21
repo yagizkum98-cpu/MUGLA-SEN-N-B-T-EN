@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {FormEvent, useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, Bell, CheckCircle2, FileText, KeyRound, Lightbulb, LockKeyhole, LogOut, Minus, Phone, Plus, ShieldCheck, ShoppingCart, UserRound, Vote} from 'lucide-react'
+import {ArrowUpRight, Bell, Camera, CheckCircle2, FileText, KeyRound, Lightbulb, LockKeyhole, LogOut, Minus, Phone, Plus, ShieldCheck, ShoppingCart, UserRound, Vote} from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
@@ -20,6 +20,19 @@ function CategoryBadge({label, color}: {label: string; color: string}) {
 
 function projectCategoryLabel(project: {category: string; customTheme?: string}) {
   return project.category === 'Diğer' && project.customTheme ? `Diğer: ${project.customTheme}` : project.category
+}
+
+function userInitials(name: string) {
+  return name.split(' ').filter(Boolean).map(part => part[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || 'V'
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('Avatar okunamadi.'))
+    reader.readAsDataURL(file)
+  })
 }
 
 export function CitizenDashboard() {
@@ -86,6 +99,26 @@ export function CitizenDashboard() {
       setMessage('Profil bilgilerin guncellendi.')
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : 'Profil guncellenemedi.')
+    }
+  }
+
+  async function updateAvatar(file: File | undefined) {
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage('Avatar icin JPG, PNG veya WEBP dosyasi secin.')
+      return
+    }
+    if (file.size > 1024 * 1024) {
+      setMessage('Avatar dosyasi en fazla 1 MB olabilir.')
+      return
+    }
+    try {
+      const avatarUrl = await fileToDataUrl(file)
+      const updated = updateCurrentUserProfile({avatarUrl})
+      setUser(updated)
+      setMessage('Avatar resmin guncellendi.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Avatar guncellenemedi.')
     }
   }
 
@@ -176,6 +209,20 @@ export function CitizenDashboard() {
           </nav>
 
           {profileTab === 'profile' && <form onSubmit={submitProfile} className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/60 p-4 md:col-span-2">
+              <span className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-mugla-navy text-xl font-black text-white">
+                {user.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name} avatar`} className="h-full w-full object-cover"/> : userInitials(user.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">Avatar resmi</p>
+                <p className="mt-1 text-sm text-mugla-navy/50">JPG, PNG veya WEBP yukleyebilirsin. En fazla 1 MB.</p>
+              </div>
+              <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-mugla-navy px-4 text-sm font-bold text-white">
+                <Camera size={17}/> Resim sec
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => void updateAvatar(event.target.files?.[0])}/>
+              </label>
+              {user.avatarUrl && <Button type="button" variant="outline" onClick={() => {const updated = updateCurrentUserProfile({avatarUrl: ''}); setUser(updated); setMessage('Avatar resmi kaldirildi.')}}>Kaldir</Button>}
+            </div>
             <label><span className="mb-2 block text-sm font-semibold">Ad Soyad</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="name" defaultValue={user.name} required minLength={3}/></label>
             <label><span className="mb-2 block text-sm font-semibold">Telefon numarasi</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="phone" type="tel" defaultValue={user.phone} required pattern="[0-9+() -]{10,20}"/></label>
             <label><span className="mb-2 block text-sm font-semibold">Il</span><input className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" name="province" defaultValue={user.province} required/></label>
