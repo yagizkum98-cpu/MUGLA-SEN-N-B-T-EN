@@ -116,18 +116,22 @@ function nextProjectCode(projects:ProjectRecord[],createdAt:string){
   return code
 }
 
-function withDefaults(project:ProjectRecord):ProjectRecord{
-  return {...project,moderationStatus:project.moderationStatus??'Onaylandı'}
-}
-
 function normalizeProject(project:ProjectRecord):ProjectRecord{
   const category=normalizeProjectCategory(project.category)
   const color=project.category===category&&project.color?project.color:categoryColor(category)
-  return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus:project.moderationStatus??'Onaylandı'}
+  const moderationStatus=normalizeModerationStatus(project)
+  return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus}
 }
 
 function isPublished(project:ProjectRecord){
   return !['Bekliyor','Reddedildi'].includes(String(project.moderationStatus))
+}
+
+function normalizeModerationStatus(project:ProjectRecord):ProjectModerationStatus{
+  const status=String(project.moderationStatus??'')
+  if(status==='Bekliyor'||status==='Onaylandı'||status==='Reddedildi')return status
+  const isCitizenApplication=String(project.status).startsWith('Başvuru')||Boolean(project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary)
+  return isCitizenApplication?'Bekliyor':'Onaylandı'
 }
 
 export function useProjects(){
@@ -144,7 +148,7 @@ export function useProjects(){
       saveLocalProjects(merged)
       setProjects(merged)
       setReady(true)
-      if(local.length)void upsertRemoteProjects(merged)
+      if(merged.length)void upsertRemoteProjects(merged)
     }
     sync()
     void syncRemote()
