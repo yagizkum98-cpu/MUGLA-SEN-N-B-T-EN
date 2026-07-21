@@ -48,12 +48,17 @@ export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
+const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi']
+
+function isRemovedProject(project:Pick<ProjectRecord,'title'>){
+  return REMOVED_PROJECT_TITLES.includes(String(project.title??'').trim().toLocaleLowerCase('tr'))
+}
 
 function readProjects():ProjectRecord[]{
   if(typeof window==='undefined')return []
   try{
     const value=JSON.parse(localStorage.getItem(STORAGE_KEY)??'[]')
-    return Array.isArray(value)?value:[]
+    return Array.isArray(value)?value.filter(project=>project?.title&&!isRemovedProject(project as ProjectRecord)):[]
   }catch{return []}
 }
 
@@ -61,7 +66,7 @@ function mergeProjectsById(local:ProjectRecord[],remote:ProjectRecord[]){
   const map=new Map<string,ProjectRecord>()
   local.map(normalizeProject).forEach(project=>map.set(project.id,project))
   remote.map(normalizeProject).forEach(project=>map.set(project.id,project))
-  return Array.from(map.values()).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
+  return Array.from(map.values()).filter(project=>!isRemovedProject(project)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
 }
 
 function saveLocalProjects(projects:ProjectRecord[]){
@@ -121,7 +126,8 @@ function nextProjectCode(projects:ProjectRecord[],createdAt:string){
 function normalizeProject(project:ProjectRecord):ProjectRecord{
   const category=normalizeProjectCategory(project.category)
   const color=project.category===category&&project.color?project.color:categoryColor(category)
-  const moderationStatus=normalizeModerationStatus(project)
+  const normalizedModerationStatus=normalizeModerationStatus(project)
+  const moderationStatus=String(project.status).startsWith('Başvuru')?'Bekliyor':String(normalizedModerationStatus)==='OnaylandÄ±'?'Onaylandı' as ProjectModerationStatus:normalizedModerationStatus
   return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus}
 }
 
@@ -146,11 +152,13 @@ export function useProjects(){
       const local=readProjects().map(normalizeProject)
       const remote=await readRemoteProjects()
       if(!remote){setProjects(local);setReady(true);return}
+      const removedIds=[...local,...remote].filter(project=>isRemovedProject(project)).map(project=>project.id)
       const merged=mergeProjectsById(local,remote)
       saveLocalProjects(merged)
       setProjects(merged)
       setReady(true)
       if(merged.length)void upsertRemoteProjects(merged)
+      removedIds.forEach(id=>void deleteRemoteProject(id))
     }
     sync()
     void syncRemote()
@@ -160,7 +168,7 @@ export function useProjects(){
   },[])
 
   const save=useCallback((next:ProjectRecord[])=>{
-    const normalized=next.map(normalizeProject)
+    const normalized=next.filter(project=>!isRemovedProject(project)).map(normalizeProject)
     saveLocalProjects(normalized)
     setProjects(normalized)
     void upsertRemoteProjects(normalized)
