@@ -50,8 +50,17 @@ const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
 const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi']
 
-function isRemovedProject(project:Pick<ProjectRecord,'title'>){
-  return REMOVED_PROJECT_TITLES.includes(String(project.title??'').trim().toLocaleLowerCase('tr'))
+function normalizeText(value:unknown){
+  return String(value??'').trim().toLocaleLowerCase('tr')
+}
+
+function hasApplicantData(project:Partial<ProjectRecord>){
+  return Boolean(project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
+}
+
+function isRemovedProject(project:Partial<ProjectRecord>&Pick<ProjectRecord,'title'>){
+  const isLegacySocialStops=REMOVED_PROJECT_TITLES.includes(normalizeText(project.title))
+  return isLegacySocialStops&&!hasApplicantData(project)
 }
 
 function readProjects():ProjectRecord[]{
@@ -127,18 +136,24 @@ function normalizeProject(project:ProjectRecord):ProjectRecord{
   const category=normalizeProjectCategory(project.category)
   const color=project.category===category&&project.color?project.color:categoryColor(category)
   const normalizedModerationStatus=normalizeModerationStatus(project)
-  const moderationStatus=String(project.status).startsWith('Başvuru')?'Bekliyor':String(normalizedModerationStatus)==='OnaylandÄ±'?'Onaylandı' as ProjectModerationStatus:normalizedModerationStatus
+  const moderationStatus=isPendingReviewProject({...project,moderationStatus:normalizedModerationStatus})?'Bekliyor':normalizedModerationStatus
   return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus}
 }
 
-function isPublished(project:ProjectRecord){
+export function isPublishedProject(project:Pick<ProjectRecord,'moderationStatus'>){
   return !['Bekliyor','Reddedildi'].includes(String(project.moderationStatus))
+}
+
+export function isPendingReviewProject(project:Partial<ProjectRecord>){
+  const moderationStatus=String(project.moderationStatus??'')
+  const status=String(project.status??'')
+  return moderationStatus==='Bekliyor'||status.startsWith('Başvuru')
 }
 
 function normalizeModerationStatus(project:ProjectRecord):ProjectModerationStatus{
   const status=String(project.moderationStatus??'')
   if(status==='Bekliyor'||status==='Onaylandı'||status==='Reddedildi')return status
-  const isCitizenApplication=String(project.status).startsWith('Başvuru')||Boolean(project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary)
+  const isCitizenApplication=isPendingReviewProject(project)||hasApplicantData(project)
   return isCitizenApplication?'Bekliyor':'Onaylandı'
 }
 
@@ -221,7 +236,7 @@ export function useProjects(){
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{
     save(readProjects().map(project=>{
-      if(project.id!==id||!isPublished(project)||!['Oylamada','Yılın Kazanan Adayı'].includes(String(project.status)))return project
+      if(project.id!==id||!isPublishedProject(project)||!['Oylamada','Yılın Kazanan Adayı'].includes(String(project.status)))return project
       return {...project,votes:Math.max(0,project.votes+delta)}
     }))
   },[save])

@@ -8,7 +8,7 @@ import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
-import {formatBudget, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
+import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
@@ -346,7 +346,7 @@ export default function Admin() {
   const scopedProjects = isCrmRole ? [] : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
-  const pendingProjects = scopedProjects.filter(project => project.moderationStatus === 'Bekliyor')
+  const pendingProjects = scopedProjects.filter(isPendingReviewProject)
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const managedProject = projects.find(project => project.id === managedProjectId) ?? null
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
