@@ -23,8 +23,8 @@ const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
 
-export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin' | 'yetkili'> {
-  if (role === 'super-admin' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'crm') return role
+export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin'> {
+  if (role === 'super-admin' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'crm' || role === 'yetkili') return role
   return 'belediye-admin'
 }
 

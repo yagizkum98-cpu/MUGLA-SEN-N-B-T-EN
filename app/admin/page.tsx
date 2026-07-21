@@ -7,7 +7,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
+import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -28,6 +28,7 @@ const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'super-admin', label: 'Super admin', note: 'Platform sahibi; sistem, API, backup, audit ve lisans kontrolu'},
   {value: 'belediye-admin', label: 'Belediye admini', note: 'Proje, oylama, CRM, rapor, kategori ve belediye operasyonlari'},
   {value: 'ilce-yoneticisi', label: 'Ilce yoneticisi', note: 'Sadece kendi ilcesindeki proje, vatandas, oy ve raporlar'},
+  {value: 'yetkili', label: 'Ilce personeli', note: 'Kendi ilcesi icin taslak proje olusturur ve incelemeye gonderir'},
   {value: 'degerlendirici', label: 'Degerlendirici', note: 'Kendisine atanan projelerde teknik/mali degerlendirme'},
   {value: 'crm', label: 'CRM yetkilisi', note: 'Vatandas talep, sikayet, mesaj, destek ve basvuru durumu'},
 ]
@@ -176,18 +177,27 @@ function topicLabel(topic: ContactRecord['topic']) {
 function ProjectDetailBlock({project}: {project: ProjectRecord}) {
   const details = [
     ['Proje kodu', project.projectCode],
+    ['Proje durumu', project.workflowStatus],
+    ['Kısa açıklama', project.shortDescription],
     ['Başvuru sahibi', project.ownerName || project.ownerEmail || 'Belirtilmedi'],
+    ['Oluşturan yetkili', project.createdByAdminName],
     ['Başvuru türü', project.applicantType ?? 'Bireysel'],
-    ['Başvuru konumu', `${project.country ?? 'Türkiye'} / ${project.province ?? 'Muğla'} / ${project.applicantDistrict ?? project.district}`],
+    ['Başvuru konumu', `${project.country ?? 'Türkiye'} / ${project.province ?? 'Muğla'} / ${project.applicantDistrict ?? project.district} / ${project.neighborhood ?? 'Mahalle belirtilmedi'}`],
+    ['Harita notu', project.locationNote],
     ['Projenin uygulanacağı ilçe', project.district],
     ['Kategori', project.category],
     ['Proje teması', project.customTheme],
     ['Hedef Grup', project.targetGroup ?? 'Herkes'],
     ['Tahmini bütçe', formatBudget(project.budget)],
+    ['Finans kaynağı', project.financingSource],
+    ['Süre', project.duration],
+    ['Öncelik', project.priority],
     ['Amaç', project.purpose],
     ['Özet', project.summary],
     ['Faaliyetler', project.activities],
     ['Beklenen sonuçlar', project.expectedResults],
+    ['Video', project.videoUrl],
+    ['Etki analizi', `Sosyal ${project.socialImpact ?? 0}/100 · Çevresel ${project.environmentalImpact ?? 0}/100 · Ekonomik ${project.economicImpact ?? 0}/100 · Erişim ${project.accessibilityImpact ?? 0}/100 · Sürdürülebilirlik ${project.sustainabilityImpact ?? 0}/100`],
     ['Ek dosyalar', project.attachments?.length ? project.attachments.map(file => `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`).join(', ') : 'Ek dosya yok'],
   ]
 
@@ -207,6 +217,8 @@ function PendingProjectCard({
   onToggleDetails,
   onApprove,
   onReject,
+  onRevision,
+  onMissingDocument,
   canReview,
 }: {
   project: ProjectRecord
@@ -216,6 +228,8 @@ function PendingProjectCard({
   onToggleDetails: () => void
   onApprove: () => void
   onReject: () => void
+  onRevision: () => void
+  onMissingDocument: () => void
   canReview: boolean
 }) {
   return <div className="rounded-2xl border border-mugla-navy/10 p-4">
@@ -231,7 +245,9 @@ function PendingProjectCard({
           {project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}
         </span>
       </label>
-      {canReview ? <div className="flex shrink-0 gap-2">
+      {canReview ? <div className="flex shrink-0 flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={onMissingDocument}><FileText size={15}/>Eksik belge</Button>
+        <Button size="sm" variant="outline" onClick={onRevision}><ArrowUpRight size={15}/>Revizyon</Button>
         <Button size="sm" variant="orange" onClick={onApprove}><CheckCircle2 size={15}/>Onayla</Button>
         <Button size="sm" variant="outline" onClick={onReject}><XCircle size={15}/>Reddet</Button>
       </div> : <span className="rounded-full bg-mugla-sand px-3 py-2 text-xs font-bold text-mugla-navy/55">Sadece inceleme</span>}
@@ -262,19 +278,27 @@ function ProjectManagementPanel({
 }) {
   const detailItems = [
     ['Proje kodu', project.projectCode],
+    ['Proje durumu', project.workflowStatus],
     ['Durum', project.status],
     ['Onay', project.moderationStatus],
     ['İlçe', project.district],
+    ['Mahalle', project.neighborhood],
+    ['Kısa açıklama', project.shortDescription],
     ['Kategori', project.category],
     ['Proje teması', project.customTheme],
     ['Hedef grup', project.targetGroup ?? 'Herkes'],
     ['Bütçe', formatBudget(project.budget)],
+    ['Finans kaynağı', project.financingSource],
+    ['Süre', project.duration],
+    ['Öncelik', project.priority],
     ['Oy', project.votes.toLocaleString('tr-TR')],
     ['Başvuru sahibi', project.ownerName || project.ownerEmail || 'Belirtilmedi'],
     ['Amaç', project.purpose],
     ['Özet', project.summary],
     ['Faaliyetler', project.activities],
     ['Beklenen sonuçlar', project.expectedResults],
+    ['Video', project.videoUrl],
+    ['Etki analizi', `Sosyal ${project.socialImpact ?? 0}/100 · Çevresel ${project.environmentalImpact ?? 0}/100 · Ekonomik ${project.economicImpact ?? 0}/100 · Erişim ${project.accessibilityImpact ?? 0}/100 · Sürdürülebilirlik ${project.sustainabilityImpact ?? 0}/100`],
   ]
 
   return <Card>
@@ -334,17 +358,19 @@ export default function Admin() {
   const isSuperAdmin = activeRole === 'super-admin'
   const isMunicipalityAdmin = activeRole === 'belediye-admin'
   const isDistrictManager = activeRole === 'ilce-yoneticisi'
+  const isDistrictStaff = activeRole === 'yetkili'
   const isEvaluator = activeRole === 'degerlendirici'
   const isCrmRole = activeRole === 'crm'
   const canManagePeople = isSuperAdmin
   const canSeeSystem = isSuperAdmin
   const canSeeProjects = !isCrmRole
-  const canReviewProjects = isSuperAdmin || isMunicipalityAdmin
+  const canReviewProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canCreateMunicipalProject = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
   const canSeeCrm = isSuperAdmin || isMunicipalityAdmin || isCrmRole
   const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin
   const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
-  const scopedProjects = isCrmRole ? [] : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id)) : projects
+  const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id) : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
   const pendingProjects = scopedProjects.filter(isPendingReviewProject)
@@ -389,16 +415,37 @@ export default function Admin() {
     const category = String(form.get('category'))
     addProject({
       title: String(form.get('title')).trim(),
+      shortDescription: String(form.get('shortDescription')).trim(),
       district: String(form.get('district')),
+      neighborhood: String(form.get('neighborhood')).trim(),
+      locationNote: String(form.get('locationNote')).trim(),
       category,
+      subcategory: String(form.get('subcategory')).trim(),
       customTheme: category === 'Diğer' ? String(form.get('customTheme')).trim() : undefined,
       targetGroup: String(form.get('targetGroup')),
       budget: Number(form.get('budget')),
+      financingSource: String(form.get('financingSource')).trim(),
+      duration: String(form.get('duration')).trim(),
+      priority: String(form.get('priority')).trim(),
       status: String(form.get('status')) as ProjectStatus,
       lat: Number(form.get('lat')) || 37.08,
       lng: Number(form.get('lng')) || 28.45,
       color: categories.find(item => item[0] === category)?.[1] ?? '#64748b',
-      moderationStatus: 'Onaylandı',
+      moderationStatus: isSuperAdmin ? 'Onaylandı' : 'Bekliyor',
+      workflowStatus: isSuperAdmin ? 'Yayında' : 'İlçe Admin İncelemesinde',
+      source: 'municipality',
+      createdByAdminId: adminUser?.id,
+      createdByAdminName: adminUser?.name,
+      purpose: String(form.get('purpose')).trim(),
+      summary: String(form.get('summary')).trim(),
+      activities: String(form.get('activities')).trim(),
+      expectedResults: String(form.get('expectedResults')).trim(),
+      videoUrl: String(form.get('videoUrl')).trim(),
+      socialImpact: Number(form.get('socialImpact')) || 0,
+      environmentalImpact: Number(form.get('environmentalImpact')) || 0,
+      economicImpact: Number(form.get('economicImpact')) || 0,
+      accessibilityImpact: Number(form.get('accessibilityImpact')) || 0,
+      sustainabilityImpact: Number(form.get('sustainabilityImpact')) || 0,
     })
     event.currentTarget.reset()
     setOpen(false)
@@ -423,6 +470,31 @@ export default function Admin() {
     setMergeFormOpen(false)
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
     setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
+  }
+
+  function approvePendingProject(project: ProjectRecord) {
+    if (isDistrictManager || isMunicipalityAdmin) {
+      updateProject(project.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor', status: 'İncelemede'})
+      writeAuditLog(adminUser, 'Ilce proje onayi', {target: project.projectCode, details: project.title})
+      setMessage('Proje Muğla Büyükşehir incelemesine gönderildi.')
+      return
+    }
+    reviewProject(project.id, 'Onaylandı')
+    updateProject(project.id, {workflowStatus: 'Yayında'})
+    writeAuditLog(adminUser, 'Super admin oylamaya acti', {target: project.projectCode, details: project.title})
+    setMessage('Proje oylamaya açıldı ve yayınlandı.')
+  }
+
+  function rejectPendingProject(project: ProjectRecord) {
+    updateProject(project.id, {workflowStatus: 'Reddedildi', moderationStatus: 'Reddedildi'})
+    writeAuditLog(adminUser, 'Proje reddetti', {target: project.projectCode, details: project.title})
+    setMessage('Proje reddedildi.')
+  }
+
+  function requestProjectRevision(project: ProjectRecord, workflowStatus: 'Revizyon İstendi' | 'Eksik Belge') {
+    updateProject(project.id, {workflowStatus, moderationStatus: 'Bekliyor', status: 'İncelemede'})
+    writeAuditLog(adminUser, workflowStatus, {target: project.projectCode, details: project.title})
+    setMessage(workflowStatus === 'Eksik Belge' ? 'Eksik belge isteği oluşturuldu.' : 'Revizyon isteği oluşturuldu.')
   }
 
   async function uploadProjectImage(project: ProjectRecord, file: File) {
@@ -616,7 +688,7 @@ export default function Admin() {
       </div>
       <div className="flex flex-wrap gap-3">
         {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kisileri kapat' : 'Yetkili kisiler'}</Button>}
-        {canReviewProjects && <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Manuel proje ekle'}</Button>}
+        {canCreateMunicipalProject && <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Proje sihirbazı'}</Button>}
       </div>
     </header>
 
@@ -733,19 +805,47 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {open && canReviewProjects && <Card>
-        <CardHeader><h2 className="text-xl font-bold">Yeni proje kaydi</h2><p className="text-sm text-mugla-navy/55">Kaydedilen proje dogrudan onayli olarak proje listesine yansir.</p></CardHeader>
-        <CardContent><form onSubmit={submitProject} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Proje adi</span><input className={field} name="title" required/></label>
-          <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} name="district" required>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
-          <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required value={manualProjectCategory} onChange={event => setManualProjectCategory(event.target.value)}>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
-          {manualProjectCategory === 'Diğer' && <label><span className="mb-2 block text-sm font-semibold">Proje teması</span><input className={field} name="customTheme" required maxLength={120} placeholder="Manuel tema yazın"/></label>}
-          <label><span className="mb-2 block text-sm font-semibold">Hedef Grup</span><select className={field} name="targetGroup" required>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
-          <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" required>{statuses.map(x => <option key={x}>{x}</option>)}</select></label>
-          <label><span className="mb-2 block text-sm font-semibold">Butce (TL)</span><input className={field} name="budget" type="number" min="0" step="1" required/></label>
-          <label><span className="mb-2 block text-sm font-semibold">Enlem</span><input className={field} name="lat" type="number" step="any" placeholder="37.08"/></label>
-          <label><span className="mb-2 block text-sm font-semibold">Boylam</span><input className={field} name="lng" type="number" step="any" placeholder="28.45"/></label>
-          <div className="md:col-span-2 xl:col-span-3"><Button type="submit" variant="orange">Projeyi kaydet</Button></div>
+      {open && canCreateMunicipalProject && <Card>
+        <CardHeader><h2 className="text-xl font-bold">8 adımlı proje başvuru sihirbazı</h2><p className="text-sm text-mugla-navy/55">Yetkili kayıtları yayınlanmaz; ilçe admin incelemesine düşer. Süper admin son kararla oylamaya açar.</p></CardHeader>
+        <CardContent><form onSubmit={submitProject} className="space-y-5">
+          <div className="h-2 overflow-hidden rounded-full bg-mugla-sand"><span className="block h-full w-full rounded-full bg-mugla-orange"/></div>
+          <section className="grid gap-4 rounded-2xl border border-mugla-navy/10 p-4 md:grid-cols-2 xl:grid-cols-3">
+            <p className="md:col-span-2 xl:col-span-3 text-xs font-black tracking-widest text-mugla-cyan">1. GENEL BİLGİLER</p>
+            <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Proje Başlığı</span><input className={field} name="title" required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} name="district" required defaultValue={isDistrictStaff || isDistrictManager ? adminUser?.district : undefined} disabled={isDistrictStaff && Boolean(adminUser?.district)}>{districts.map(x => <option key={x}>{x}</option>)}</select>{isDistrictStaff && adminUser?.district && <input type="hidden" name="district" value={adminUser.district}/>}</label>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Kısa Açıklama</span><input className={field} name="shortDescription" maxLength={180} required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required value={manualProjectCategory} onChange={event => setManualProjectCategory(event.target.value)}>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Alt Kategori</span><input className={field} name="subcategory" placeholder="Genel, ulaşım, park vb."/></label>
+            {manualProjectCategory === 'Diğer' && <label><span className="mb-2 block text-sm font-semibold">Proje teması</span><input className={field} name="customTheme" required maxLength={120} placeholder="Manuel tema yazın"/></label>}
+            <label><span className="mb-2 block text-sm font-semibold">Mahalle</span><input className={field} name="neighborhood" placeholder="Mahalle adı"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Enlem</span><input className={field} name="lat" type="number" step="any" placeholder="37.08"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Boylam</span><input className={field} name="lng" type="number" step="any" placeholder="28.45"/></label>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Proje Konumu / Harita Notu</span><input className={field} name="locationNote" placeholder="Haritada pin bırakılacak nokta veya adres tarifi"/></label>
+          </section>
+          <section className="grid gap-4 rounded-2xl border border-mugla-navy/10 p-4 md:grid-cols-2 xl:grid-cols-3">
+            <p className="md:col-span-2 xl:col-span-3 text-xs font-black tracking-widest text-mugla-cyan">2. DETAYLAR VE İÇERİK</p>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Amaç</span><textarea className={`${field} min-h-24`} name="purpose" required/></label>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Özet / Açıklama</span><textarea className={`${field} min-h-28`} name="summary" required/></label>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Faaliyetler</span><textarea className={`${field} min-h-24`} name="activities"/></label>
+            <label className="md:col-span-3"><span className="mb-2 block text-sm font-semibold">Beklenen Fayda / Sonuç</span><textarea className={`${field} min-h-24`} name="expectedResults" required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Hedef Kitle</span><select className={field} name="targetGroup" required>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Video URL (opsiyonel)</span><input className={field} name="videoUrl" type="url" placeholder="https://"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" required defaultValue="Başvuru"><option>Başvuru</option>{isSuperAdmin && statuses.filter(x => x !== 'Başvuru').map(x => <option key={x}>{x}</option>)}</select></label>
+          </section>
+          <section className="grid gap-4 rounded-2xl border border-mugla-navy/10 p-4 md:grid-cols-2 xl:grid-cols-4">
+            <p className="md:col-span-2 xl:col-span-4 text-xs font-black tracking-widest text-mugla-cyan">3. FİNANS VE ETKİ ANALİZİ</p>
+            <label><span className="mb-2 block text-sm font-semibold">Tahmini Bütçe</span><input className={field} name="budget" type="number" min="0" step="1" required disabled={isDistrictStaff}/>{isDistrictStaff && <input type="hidden" name="budget" value="0"/>}</label>
+            <label><span className="mb-2 block text-sm font-semibold">Finans Kaynağı</span><input className={field} name="financingSource" placeholder="Belediye, hibe, ortak finansman"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Süre</span><input className={field} name="duration" placeholder="Örn. 6 ay"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Öncelik</span><select className={field} name="priority"><option>Orta</option><option>Yüksek</option><option>Düşük</option></select></label>
+            {['socialImpact','environmentalImpact','economicImpact','accessibilityImpact','sustainabilityImpact'].map((name, index) => <label key={name}><span className="mb-2 block text-sm font-semibold">{['Sosyal Etki','Çevresel Etki','Ekonomik Etki','Engelli Erişimi','Sürdürülebilirlik'][index]}</span><input className={field} name={name} type="number" min="0" max="100" step="1" placeholder="0-100"/></label>)}
+          </section>
+          <section className="grid gap-4 rounded-2xl border border-mugla-navy/10 p-4 md:grid-cols-3">
+            <p className="md:col-span-3 text-xs font-black tracking-widest text-mugla-cyan">4-8. BELGELER, HARİTA, ÖN İZLEME VE GÖNDER</p>
+            <div className="rounded-xl bg-mugla-sand/70 p-4 text-sm text-mugla-navy/55">PDF, Word, görsel, drone görseli ve 3D tasarım dosyaları mevcut proje kartı yönetimi alanından eklenir. Vatandaş ön izlemesi proje kartı bilgilerinden otomatik oluşur.</div>
+            <div className="rounded-xl bg-mugla-sand/70 p-4 text-sm text-mugla-navy/55">Yetkili yayınlayamaz, oylamaya açamaz, bütçe değiştiremez ve silemez. Kayıt ilçe admin incelemesine gider.</div>
+            <div className="flex items-end"><Button type="submit" variant="orange">{isDistrictStaff ? 'İncelemeye Gönder' : 'Taslak Kaydet / İncelemeye Gönder'}</Button></div>
+          </section>
         </form></CardContent>
       </Card>}
 
@@ -908,8 +1008,10 @@ export default function Admin() {
             expanded={expandedProjectDetails === project.id}
             onToggleMerge={() => toggleMergeSelection(project.id)}
             onToggleDetails={() => setExpandedProjectDetails(value => value === project.id ? null : project.id)}
-            onApprove={() => {reviewProject(project.id, 'Onaylandı'); writeAuditLog(adminUser, 'Proje onayladi', {target: project.projectCode, details: project.title}); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje onaylandi ve oylamaya acildi.')}}
-            onReject={() => {reviewProject(project.id, 'Reddedildi'); writeAuditLog(adminUser, 'Proje reddetti', {target: project.projectCode, details: project.title}); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje reddedildi.')}}
+            onApprove={() => {approvePendingProject(project); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value)}}
+            onReject={() => {rejectPendingProject(project); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value)}}
+            onRevision={() => requestProjectRevision(project, 'Revizyon İstendi')}
+            onMissingDocument={() => requestProjectRevision(project, 'Eksik Belge')}
             canReview={canReviewProjects}
           />) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
         </CardContent>
@@ -926,6 +1028,19 @@ export default function Admin() {
         onImage={(file) => void uploadProjectImage(managedProject, file)}
         onRemoveImage={() => removeProjectImage(managedProject)}
       />}
+
+      {managedProject && isSuperAdmin && <Card>
+        <CardHeader><h2 className="text-xl font-bold">Süper admin kararları</h2><p className="text-sm text-mugla-navy/55">Son karar mercii bu alandan projeyi oylama, kazanan, uygulama ve arşiv aşamalarına taşır.</p></CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProject(managedProject.id, {workflowStatus: 'Yayında', status: 'Oylamada'}); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Aç</Button>
+          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'})}>Oylama Tarihini Belirle</Button>
+          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır'})}>Planlandı</Button>
+          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'})}>Kazanan İlan Et</Button>
+          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor'})}>İlçeye Geri Gönder</Button>
+          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Tamamlandı', status: 'Tamamlandı'})}>Projeyi Kilitle</Button>
+          <Button variant="outline" onClick={() => {rejectPendingProject(managedProject); setManagedProjectId(null)}}>Projeyi Arşivle</Button>
+        </CardContent>
+      </Card>}
 
     </div>
   </AppShell></AdminAuthGate>

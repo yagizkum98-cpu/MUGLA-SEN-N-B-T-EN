@@ -6,11 +6,13 @@ import {createClient} from '@/lib/supabase/client'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
+export type ProjectWorkflowStatus='Taslak'|'İlçe Admin İncelemesinde'|'Muğla BB İncelemesinde'|'Oylamaya Hazır'|'Yayında'|'Kazandı'|'Uygulanıyor'|'Tamamlandı'|'Revizyon İstendi'|'Eksik Belge'|'Reddedildi'
 
 export type ProjectRecord={
   id:string
   projectCode:string
   title:string
+  shortDescription?:string
   category:string
   customTheme?:string
   subcategory?:string
@@ -20,7 +22,12 @@ export type ProjectRecord={
   countryCode?:string
   province?:string
   applicantDistrict?:string
+  neighborhood?:string
+  locationNote?:string
   budget:number
+  financingSource?:string
+  duration?:string
+  priority?:string
   votes:number
   progress:number
   lat:number
@@ -28,13 +35,23 @@ export type ProjectRecord={
   color:string
   status:ProjectStatus
   moderationStatus:ProjectModerationStatus
+  workflowStatus?:ProjectWorkflowStatus
   createdAt:string
+  createdByAdminId?:string
+  createdByAdminName?:string
+  source?:'citizen'|'municipality'
   purpose?:string
   summary?:string
   activities?:string
   expectedResults?:string
   attachments?:{name:string;size:number;type:string}[]
   image?:{name:string;size:number;type:string;dataUrl:string}
+  videoUrl?:string
+  socialImpact?:number
+  environmentalImpact?:number
+  economicImpact?:number
+  accessibilityImpact?:number
+  sustainabilityImpact?:number
   ownerId?:string
   ownerName?:string
   ownerEmail?:string
@@ -153,6 +170,9 @@ export function isPublishedProject(project:Pick<ProjectRecord,'moderationStatus'
 export function isPendingReviewProject(project:Partial<ProjectRecord>){
   const moderationStatus=String(project.moderationStatus??'')
   const status=String(project.status??'')
+  const workflowStatus=String(project.workflowStatus??'')
+  if(moderationStatus==='Onaylandı'||moderationStatus==='Reddedildi')return false
+  if(['İlçe Admin İncelemesinde','Muğla BB İncelemesinde','Revizyon İstendi','Eksik Belge'].includes(workflowStatus))return true
   return moderationStatus==='Bekliyor'||status.startsWith('Başvuru')
 }
 
