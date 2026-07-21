@@ -9,13 +9,14 @@ import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
-import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
+import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
+import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -24,9 +25,11 @@ const field = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 
 const districtGradients = ['from-cyan-50 via-white to-orange-50', 'from-green-50 via-white to-cyan-50', 'from-orange-50 via-white to-lime-50', 'from-sky-50 via-white to-emerald-50'] as const
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
-  {value: 'super-admin', label: 'Super admin', note: 'Tum admin hesaplarini yonetir'},
-  {value: 'admin', label: 'Admin', note: 'Proje islemlerini yonetir'},
-  {value: 'yetkili', label: 'Yetkili', note: 'Proje islemlerine erisir'},
+  {value: 'super-admin', label: 'Super admin', note: 'Platform sahibi; sistem, API, backup, audit ve lisans kontrolu'},
+  {value: 'belediye-admin', label: 'Belediye admini', note: 'Proje, oylama, CRM, rapor, kategori ve belediye operasyonlari'},
+  {value: 'ilce-yoneticisi', label: 'Ilce yoneticisi', note: 'Sadece kendi ilcesindeki proje, vatandas, oy ve raporlar'},
+  {value: 'degerlendirici', label: 'Degerlendirici', note: 'Kendisine atanan projelerde teknik/mali degerlendirme'},
+  {value: 'crm', label: 'CRM yetkilisi', note: 'Vatandas talep, sikayet, mesaj, destek ve basvuru durumu'},
 ]
 const assignableRoles = roles.filter(role => role.value !== 'super-admin')
 const portalLinks = [
@@ -111,6 +114,57 @@ function SuperAdminPortalAccess() {
   </Card>
 }
 
+function SuperAdminSystemSecurity({auditRecords}: {auditRecords: AuditRecord[]}) {
+  const systemGroups = [
+    ['Sistem Ayarları', ['Domain', 'SMTP', 'SMS API', 'e-Devlet API', 'KVKK ayarları', 'OAuth', 'JWT Secret', 'API Key']],
+    ['Kullanıcı Yetkileri', ['Admin oluştur/sil', 'Yetki değiştir', 'Rol oluştur/sil', 'Şifre sıfırla']],
+    ['İlçe Yönetimi', ['İlçe oluştur', 'İlçe sil', 'İlçe kapat']],
+    ['Oylama Sistemi', ['Oylamayı başlat/durdur', 'Sonuçları kilitle/aç', 'İkinci onay']],
+    ['Yapay Zeka', ['Promptlar', 'AI puanlama', 'AI moderasyon', 'AI filtre']],
+    ['Yedekleme ve Güncelleme', ['Backup al', 'Restore yap', 'Log indir', 'Migration', 'Sunucu ayarları']],
+    ['Gizli Analitik', ['Tüm ilçeler', 'Tüm kullanıcılar', 'Gerçek oylar', 'Sistem performansı']],
+  ] as const
+
+  return <Card id="sistem">
+    <CardHeader>
+      <p className="text-xs font-bold tracking-widest text-mugla-cyan">SUPER ADMIN SİSTEM GÜVENLİĞİ</p>
+      <h2 className="text-xl font-bold">Çekirdek ayarlar, ticari koruma ve audit log</h2>
+      <p className="text-sm text-mugla-navy/55">Bu alan belediye personeline kapalıdır. Platform sahibi; lisans, entegrasyon, API, backup, log ve güvenlik altyapısını burada kontrol eder.</p>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {['2FA zorunlu', 'API anahtarları gizli', 'Rol değişimi sadece super admin', 'Audit log silinemez'].map(item => <div key={item} className="rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-black text-green-800"><ShieldCheck className="mb-3" size={20}/>{item}</div>)}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {systemGroups.map(([title, items]) => <section key={title} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+          <h3 className="font-black">{title}</h3>
+          <div className="mt-3 flex flex-wrap gap-2">{items.map(item => <span key={item} className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/60">{item}</span>)}</div>
+        </section>)}
+      </div>
+      <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h3 className="font-black">Audit Log</h3><p className="mt-1 text-sm text-mugla-navy/55">Kim, ne zaman, hangi işlem yaptı; IP ve tarayıcı bilgisiyle tutulur.</p></div>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/55">{auditRecords.length} kayıt</span>
+        </div>
+        <div className="mt-4 max-h-80 overflow-auto rounded-xl bg-white">
+          {auditRecords.length ? <table className="w-full min-w-[820px] text-left text-xs">
+            <thead className="text-mugla-navy/45"><tr><th className="p-3">Tarih</th><th>Kullanıcı</th><th>Rol</th><th>İşlem</th><th>Hedef</th><th>IP</th><th>Tarayıcı</th></tr></thead>
+            <tbody>{auditRecords.map(record => <tr key={record.id} className="border-t border-mugla-navy/10">
+              <td className="p-3">{new Date(record.createdAt).toLocaleString('tr-TR')}</td>
+              <td>{record.actorName}<span className="block text-mugla-navy/40">{record.actorEmail}</span></td>
+              <td>{record.actorRole}</td>
+              <td className="font-bold">{record.action}</td>
+              <td>{record.target ?? '-'}</td>
+              <td>{record.ip}</td>
+              <td className="max-w-56 truncate">{record.userAgent}</td>
+            </tr>)}</tbody>
+          </table> : <div className="p-8 text-center text-sm font-semibold text-mugla-navy/45">Henüz audit kaydı yok.</div>}
+        </div>
+      </section>
+    </CardContent>
+  </Card>
+}
+
 function projectCategoryLabel(project: ProjectRecord) {
   return project.category === 'Diğer' && project.customTheme ? `Diğer: ${project.customTheme}` : project.category
 }
@@ -153,6 +207,7 @@ function PendingProjectCard({
   onToggleDetails,
   onApprove,
   onReject,
+  canReview,
 }: {
   project: ProjectRecord
   selected: boolean
@@ -161,6 +216,7 @@ function PendingProjectCard({
   onToggleDetails: () => void
   onApprove: () => void
   onReject: () => void
+  canReview: boolean
 }) {
   return <div className="rounded-2xl border border-mugla-navy/10 p-4">
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -175,10 +231,10 @@ function PendingProjectCard({
           {project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}
         </span>
       </label>
-      <div className="flex shrink-0 gap-2">
+      {canReview ? <div className="flex shrink-0 gap-2">
         <Button size="sm" variant="orange" onClick={onApprove}><CheckCircle2 size={15}/>Onayla</Button>
         <Button size="sm" variant="outline" onClick={onReject}><XCircle size={15}/>Reddet</Button>
-      </div>
+      </div> : <span className="rounded-full bg-mugla-sand px-3 py-2 text-xs font-bold text-mugla-navy/55">Sadece inceleme</span>}
     </div>
     {expanded && <ProjectDetailBlock project={project}/>}
   </div>
@@ -272,13 +328,30 @@ export default function Admin() {
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
   const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
-  const canManagePeople = adminUser?.role === 'super-admin'
-  const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
+  const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([])
+  const activeRole = normalizeAdminRole(adminUser?.role)
+  const isSuperAdmin = activeRole === 'super-admin'
+  const isMunicipalityAdmin = activeRole === 'belediye-admin'
+  const isDistrictManager = activeRole === 'ilce-yoneticisi'
+  const isEvaluator = activeRole === 'degerlendirici'
+  const isCrmRole = activeRole === 'crm'
+  const canManagePeople = isSuperAdmin
+  const canSeeSystem = isSuperAdmin
+  const canSeeProjects = !isCrmRole
+  const canReviewProjects = isSuperAdmin || isMunicipalityAdmin
+  const canSeeCrm = isSuperAdmin || isMunicipalityAdmin || isCrmRole
+  const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin
+  const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
+  const scopedProjects = isCrmRole ? [] : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id)) : projects
+  const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
+  const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
+  const pendingProjects = scopedProjects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const managedProject = projects.find(project => project.id === managedProjectId) ?? null
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
   const voteLeaderboard = projects
-    .filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
+    .filter(project => scopedProjects.some(item => item.id === project.id) && project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
     .sort((a, b) => b.votes - a.votes)
 
   async function refreshAccounts() {
@@ -293,14 +366,20 @@ export default function Admin() {
 
   useEffect(() => {
     refreshAccounts()
+    setAuditRecords(readAuditLog())
+    const syncAudit = () => setAuditRecords(readAuditLog())
     const syncThemes = () => {
       const settings = listAnnualThemeSettings()
       setThemeSettings(settings)
       setThemeDraft(settings.find(setting => setting.year === annualThemeYears[0])?.themes ?? ['all'])
     }
     syncThemes()
+    window.addEventListener('mugla-admin-audit-log-changed', syncAudit)
     window.addEventListener(annualThemeChangeEvent, syncThemes)
-    return () => window.removeEventListener(annualThemeChangeEvent, syncThemes)
+    return () => {
+      window.removeEventListener('mugla-admin-audit-log-changed', syncAudit)
+      window.removeEventListener(annualThemeChangeEvent, syncThemes)
+    }
   }, [])
 
   function submitProject(event: FormEvent<HTMLFormElement>) {
@@ -323,6 +402,7 @@ export default function Admin() {
     event.currentTarget.reset()
     setOpen(false)
     setManualProjectCategory(categories[0]?.[0] ?? '')
+    writeAuditLog(adminUser, 'Manuel proje ekledi', {target: String(form.get('title')).trim()})
     setMessage('Proje kaydedildi.')
   }
 
@@ -336,6 +416,7 @@ export default function Admin() {
 
   function reviewMany(ids: string[], moderationStatus: 'Onaylandı' | 'Reddedildi') {
     ids.forEach(id => reviewProject(id, moderationStatus))
+    writeAuditLog(adminUser, `Toplu proje ${moderationStatus}`, {target: ids.join(','), details: `${ids.length} proje`})
     setMergeSelection(value => value.filter(id => !ids.includes(id)))
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
     setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
@@ -354,6 +435,7 @@ export default function Admin() {
       const image = await readImageFile(file)
       updateProject(project.id, {image})
       setManagedProjectId(project.id)
+      writeAuditLog(adminUser, 'Proje gorseli guncelledi', {target: project.projectCode, details: project.title})
       setMessage(`${project.title} icin proje gorseli guncellendi.`)
     } catch {
       setMessage('Proje gorseli okunamadi. Lutfen farkli bir dosya deneyin.')
@@ -363,6 +445,7 @@ export default function Admin() {
   function removeProjectImage(project: ProjectRecord) {
     updateProject(project.id, {image: undefined})
     setManagedProjectId(project.id)
+    writeAuditLog(adminUser, 'Proje gorseli kaldirdi', {target: project.projectCode, details: project.title})
     setMessage(`${project.title} icin proje gorseli kaldirildi.`)
   }
 
@@ -389,6 +472,7 @@ export default function Admin() {
       })
       event.currentTarget.reset()
       setMergeSelection([])
+      writeAuditLog(adminUser, 'Projeleri birlestirdi', {target: project.projectCode, details: mergeSelection.join(',')})
       setMessage(`${project.title} birleştirilmiş proje olarak onaylandı ve oylamaya açıldı.`)
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : 'Projeler birleştirilemedi.')
@@ -409,6 +493,7 @@ export default function Admin() {
         actor: adminUser,
       })
       formElement.reset()
+      writeAuditLog(adminUser, 'Admin hesabi tanimladi', {target: String(form.get('email')).trim(), details: String(form.get('role'))})
       setMessage('Yetkili hesap tanimlandi.')
       await refreshAccounts()
     } catch (cause) {
@@ -446,6 +531,7 @@ export default function Admin() {
       setPasswordVisible(false)
       formElement.reset()
       setMessage('Sifren kendi sectigin yeni sifreyle guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
+      writeAuditLog(adminUser, 'Kendi sifresini guncelledi')
       await refreshAccounts()
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
@@ -460,6 +546,7 @@ export default function Admin() {
     if (!target || !confirm(`${target.name} hesabini sistemden kaldirmak istiyor musun? Bu kisi artik belediye paneline giremez.`)) return
     try {
       await removeAdminAccount(id, adminUser)
+      writeAuditLog(adminUser, 'Admin hesabi sildi', {target: target.email, details: target.role})
       setMessage('Yetkili hesap silindi.')
       await refreshAccounts()
     } catch (cause) {
@@ -494,24 +581,25 @@ export default function Admin() {
     const updated = upsertAnnualThemeSetting(themeYear, themeDraft)
     setThemeSettings(listAnnualThemeSettings())
     setThemeDraft(updated.themes)
+    writeAuditLog(adminUser, 'Yillik tema kuralini guncelledi', {target: updated.year, details: updated.themes.join(',')})
     setMessage(`${updated.year} yili icin tema kuralı guncellendi.`)
   }
 
   const stats = [
-    ['Toplam proje', projects.length, 'Kayitli tum projeler', FolderKanban],
+    ['Toplam proje', scopedProjects.length, isDistrictManager ? 'Kendi ilcenizdeki projeler' : 'Yetkinize giren projeler', FolderKanban],
     ['Onay bekleyen', pendingProjects.length, 'Belediye karari bekliyor', Clock3],
-    ['Oylamada', projects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(p.status))).length, 'Projeler sekmesinde', CheckCircle2],
+    ['Oylamada', scopedProjects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(p.status))).length, 'Projeler sekmesinde', CheckCircle2],
     ['Yetkili kisi', accounts.length, 'Tanimli admin hesaplari', ShieldCheck],
   ] as const
 
   const contactGroups = [
-    ['Vatandas verileri', contactRecords, 'Formu dolduran kisilerin iletisim bilgileri'],
-    ['Gorus ve oneriler', contactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
-    ['Sorular', contactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
+    ['Vatandas verileri', scopedContactRecords, 'Formu dolduran kisilerin iletisim bilgileri'],
+    ['Gorus ve oneriler', scopedContactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
+    ['Sorular', scopedContactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
   ] as const
   const ageDistribution = ageGroups.map(group => ({
     label: group,
-    value: citizens.filter(citizen => ageGroup(Number(citizen.age)) === group).length,
+    value: scopedCitizens.filter(citizen => ageGroup(Number(citizen.age)) === group).length,
   }))
   const maxAgeGroup = Math.max(1, ...ageDistribution.map(item => item.value))
 
@@ -523,15 +611,16 @@ export default function Admin() {
         <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
       </div>
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kisileri kapat' : 'Yetkili kisiler'}</Button>
-        <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Manuel proje ekle'}</Button>
+        {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kisileri kapat' : 'Yetkili kisiler'}</Button>}
+        {canReviewProjects && <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Manuel proje ekle'}</Button>}
       </div>
     </header>
 
     <div className="space-y-7 p-6 lg:p-10">
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
 
-      {adminUser?.role === 'super-admin' && <SuperAdminPortalAccess/>}
+      {isSuperAdmin && <SuperAdminPortalAccess/>}
+      {canSeeSystem && <SuperAdminSystemSecurity auditRecords={auditRecords}/>}
 
       <Card>
         <CardHeader>
@@ -576,7 +665,7 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      {peopleOpen && <Card>
+      {peopleOpen && canManagePeople && <Card>
         <CardHeader>
           <h2 className="text-xl font-bold">Yetkili kisiler</h2>
           <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar belediye paneline girebilir. Admin ve yetkili hesaplarini yalnizca super admin ekleyip silebilir.</p>
@@ -604,7 +693,7 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      <Card>
+      {canSeeCategories && <Card>
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">YILLIK TEMA KURALLARI</p>
           <h2 className="text-xl font-bold">Vatandas fikir gonderim temalari</h2>
@@ -638,9 +727,9 @@ export default function Admin() {
             <div className="mt-5"><Button type="submit" variant="orange" disabled={adminUser?.role !== 'super-admin'}><ShieldCheck size={17}/> Tema kuralini kaydet</Button></div>
           </form>
         </CardContent>
-      </Card>
+      </Card>}
 
-      {open && <Card>
+      {open && canReviewProjects && <Card>
         <CardHeader><h2 className="text-xl font-bold">Yeni proje kaydi</h2><p className="text-sm text-mugla-navy/55">Kaydedilen proje dogrudan onayli olarak proje listesine yansir.</p></CardHeader>
         <CardContent><form onSubmit={submitProject} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Proje adi</span><input className={field} name="title" required/></label>
@@ -656,9 +745,9 @@ export default function Admin() {
         </form></CardContent>
       </Card>}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
+      <section id="analitik" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
 
-      <Card>
+      {canSeeCrm && <Card>
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAS DEMOGRAFISI</p>
           <h2 className="text-xl font-bold">Yaş aralığı verileri</h2>
@@ -675,9 +764,9 @@ export default function Admin() {
             </div>
           </div>)}
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card id="iletisim">
+      {canSeeCrm && <Card id="iletisim">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">KATILIMCI BUTCE ILETISIM</p>
           <h2 className="text-xl font-bold">Vatandas iletisim talepleri</h2>
@@ -694,10 +783,10 @@ export default function Admin() {
             </section>)}
           </div>
 
-          {contactRecords.length ? <div className="overflow-x-auto">
+          {scopedContactRecords.length ? <div className="overflow-x-auto">
             <table className="w-full min-w-[1040px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Tarih</th><th>Vatandas verileri</th><th>Alan</th><th>Konu</th><th>Mesaj</th><th>KVKK</th><th className="text-right">Islem</th></tr></thead>
-              <tbody>{contactRecords.map(record => <tr key={record.id} className="border-t border-mugla-navy/10 align-top">
+              <tbody>{scopedContactRecords.map(record => <tr key={record.id} className="border-t border-mugla-navy/10 align-top">
                 <td className="py-4 text-mugla-navy/55">{new Date(record.createdAt).toLocaleString('tr-TR')}</td>
                 <td className="py-4">
                   <b className="block">{record.name}</b>
@@ -713,9 +802,9 @@ export default function Admin() {
             </table>
           </div> : <div className="py-12 text-center text-mugla-navy/50"><Mail className="mx-auto mb-3"/><p className="font-semibold">Henuz iletisim talebi yok.</p><p className="mt-1 text-sm">Vatandaslar iletisim formunu doldurdugunda bu alan otomatik guncellenir.</p></div>}
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card>
+      {canSeeDistricts && <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
             <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE DASHBOARDLARI</p>
@@ -727,7 +816,7 @@ export default function Admin() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {muglaDistrictDashboards.map((item, index) => {
-              const districtProjects = projects.filter(project => project.district === item.name)
+              const districtProjects = scopedProjects.filter(project => project.district === item.name)
               const active = districtProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && (String(project.status) === 'Oylamada' || String(project.status).includes('Kazanan')))
               const gradient = districtGradients[index % districtGradients.length]
               return <div key={item.slug} className={`relative flex min-h-52 flex-col justify-between overflow-hidden rounded-2xl border border-mugla-navy/10 bg-gradient-to-br ${gradient} p-4 shadow-sm`}>
@@ -747,9 +836,9 @@ export default function Admin() {
             })}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card>
+      {canSeeVoting && <Card>
         <CardHeader>
           <h2 className="text-xl font-bold">Oylama leaderboard</h2>
           <p className="text-sm text-mugla-navy/55">Onaylı projeler oy sayısına göre sıralanır. Bu tablo hangi projenin ne kadar oylandığını sayısal olarak gösterir.</p>
@@ -769,12 +858,12 @@ export default function Admin() {
             </tr>)}</tbody>
           </table> : <div className="py-12 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz oy verisi yok.</p><p className="mt-1 text-sm">Vatandaşlar sepetlerini onayladığında leaderboard otomatik güncellenir.</p></div>}
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card>
+      {canSeeProjects && <Card>
         <CardHeader><h2 className="text-xl font-bold">Onay bekleyen basvurular</h2><p className="text-sm text-mugla-navy/55">Onaylanan projeler proje listesinde oylamaya acilir.</p></CardHeader>
         <CardContent className="space-y-4">
-          {pendingProjects.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+          {pendingProjects.length > 0 && canReviewProjects && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
             <label className="flex items-center gap-3 text-sm font-bold text-mugla-navy">
               <input type="checkbox" className="h-4 w-4 accent-mugla-orange" checked={allPendingSelected} onChange={toggleAllPendingSelection}/>
               Tüm onay kutularını seç
@@ -814,16 +903,17 @@ export default function Admin() {
             expanded={expandedProjectDetails === project.id}
             onToggleMerge={() => toggleMergeSelection(project.id)}
             onToggleDetails={() => setExpandedProjectDetails(value => value === project.id ? null : project.id)}
-            onApprove={() => {reviewProject(project.id, 'Onaylandı'); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje onaylandi ve oylamaya acildi.')}}
-            onReject={() => {reviewProject(project.id, 'Reddedildi'); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje reddedildi.')}}
+            onApprove={() => {reviewProject(project.id, 'Onaylandı'); writeAuditLog(adminUser, 'Proje onayladi', {target: project.projectCode, details: project.title}); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje onaylandi ve oylamaya acildi.')}}
+            onReject={() => {reviewProject(project.id, 'Reddedildi'); writeAuditLog(adminUser, 'Proje reddetti', {target: project.projectCode, details: project.title}); setMergeSelection(value => value.filter(item => item !== project.id)); setExpandedProjectDetails(value => value === project.id ? null : value); setMessage('Proje reddedildi.')}}
+            canReview={canReviewProjects}
           />) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen basvuru yok.</p></div>}
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card id="proje-havuzu">
+      {canSeeProjects && <Card id="proje-havuzu">
         <CardHeader><h2 className="text-xl font-bold">Proje Havuzu</h2><p className="text-sm text-mugla-navy/55">Onaylanan, reddedilen veya süreçteki tüm proje kayıtları veri havuzu olarak burada kalır.</p></CardHeader>
-        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th>Gorsel</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td><span className={`rounded-full px-3 py-1 text-xs font-bold ${project.image ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/45'}`}>{project.image ? 'Var' : 'Yok'}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={(event) => {event.stopPropagation(); removeProject(project.id)}}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
-      </Card>
+        <CardContent className="overflow-x-auto">{scopedProjects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th>Gorsel</th><th className="text-right">Islem</th></tr></thead><tbody>{scopedProjects.map(project => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td><span className={`rounded-full px-3 py-1 text-xs font-bold ${project.image ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/45'}`}>{project.image ? 'Var' : 'Yok'}</span></td><td className="text-right">{canReviewProjects ? <button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={(event) => {event.stopPropagation(); writeAuditLog(adminUser, 'Proje sildi', {target: project.projectCode, details: project.title}); removeProject(project.id)}}><Trash2 size={17}/></button> : <span className="text-xs font-bold text-mugla-navy/35">Goruntu</span>}</td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
+      </Card>}
 
       {managedProject && <ProjectManagementPanel
         project={managedProject}

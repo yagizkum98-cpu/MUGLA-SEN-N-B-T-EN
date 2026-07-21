@@ -1,12 +1,15 @@
 'use client'
 
-export type AdminRole = 'super-admin' | 'admin' | 'yetkili'
+export type AdminRole = 'super-admin' | 'belediye-admin' | 'ilce-yoneticisi' | 'degerlendirici' | 'crm' | 'admin' | 'yetkili'
 
 export type AdminAccount = {
   id: string
   name: string
   email: string
   role: AdminRole
+  district?: string
+  department?: string
+  assignedProjectIds?: string[]
   passwordHash: string
   salt: string
   passwordPreview?: string
@@ -19,6 +22,11 @@ const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
+
+export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin' | 'yetkili'> {
+  if (role === 'super-admin' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'crm') return role
+  return 'belediye-admin'
+}
 
 function bytesToBase64(bytes: Uint8Array) {
   let value = ''
@@ -123,7 +131,7 @@ export async function getCurrentAdmin() {
 }
 
 export async function addAdminAccount(input: {name: string; email: string; role: AdminRole; password: string; actor: AdminAccount}) {
-  if (input.actor.role !== 'super-admin') throw new Error('Sadece super admin admin ve yetkili hesabi tanimlayabilir.')
+  if (normalizeAdminRole(input.actor.role) !== 'super-admin') throw new Error('Sadece super admin admin ve yetkili hesabi tanimlayabilir.')
   if (input.role === 'super-admin') throw new Error('Yeni super admin hesabi tanimlanamaz.')
   const accounts = await ensureSeedAccount()
   const email = input.email.trim().toLocaleLowerCase('tr')
@@ -159,7 +167,7 @@ export async function revealOwnAdminPassword(actor: AdminAccount) {
 }
 
 export async function removeAdminAccount(id: string, actor: AdminAccount) {
-  if (actor.role !== 'super-admin') throw new Error('Sadece super admin hesap silebilir.')
+  if (normalizeAdminRole(actor.role) !== 'super-admin') throw new Error('Sadece super admin hesap silebilir.')
   if (id === actor.id) throw new Error('Kendi hesabini silemezsin.')
   const accounts = await ensureSeedAccount()
   const target = accounts.find(account => account.id === id)

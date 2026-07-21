@@ -32,7 +32,7 @@ export function AdminAuthGate({children}: {children: React.ReactNode}) {
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-mugla-navy text-white"><LockKeyhole size={28}/></span>
       <p className="mt-6 text-xs font-bold tracking-[.2em] text-mugla-orange">BELEDIYE PANELI GIRISI GEREKLI</p>
       <h1 className="mt-2 text-3xl font-bold">Bu alan yetkili kullanicilar icindir.</h1>
-      <p className="mt-3 leading-7 text-mugla-navy/55">Sadece super admin, admin ve tanimli yetkili hesaplar e-posta ve sifreyle girebilir.</p>
+      <p className="mt-3 leading-7 text-mugla-navy/55">Sadece super admin, belediye admini, ilce yoneticisi, degerlendirici ve CRM yetkilisi olarak tanimli hesaplar e-posta ve sifreyle girebilir.</p>
       <Link href="/admin/giris" className="mt-7 inline-flex"><Button variant="orange"><LockKeyhole size={17}/> Belediye paneli girisi</Button></Link>
     </section>
   </main>

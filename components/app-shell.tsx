@@ -4,10 +4,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {FolderKanban, Home, LogOut, Mail, ShieldCheck, ShoppingCart, UserRound, UsersRound} from 'lucide-react'
+import {BarChart3, FolderKanban, Home, LogOut, Mail, Settings, ShieldCheck, ShoppingCart, UserRound, UsersRound} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
-import {getCurrentAdmin, logoutAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
 
 const citizen = [
   ['/vatandas/panel#panelim', 'Panelim', Home],
@@ -17,17 +17,20 @@ const citizen = [
 ] as const
 
 const admin = [
-  ['/admin', 'Belediye Yonetimi', ShieldCheck],
-  ['/dashboard', 'Ilce Dashboardlari', Home],
-  ['/admin#iletisim', 'Iletisim Talepleri', Mail],
-  ['/crm', 'CRM', UsersRound],
+  {href: '/admin', label: 'Belediye Yonetimi', icon: ShieldCheck, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
+  {href: '/dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm']},
+  {href: '/admin#iletisim', label: 'Iletisim Talepleri', icon: Mail, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#analitik', label: 'Analitik', icon: BarChart3, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#sistem', label: 'Sistem Ayarlari', icon: Settings, roles: ['super-admin']},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {
   const path = usePathname()
-  const links = role === 'admin' ? admin : citizen
   const [user, setUser] = useState<LocalUser | null>(null)
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
+  const adminRole = normalizeAdminRole(adminUser?.role)
+  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizen
 
   useEffect(() => {
     const sync = () => {
@@ -65,7 +68,8 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         <span className="font-bold leading-tight">Mugla<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
       </Link>
       <nav className="flex gap-2 overflow-x-auto md:flex-col">
-        {links.map(([href, label, Icon]) => {
+        {links.map((link) => {
+          const [href, label, Icon] = Array.isArray(link) ? link : [link.href, link.label, link.icon]
           const active = path === href.split('#')[0].split('?')[0]
           return <Link key={href} href={href} className={cn('flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-sm text-white/65 hover:bg-white/10 hover:text-white', active && 'bg-white text-mugla-navy hover:bg-white hover:text-mugla-navy')}>
             <Icon size={18}/>{label}
