@@ -33,7 +33,7 @@ const views: [View, string, React.ElementType][] = [
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const roles: CrmRole[] = ['Vatandas', 'STK', 'Akademisyen', 'Turist', 'Girisimci', 'Ilce Admin', 'Belediye Admin', 'Super Admin'] as CrmRole[]
-const interests = ['Genclik', 'Cevre', 'Spor', 'Kultur', 'Turizm', 'Ulasim', 'Egitim']
+const interests = ['Genclik', 'Cevre', 'Spor', 'Kulturel Miras ve Essiz Yasam', 'Ulasim']
 const channels: Channel[] = ['SMS', 'E-posta', 'Push', 'WhatsApp', 'Telegram']
 const palette = ['#00a6c8', '#ef7d00', '#6a9d3b', '#006cae', '#7c5bcc', '#0f766e', '#be123c']
 const input = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 text-sm outline-none focus:border-mugla-cyan'
@@ -162,7 +162,7 @@ export default function CrmPage() {
     ['STKlar', citizens.filter(item => String(item.role).includes('STK')).length],
     ['Akademisyenler', citizens.filter(item => String(item.role).includes('Akademisyen')).length],
     ['Turistler', citizens.filter(item => String(item.role).includes('Turist')).length],
-    ['Dijital Gocebeler', citizens.filter(item => String(item.role).includes('Gir') && item.interests.includes('Turizm')).length],
+    ['Dijital Gocebeler', citizens.filter(item => String(item.role).includes('Gir') && (item.interests.includes('Kulturel Miras ve Essiz Yasam') || item.interests.includes('Turizm'))).length],
   ] as const, [citizens])
 
   useEffect(() => {

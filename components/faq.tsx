@@ -20,7 +20,7 @@ const faqs=[
   ['Oylama sonuçları şeffaf olacak mı?','Evet. Sonuçlar proje bazında ve açık biçimde platform üzerinden yayımlanacaktır.'],
   ['Kazanan projeler ne zaman uygulanır?','Seçilen projeler yıllık bütçe planlamasına dâhil edilir ve teknik hazırlıkların ardından uygulama takvimine alınır.'],
   ['Projelerin uygulama sürecini takip edebilir miyim?','Evet. Bütçe durumu, ilerleme yüzdesi, hedef tamamlanma tarihi ve güncel proje içerikleri platformda yayımlanacaktır.'],
-  ['Tematik bütçe nedir?','Belirli bir yıl veya dönem için Gençlik, İklim, Akıllı Şehir ya da Kültür ve Miras gibi bir temaya özel bütçe ayrılmasıdır.'],
+  ['Tematik bütçe nedir?','Belirli bir yıl veya dönem için Gençlik, İklim, Akıllı Şehir ya da Kültürel Miras ve Eşsiz Yaşam gibi bir temaya özel bütçe ayrılmasıdır.'],
   ['Gençler için özel bir alan olacak mı?','Evet. Gençlik Meclisi ve Gençlik Bütçesi modülleriyle gençlerin kendi projelerini geliştirmeleri ve oylamaları desteklenecektir.'],
   ['Çocuklar katılabilecek mi?','Evet. “Çocuk Bütçesi” kapsamında çocukların yaşlarına uygun yöntemlerle fikirlerini paylaşabilecekleri özel alanlar planlanmaktadır.'],
   ['Projelerimi düzenleyebilir miyim?','Teknik inceleme süreci başlamadan önce proje sahibi başvurusunu düzenleyebilir.'],

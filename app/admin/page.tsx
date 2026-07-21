@@ -34,6 +34,10 @@ function CategoryBadge({label, color}: {label: string; color: string}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
 }
 
+function projectCategoryLabel(project: ProjectRecord) {
+  return project.category === 'Diğer' && project.customTheme ? `Diğer: ${project.customTheme}` : project.category
+}
+
 function topicLabel(topic: ContactRecord['topic']) {
   return topic === 'Gorus' ? 'Gorus' : topic === 'Oneri' ? 'Oneri' : 'Soru'
 }
@@ -45,7 +49,8 @@ function ProjectDetailBlock({project}: {project: ProjectRecord}) {
     ['Başvuru türü', project.applicantType ?? 'Bireysel'],
     ['Başvuru konumu', `${project.country ?? 'Türkiye'} / ${project.province ?? 'Muğla'} / ${project.applicantDistrict ?? project.district}`],
     ['Projenin uygulanacağı ilçe', project.district],
-    ['Kategori', `${project.category}${project.subcategory ? ` / ${project.subcategory}` : ''}`],
+    ['Kategori', project.category],
+    ['Proje teması', project.customTheme],
     ['Hedef Grup', project.targetGroup ?? 'Herkes'],
     ['Tahmini bütçe', formatBudget(project.budget)],
     ['Amaç', project.purpose],
@@ -89,7 +94,7 @@ function PendingProjectCard({
             <p className="font-bold">{project.title}</p>
             <Button size="sm" variant="outline" type="button" onClick={onToggleDetails}><Eye size={15}/>Detaylı Proje Bilgisi</Button>
           </span>
-          <p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {project.category} - {project.targetGroup ?? 'Herkes'} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>
+          <p className="mt-1 text-sm text-mugla-navy/55"><span className="mr-2 rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>{project.district} - {projectCategoryLabel(project)} - {project.targetGroup ?? 'Herkes'} - {project.applicantType ?? 'Bireysel'} - {formatBudget(project.budget)}</p>
           {project.summary && <p className="mt-3 max-w-3xl text-sm leading-6 text-mugla-navy/65">{project.summary}</p>}
         </span>
       </label>
@@ -127,7 +132,8 @@ function ProjectManagementPanel({
     ['Durum', project.status],
     ['Onay', project.moderationStatus],
     ['İlçe', project.district],
-    ['Kategori', `${project.category}${project.subcategory ? ` / ${project.subcategory}` : ''}`],
+    ['Kategori', project.category],
+    ['Proje teması', project.customTheme],
     ['Hedef grup', project.targetGroup ?? 'Herkes'],
     ['Bütçe', formatBudget(project.budget)],
     ['Oy', project.votes.toLocaleString('tr-TR')],
@@ -188,6 +194,7 @@ export default function Admin() {
   const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
+  const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
   const canManagePeople = adminUser?.role === 'super-admin'
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
@@ -227,6 +234,7 @@ export default function Admin() {
       title: String(form.get('title')).trim(),
       district: String(form.get('district')),
       category,
+      customTheme: category === 'Diğer' ? String(form.get('customTheme')).trim() : undefined,
       targetGroup: String(form.get('targetGroup')),
       budget: Number(form.get('budget')),
       status: String(form.get('status')) as ProjectStatus,
@@ -237,6 +245,7 @@ export default function Admin() {
     })
     event.currentTarget.reset()
     setOpen(false)
+    setManualProjectCategory(categories[0]?.[0] ?? '')
     setMessage('Proje kaydedildi.')
   }
 
@@ -557,7 +566,8 @@ export default function Admin() {
         <CardContent><form onSubmit={submitProject} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Proje adi</span><input className={field} name="title" required/></label>
           <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} name="district" required>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
-          <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+          <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required value={manualProjectCategory} onChange={event => setManualProjectCategory(event.target.value)}>{categories.map(([x]) => <option key={x}>{x}</option>)}</select></label>
+          {manualProjectCategory === 'Diğer' && <label><span className="mb-2 block text-sm font-semibold">Proje teması</span><input className={field} name="customTheme" required maxLength={120} placeholder="Manuel tema yazın"/></label>}
           <label><span className="mb-2 block text-sm font-semibold">Hedef Grup</span><select className={field} name="targetGroup" required>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
           <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" required>{statuses.map(x => <option key={x}>{x}</option>)}</select></label>
           <label><span className="mb-2 block text-sm font-semibold">Butce (TL)</span><input className={field} name="budget" type="number" min="0" step="1" required/></label>
@@ -674,7 +684,7 @@ export default function Admin() {
               <td className="py-4"><span className="inline-grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black text-mugla-navy/65">{index + 1}</span></td>
               <td className="font-semibold">{project.title}</td>
               <td>{project.district}</td>
-              <td><CategoryBadge label={project.category} color={project.color}/></td>
+              <td><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/></td>
               <td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td>
               <td className="text-right text-lg font-black">{project.votes.toLocaleString('tr-TR')}</td>
             </tr>)}</tbody>

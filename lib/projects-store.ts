@@ -12,6 +12,7 @@ export type ProjectRecord={
   projectCode:string
   title:string
   category:string
+  customTheme?:string
   subcategory?:string
   targetGroup?:string
   district:string

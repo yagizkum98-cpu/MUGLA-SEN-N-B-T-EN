@@ -1,10 +1,10 @@
 'use client'
 
-import {projectCategories, subcategoriesFor} from '@/lib/project-taxonomy'
+import {projectCategories} from '@/lib/project-taxonomy'
 
-export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032'] as const
+export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'egitim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
 
 export type AnnualThemeSetting = {
   year: string
@@ -12,17 +12,17 @@ export type AnnualThemeSetting = {
   updatedAt: string
 }
 
-export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string; categories?: string[]; subcategories?: Record<string, string[]>}[] = [
-  {id: 'all', label: 'Tüm temalar', note: 'Vatandaşlar o yıl tüm kategori ve alt kategorilerden fikir gönderebilir.'},
+export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string; categories?: string[]}[] = [
+  {id: 'all', label: 'Tüm temalar', note: 'Vatandaşlar o yıl tüm kategorilerden fikir gönderebilir.'},
   {id: 'afet', label: 'Afet ve Risk Yönetimi', note: 'Afet hazırlığı, risk azaltma ve kriz koordinasyonu fikirleri.', categories: ['Afet ve Risk Yönetimi']},
   {id: 'cevre', label: 'Çevre ve İklim Değişikliği', note: 'İklim, çevre, atık, enerji, su ve yeşil alan fikirleri.', categories: ['Çevre ve İklim Değişikliği']},
-  {id: 'genclik', label: 'Gençlik', note: 'Gençlik, eğitim, spor ve gençlik odaklı sosyal fikirler.', subcategories: {'Sosyal Yaşam': ['Gençlik'], 'Eğitim': ['Gençlik Akademileri'], 'Spor': ['Gençlik Sporları', 'E-Spor']}},
-  {id: 'sosyal-politikalar', label: 'Sosyal politikalar', note: 'Kadın, çocuk, yaşlı, engelli, aile ve sosyal destek fikirleri.', subcategories: {'Sosyal Yaşam': ['Kadın Hizmetleri', 'Çocuk Hizmetleri', 'Yaşlı Destek Hizmetleri', 'Engelli Hizmetleri', 'Aile Destek Programları', 'Sosyal Yardımlar', 'Halk Sağlığı', 'Psikolojik Destek', 'Gıda Destekleri', 'Toplum Merkezleri']}},
+  {id: 'yesil-alan-yonetimi', label: 'Yeşil Alan Yönetimi', note: 'Park, bahçe, kent ormanı, peyzaj ve yeşil koridor fikirleri.', categories: ['Yeşil Alan Yönetimi']},
+  {id: 'imar-sehircilik', label: 'İmar ve Şehircilik', note: 'İmar, şehircilik, kentsel tasarım ve mekansal planlama fikirleri.', categories: ['İmar ve Şehircilik']},
+  {id: 'genclik', label: 'Gençlik', note: 'Gençlik, spor ve gençlik odaklı sosyal fikirler.', categories: ['Sosyal Yaşam', 'Spor']},
+  {id: 'sosyal-politikalar', label: 'Sosyal politikalar', note: 'Kadın, çocuk, yaşlı, engelli, aile ve sosyal destek fikirleri.', categories: ['Sosyal Yaşam']},
   {id: 'ulasim', label: 'Ulaşım', note: 'Ulaşım, trafik, yaya, bisiklet ve erişilebilirlik fikirleri.', categories: ['Ulaşım']},
-  {id: 'egitim', label: 'Eğitim', note: 'Eğitim, kütüphane, meslek, teknoloji ve akademi fikirleri.', categories: ['Eğitim']},
-  {id: 'kultur-sanat', label: 'Kültür ve sanat', note: 'Kültür, sanat, festival, rota ve yerel miras fikirleri.', categories: ['Kültür ve Sanat']},
   {id: 'spor', label: 'Spor', note: 'Spor tesisleri, etkinlikler ve açık spor alanları fikirleri.', categories: ['Spor']},
-  {id: 'kulturel-miras-turizm', label: 'Kültürel Miras ve Turizm', note: 'Kültürel miras, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Kültürel Miras ve Turizm']},
+  {id: 'kulturel-miras-turizm', label: 'Kültürel Miras ve Eşsiz Yaşam', note: 'Kültürel miras, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Kültürel Miras ve Eşsiz Yaşam']},
   {id: 'yapay-zeka-dijitallesme', label: 'Yapay Zeka ve Dijitalleşme', note: 'Akıllı şehir, açık veri, dijital katılım ve yapay zeka fikirleri.', categories: ['Yapay Zeka ve Dijitalleşme']},
   {id: 'katilimci-yenilikci-yonetim', label: 'Katılımcı ve Yenilikçi Yönetim', note: 'Katılımcı bütçe, ortak akıl, şeffaflık ve yenilikçi hizmet fikirleri.', categories: ['Katılımcı ve Yenilikçi Yönetim']},
 ]
@@ -31,7 +31,7 @@ const STORAGE_KEY = 'mugla-annual-theme-settings-v1'
 export const annualThemeChangeEvent = 'mugla-annual-themes-changed'
 
 function normalizeThemeId(value: string): AnnualThemeId | null {
-  if (value === 'turizm' || value === 'kulturel-miras-essiz-yasam') return 'kulturel-miras-turizm'
+  if (value === 'turizm' || value === 'kultur-sanat' || value === 'kulturel-miras-essiz-yasam') return 'kulturel-miras-turizm'
   return annualThemeOptions.some(theme => theme.id === value) ? value as AnnualThemeId : null
 }
 
@@ -80,23 +80,14 @@ export function allowedCategoriesForYear(year: string) {
   setting.themes.forEach(themeId => {
     const theme = annualThemeOptions.find(option => option.id === themeId)
     theme?.categories?.forEach(category => allowed.add(category))
-    Object.keys(theme?.subcategories ?? {}).forEach(category => allowed.add(category))
   })
   return projectCategories.filter(([category]) => allowed.has(category))
 }
 
 export function allowedSubcategoriesForYear(year: string, category: string) {
-  if (isAllThemesOpen(year)) return subcategoriesFor(category)
-  const setting = getAnnualThemeSetting(year)
-  const allowAll = setting.themes.some(themeId => annualThemeOptions.find(option => option.id === themeId)?.categories?.includes(category))
-  if (allowAll) return subcategoriesFor(category)
-  const allowed = new Set<string>()
-  setting.themes.forEach(themeId => {
-    annualThemeOptions.find(option => option.id === themeId)?.subcategories?.[category]?.forEach(subcategory => allowed.add(subcategory))
-  })
-  return subcategoriesFor(category).filter(subcategory => allowed.has(subcategory))
+  return allowedCategoriesForYear(year).some(([name]) => name === category) ? ['Genel'] : []
 }
 
 export function isProjectThemeAllowed(year: string, category: string, subcategory: string) {
-  return allowedCategoriesForYear(year).some(([name]) => name === category) && allowedSubcategoriesForYear(year, category).includes(subcategory)
+  return allowedCategoriesForYear(year).some(([name]) => name === category)
 }

@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import {useMemo, useState, type ReactNode} from 'react'
-import {ArrowLeft, CheckCircle2, FileText, MapPin, Search, ShoppingCart, SlidersHorizontal} from 'lucide-react'
+import {ArrowLeft, CheckCircle2, ChevronDown, FileText, MapPin, Search, ShoppingCart, SlidersHorizontal} from 'lucide-react'
 import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser} from '@/lib/local-auth'
-import {projectCategories, subcategoriesFor, targetGroups} from '@/lib/project-taxonomy'
+import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 
@@ -62,7 +62,7 @@ const projectStatusOptions = [
   { value: 'Yapılamadı', label: 'Yapılamadı', description: 'Proje teknik, hukuki, mali veya saha koşulları nedeniyle uygulanamamıştır; gerekçe bilgisi açıklanır.' },
   { value: 'Ertelendi', label: 'Ertelendi', description: 'Proje mevcut dönemde uygulanmamış, sonraki takvim veya bütçe değerlendirmesine bırakılmıştır.' },
 ] as const
-const projectYearOptions = ['2026', '2027', '2028', '2029', '2030', '2031', '2032'] as const
+const projectYearOptions = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
 function statusClass(status: string) {
   if (status === 'Oylamada') return 'bg-green-50 text-green-700'
@@ -76,7 +76,8 @@ function statusClass(status: string) {
 }
 
 function CategoryBadge({project}:{project:ProjectRecord}) {
-  return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{project.category}</span>
+  const label = project.category === 'Diğer' && project.customTheme ? `Diğer: ${project.customTheme}` : project.category
+  return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{label}</span>
 }
 
 function ProjectImage({project, className = 'h-36'}: {project: ProjectRecord; className?: string}) {
@@ -95,7 +96,6 @@ type ProjectFilters = {
   years: string[]
   districts: string[]
   categories: string[]
-  subcategories: string[]
   targetGroups: string[]
   statuses: string[]
 }
@@ -105,7 +105,6 @@ const emptyFilters: ProjectFilters = {
   years: [],
   districts: [],
   categories: [],
-  subcategories: [],
   targetGroups: [],
   statuses: [],
 }
@@ -115,13 +114,16 @@ function toggleValue(list: string[], value: string) {
 }
 
 function FilterSection({title, allLabel, count, children}: {title: string; allLabel: string; count: number; children: ReactNode}) {
-  return <details className="group border-b border-mugla-navy/10 py-3" open>
-    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-mugla-navy">
+  const [open, setOpen] = useState(true)
+
+  return <section className="border-b border-mugla-navy/10 py-3">
+    <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full cursor-pointer items-center justify-between gap-3 text-left text-sm font-black text-mugla-navy">
       <span>{title}</span>
       <span className="rounded-full bg-mugla-sand px-2 py-0.5 text-[11px] font-bold text-mugla-navy/55">{count ? `${count} seçili` : allLabel}</span>
-    </summary>
-    <div className="mt-3 grid gap-2">{children}</div>
-  </details>
+      <ChevronDown size={16} className={`shrink-0 text-mugla-navy/45 transition-transform ${open ? 'rotate-180' : ''}`}/>
+    </button>
+    {open && <div className="mt-3 grid gap-2">{children}</div>}
+  </section>
 }
 
 function CheckOption({label, checked, onChange}: {label: string; checked: boolean; onChange: () => void}) {
@@ -201,14 +203,6 @@ export default function Projects() {
       return a.localeCompare(b, 'tr')
     })
   }, [approved])
-  const subcategories = useMemo(() => {
-    const sourceCategories = draftFilters.categories.length ? draftFilters.categories : categories
-    return Array.from(new Set(sourceCategories.flatMap(category => subcategoriesFor(category)))).sort((a, b) => {
-      if (a === 'Diğer') return 1
-      if (b === 'Diğer') return -1
-      return a.localeCompare(b, 'tr')
-    })
-  }, [categories, draftFilters.categories])
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
   const matchesYear = (project: ProjectRecord) => !appliedFilters.years.length || appliedFilters.years.includes(applicationYear(project))
   const votingProjects = approved.filter(project => matchesYear(project) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
@@ -221,11 +215,10 @@ export default function Projects() {
     const matchesProject = projectText.includes(appliedFilters.query.trim().toLocaleLowerCase('tr'))
     const matchesDistrict = !appliedFilters.districts.length || appliedFilters.districts.includes(project.district)
     const matchesCategory = !appliedFilters.categories.length || appliedFilters.categories.includes(project.category)
-    const matchesSubcategory = !appliedFilters.subcategories.length || (project.subcategory ? appliedFilters.subcategories.includes(project.subcategory) : false)
     const matchesTargetGroup = !appliedFilters.targetGroups.length || appliedFilters.targetGroups.includes(project.targetGroup ?? 'Herkes')
-    return matchesStatus && matchesApplicationYear && matchesProject && matchesDistrict && matchesCategory && matchesSubcategory && matchesTargetGroup
+    return matchesStatus && matchesApplicationYear && matchesProject && matchesDistrict && matchesCategory && matchesTargetGroup
   })
-  const activeFilterCount = appliedFilters.years.length + appliedFilters.districts.length + appliedFilters.categories.length + appliedFilters.subcategories.length + appliedFilters.targetGroups.length + appliedFilters.statuses.length + (appliedFilters.query.trim() ? 1 : 0)
+  const activeFilterCount = appliedFilters.years.length + appliedFilters.districts.length + appliedFilters.categories.length + appliedFilters.targetGroups.length + appliedFilters.statuses.length + (appliedFilters.query.trim() ? 1 : 0)
 
   function addToBasket(id: string) {
     if (!user) {
@@ -243,11 +236,6 @@ export default function Projects() {
   function toggleDraftFilter(key: keyof Omit<ProjectFilters, 'query'>, value: string) {
     setDraftFilters(current => {
       const next = {...current, [key]: toggleValue(current[key], value)}
-      if (key === 'categories') {
-        const sourceCategories = next.categories.length ? next.categories : categories
-        const allowedSubcategories = new Set(sourceCategories.flatMap(category => subcategoriesFor(category)))
-        next.subcategories = next.subcategories.filter(subcategory => allowedSubcategories.has(subcategory))
-      }
       return next
     })
   }
@@ -330,12 +318,6 @@ export default function Projects() {
 
           <FilterSection title="Tüm kategoriler" allLabel="Tümü" count={draftFilters.categories.length}>
             {categories.map(category => <CheckOption key={category} label={category} checked={draftFilters.categories.includes(category)} onChange={() => toggleDraftFilter('categories', category)}/>)}
-          </FilterSection>
-
-          <FilterSection title="Tüm alt kategoriler" allLabel="Tümü" count={draftFilters.subcategories.length}>
-            <div className="max-h-64 overflow-y-auto pr-1">
-              {subcategories.map(subcategory => <CheckOption key={subcategory} label={subcategory} checked={draftFilters.subcategories.includes(subcategory)} onChange={() => toggleDraftFilter('subcategories', subcategory)}/>)}
-            </div>
           </FilterSection>
 
           <FilterSection title="Tüm hedef gruplar" allLabel="Tümü" count={draftFilters.targetGroups.length}>
@@ -429,7 +411,7 @@ export default function Projects() {
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>
             <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/>{selectedProject.targetGroup && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">{selectedProject.targetGroup}</span>}<span className="text-sm text-mugla-navy/55">{selectedProject.district}{selectedProject.subcategory ? ` / ${selectedProject.subcategory}` : ''} · {formatBudget(selectedProject.budget)}</span></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/>{selectedProject.targetGroup && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">{selectedProject.targetGroup}</span>}<span className="text-sm text-mugla-navy/55">{selectedProject.district} · {formatBudget(selectedProject.budget)}</span></div>
           </div>
           <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
         </div>
