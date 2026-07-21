@@ -1,6 +1,9 @@
 export const projectCategories=[
   ['Ulaşım','#ef7d00'],
   ['Çevre ve İklim Değişikliği','#6a9d3b'],
+  ['Su Yönetimi','#0284c7'],
+  ['Tarım','#65a30d'],
+  ['Hayvan Hakları','#f59e0b'],
   ['Yeşil Alan Yönetimi','#16a34a'],
   ['İmar ve Şehircilik','#9333ea'],
   ['Sosyal Yaşam','#00a6c8'],
@@ -20,6 +23,9 @@ export type TargetGroup=typeof targetGroups[number]
 export const projectSubcategories:Record<ProjectCategory,string[]>={
   'Ulaşım':['Toplu Taşıma','Otobüs Durakları','Minibüs / Dolmuş','Deniz Ulaşımı','Akıllı Ulaşım Sistemleri','Trafik Yönetimi','Akıllı Kavşaklar','Otopark','Katlı Otopark','Bisiklet Yolları','Bisiklet Parkları','Elektrikli Araç Şarj İstasyonları','Scooter ve Mikro Mobilite','Yaya Yolları','Engelli Ulaşımı','Yol Bakım ve Asfalt','Kavşak Düzenlemeleri','Trafik Güvenliği','Köprü / Alt Geçit / Üst Geçit','Kırsal Ulaşım','Deniz Taksi / Su Ulaşımı','Diğer'],
   'Çevre ve İklim Değişikliği':['Atık Yönetimi','Geri Dönüşüm','Sıfır Atık','Kompost','Temizlik Hizmetleri','Deniz Temizliği','Dere ve Kanal Temizliği','Hava Kalitesi','Gürültü Kirliliği','Yeşil Alanlar','Ağaçlandırma','Park ve Bahçeler','Yağmur Suyu Yönetimi','Yenilenebilir Enerji','Güneş Enerjisi','İklim Değişikliği','Su Tasarrufu','Biyolojik Çeşitlilik','Sokak Hayvanları','Tarım ve Kırsal Çevre','Diğer'],
+  'Su Yönetimi':['İçme Suyu','Su Tasarrufu','Yağmur Suyu Yönetimi','Dere ve Kanal Yönetimi','Atık Su','Gri Su Kullanımı','Sulama Sistemleri','Kıyı ve Deniz Suyu','Taşkın ve Sel Önleme','Su Kalitesi','Diğer'],
+  'Tarım':['Tarımsal Üretim','Kooperatifler','Yerel Üretici Desteği','Sulama','Toprak Sağlığı','Seracılık','Arıcılık','Balıkçılık','Kırsal Kalkınma','Tarımsal Eğitim','Pazar ve Lojistik','Diğer'],
+  'Hayvan Hakları':['Sokak Hayvanları','Barınaklar','Kısırlaştırma','Beslenme Odakları','Veteriner Hizmetleri','Sahiplendirme','Hayvan Refahı','Yaban Hayatı','Acil Müdahale','Farkındalık','Diğer'],
   'Yeşil Alan Yönetimi':['Park ve Bahçeler','Kent Ormanları','Ağaçlandırma','Peyzaj Yönetimi','Yeşil Koridorlar','Rekreasyon Alanları','Çocuk Parkları','Kıyı Yeşil Alanları','Bakım ve Sulama','Biyoçeşitlilik','Diğer'],
   'İmar ve Şehircilik':['İmar Planları','Kentsel Tasarım','Mekansal Planlama','Kentsel Dönüşüm','Kamusal Alan Tasarımı','Yapılaşma ve Ruhsat','Kent Estetiği','Sokak Sağlıklaştırma','Meydan Düzenlemeleri','Kıyı Planlaması','Diğer'],
   'Sosyal Yaşam':['Kadın Hizmetleri','Çocuk Hizmetleri','Yaşlı Destek Hizmetleri','Engelli Hizmetleri','Gençlik','Aile Destek Programları','Sosyal Yardımlar','Mahalle Yaşamı','Halk Sağlığı','Psikolojik Destek','Gıda Destekleri','Toplum Merkezleri','Gönüllülük','Dijital Belediyecilik','Vatandaş Katılımı','Afet ve Acil Durum','Güvenlik','Diğer'],

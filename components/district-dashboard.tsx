@@ -5,29 +5,55 @@ import {motion} from 'framer-motion'
 import {
   ArrowUpRight,
   BarChart3,
+  Bell,
+  CalendarDays,
   CheckCircle2,
   Clock3,
-  Database,
+  FileDown,
+  FileSpreadsheet,
   FileText,
   FolderKanban,
   LayoutDashboard,
+  Mail,
   MapPin,
-  Plus,
+  MessageSquare,
+  Search,
   ShieldCheck,
   UsersRound,
   Vote,
-  WalletCards,
 } from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {muglaDistrictDashboards, type MuglaDistrictDashboard} from '@/lib/district-dashboards'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
-import {useCrm} from '@/lib/crm-store'
+import {useCrm, type Citizen} from '@/lib/crm-store'
 
 type DistrictDashboardProps = {
   district?: MuglaDistrictDashboard
 }
+
+const menuItems = [
+  ['dashboard', 'Dashboard', LayoutDashboard],
+  ['projeler', 'Projeler', FolderKanban],
+  ['oylamalar', 'Oylamalar', Vote],
+  ['vatandaslar', 'Vatandaşlar', UsersRound],
+  ['basvurular', 'Başvurular', FileText],
+  ['istatistikler', 'İstatistikler', BarChart3],
+  ['duyurular', 'Duyurular', Bell],
+  ['mesajlar', 'Mesajlar', MessageSquare],
+  ['takvim', 'Takvim', CalendarDays],
+  ['raporlar', 'Raporlar', FileDown],
+] as const
+
+const stageRows = [
+  ['Başvuru', '🟢'],
+  ['Ön İnceleme', '🟡'],
+  ['Teknik Değerlendirme', '🔵'],
+  ['Oylama', '🟣'],
+  ['Uygulama', '🟠'],
+  ['Tamamlandı', '✅'],
+] as const
 
 function isApproved(project: ProjectRecord) {
   return String(project.moderationStatus).startsWith('Onay')
@@ -41,29 +67,59 @@ function isRejected(project: ProjectRecord) {
   return String(project.moderationStatus).startsWith('Red')
 }
 
-function isVoting(project: ProjectRecord) {
-  return isApproved(project) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status))
-}
-
 function isCompleted(project: ProjectRecord) {
   return String(project.status).startsWith('Tamamland')
 }
 
-function Metric({label, value, note, icon: Icon, color}: {label: string; value: string; note: string; icon: typeof FolderKanban; color: string}) {
-  return <Card><CardContent className="flex min-h-32 items-center gap-4 pt-6">
-    <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white ${color}`}><Icon size={22}/></span>
+function isActive(project: ProjectRecord) {
+  return ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor'].includes(String(project.status))
+}
+
+function thisMonth(value: string) {
+  const date = new Date(value)
+  const now = new Date()
+  return !Number.isNaN(date.getTime()) && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+}
+
+function districtInitial(name: string) {
+  return name.split(' ').map(part => part[0]).join('').slice(0, 2).toLocaleUpperCase('tr')
+}
+
+function ageBucket(citizen: Citizen) {
+  if (citizen.age <= 25) return '18-25'
+  if (citizen.age <= 40) return '26-40'
+  return '40+'
+}
+
+function percent(value: number, total: number) {
+  return total ? Math.round(value / total * 100) : 0
+}
+
+function groupCount<T>(items: T[], getKey: (item: T) => string) {
+  const map = new Map<string, number>()
+  items.forEach(item => map.set(getKey(item) || 'Belirtilmedi', (map.get(getKey(item) || 'Belirtilmedi') ?? 0) + 1))
+  return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
+}
+
+function MetricCard({label, value, note, icon: Icon}: {label: string; value: string; note: string; icon: typeof FolderKanban}) {
+  return <Card><CardContent className="flex min-h-28 items-center gap-4 pt-6">
+    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-mugla-navy text-white"><Icon size={20}/></span>
     <div className="min-w-0">
       <p className="text-sm text-mugla-navy/55">{label}</p>
-      <strong className="mt-1 block break-words text-2xl">{value}</strong>
+      <b className="mt-1 block break-words text-2xl">{value}</b>
       <p className="mt-1 text-xs text-mugla-navy/45">{note}</p>
     </div>
   </CardContent></Card>
 }
 
-function StatusBar({label, value, color = 'bg-mugla-cyan'}: {label: string; value: number; color?: string}) {
+function MiniBar({label, value, total, color = 'bg-mugla-cyan'}: {label: string; value: number; total: number; color?: string}) {
+  const width = percent(value, total)
   return <div>
-    <div className="mb-2 flex justify-between text-sm"><span className="text-mugla-navy/60">{label}</span><b>{Math.round(value)}%</b></div>
-    <div className="h-2 rounded-full bg-mugla-navy/10"><div className={`h-full rounded-full ${color}`} style={{width: `${Math.min(100, Math.max(0, value))}%`}}/></div>
+    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+      <span className="truncate text-mugla-navy/60">{label}</span>
+      <b>{value.toLocaleString('tr-TR')}</b>
+    </div>
+    <div className="h-2 overflow-hidden rounded-full bg-mugla-navy/10"><span className={`block h-full rounded-full ${color}`} style={{width: `${width}%`}}/></div>
   </div>
 }
 
@@ -71,8 +127,16 @@ function CategoryBadge({label, color}: {label: string; color: string}) {
   return <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
 }
 
+function SectionTitle({eyebrow, title, text}: {eyebrow: string; title: string; text?: string}) {
+  return <div>
+    <p className="text-xs font-bold tracking-widest text-mugla-cyan">{eyebrow}</p>
+    <h2 className="mt-1 text-xl font-bold">{title}</h2>
+    {text && <p className="mt-1 text-sm text-mugla-navy/55">{text}</p>}
+  </div>
+}
+
 function EmptyState({title, text}: {title: string; text: string}) {
-  return <div className="py-14 text-center text-mugla-navy/45">
+  return <div className="py-12 text-center text-mugla-navy/45">
     <FolderKanban className="mx-auto mb-3"/>
     <p className="font-semibold">{title}</p>
     <p className="mt-1 text-sm">{text}</p>
@@ -84,151 +148,209 @@ export function DistrictDashboard({district}: DistrictDashboardProps) {
   const {citizens, campaigns} = useCrm()
   const scopedProjects = district ? projects.filter(project => project.district === district.name) : projects
   const scopedCitizens = district ? citizens.filter(citizen => citizen.district === district.name) : citizens
-  const approvedProjects = scopedProjects.filter(isApproved)
   const pendingProjects = scopedProjects.filter(isPending)
+  const approvedProjects = scopedProjects.filter(isApproved)
   const rejectedProjects = scopedProjects.filter(isRejected)
-  const votingProjects = scopedProjects.filter(isVoting)
+  const activeProjects = scopedProjects.filter(isActive)
   const completedProjects = scopedProjects.filter(isCompleted)
-  const totalBudget = scopedProjects.reduce((sum, project) => sum + project.budget, 0)
-  const approvedBudget = approvedProjects.reduce((sum, project) => sum + project.budget, 0)
   const totalVotes = scopedProjects.reduce((sum, project) => sum + project.votes, 0)
-  const approvalRate = scopedProjects.length ? approvedProjects.length / scopedProjects.length * 100 : 0
-  const completionRate = approvedProjects.length ? completedProjects.length / approvedProjects.length * 100 : 0
-  const votingRate = scopedProjects.length ? votingProjects.length / scopedProjects.length * 100 : 0
-  const title = district ? `${district.name} Yönetici Dashboardu` : 'Belediye Yönetici Dashboardu'
+  const monthlyProjects = scopedProjects.filter(project => thisMonth(project.createdAt))
+  const monthlyVotes = monthlyProjects.reduce((sum, project) => sum + project.votes, 0)
+  const activeVoters = scopedCitizens.filter(citizen => citizen.voteCount > 0 || citizen.participationCount > 0)
+  const title = district ? district.name : 'Muğla Büyükşehir'
+  const today = new Date().toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})
+  const monthTotal = Math.max(1, monthlyProjects.length)
+  const topProjects = [...scopedProjects].sort((a, b) => b.votes - a.votes).slice(0, 10)
+  const neighborhoodRows = groupCount(scopedProjects, project => project.applicantDistrict || project.district).slice(0, 8)
+  const categoryRows = groupCount(scopedProjects, project => project.category).slice(0, 6)
+  const genderRows = groupCount(scopedCitizens, citizen => citizen.gender).slice(0, 4)
+  const ageRows = groupCount(scopedCitizens, ageBucket)
+  const messageCounts = [
+    ['Bekleyen', 0],
+    ['Cevaplandı', 0],
+    ['Kapatıldı', 0],
+  ] as const
+  const announcementCounts = [
+    ['Taslak', campaigns.filter(item => item.status === 'Taslak').length],
+    ['Yayınlandı', campaigns.filter(item => item.status === 'Gönderildi').length],
+    ['Arşiv', 0],
+  ] as const
 
   const metrics = [
-    {label: 'Toplam proje', value: String(scopedProjects.length), note: `${pendingProjects.length} başvuru inceleme bekliyor`, icon: FolderKanban, color: 'bg-mugla-orange'},
-    {label: 'Onaylı portföy', value: formatBudget(approvedBudget), note: `Toplam kayıtlı bütçe ${formatBudget(totalBudget)}`, icon: WalletCards, color: 'bg-mugla-green'},
-    {label: 'Canlı oy verisi', value: totalVotes.toLocaleString('tr-TR'), note: `${votingProjects.length} proje oylamada`, icon: Vote, color: 'bg-mugla-cyan'},
-    {label: 'Vatandaş kaydı', value: String(scopedCitizens.length), note: `${campaigns.length} iletişim kampanyası kayıtlı`, icon: UsersRound, color: 'bg-mugla-blue'},
-  ]
-
-  const statusCards = [
-    ['Bekleyen', pendingProjects.length, 'Belediye onayı bekleyen başvurular', Clock3, 'text-mugla-orange'],
-    ['Onaylanan', approvedProjects.length, 'Yayına ve rapora alınan projeler', CheckCircle2, 'text-green-600'],
-    ['Reddedilen', rejectedProjects.length, 'Uygun bulunmayan başvurular', ShieldCheck, 'text-red-600'],
-    ['Tamamlanan', completedProjects.length, 'Uygulaması biten projeler', BarChart3, 'text-mugla-blue'],
+    ['Toplam Proje', scopedProjects.length, 'İlçe veri havuzu', FolderKanban],
+    ['Bekleyen Proje', pendingProjects.length, 'Yeni başvurular', Clock3],
+    ['Onaylanan', approvedProjects.length, 'Yayına alınan', CheckCircle2],
+    ['Reddedilen', rejectedProjects.length, 'Uygun bulunmayan', ShieldCheck],
+    ['Devam Eden', activeProjects.length, 'Aktif süreç', BarChart3],
+    ['Tamamlanan', completedProjects.length, 'Kapanan iş', CheckCircle2],
+    ['Toplam Oy', totalVotes, 'Tüm oylar', Vote],
+    ['Katılımcı Sayısı', scopedCitizens.length, 'Kayıtlı vatandaş', UsersRound],
+    ['Bu Ay Başvuru', monthlyProjects.length, 'Aylık giriş', FileText],
+    ['Bu Ay Oy', monthlyVotes, 'Aylık destek', Vote],
   ] as const
 
   return <AppShell role="admin">
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
-      <div>
-        <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">{district ? 'İLÇE YÖNETİCİ ALANI' : 'CANLI BELEDİYE VERİ ALANI'}</p>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu dashboard belediye paneliyle aynı canlı verileri okur. Veri girişi yoksa tüm göstergeler 0’dan başlar; belediye proje, vatandaş ve oylama verisi girdikçe otomatik dolar.</p>
+    <header className="border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="grid h-16 w-16 place-items-center rounded-2xl bg-mugla-navy text-xl font-black text-white">{districtInitial(title)}</span>
+          <div>
+            <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">{district ? 'İLÇE PANELİ' : 'BÜYÜKŞEHİR PANELİ'}</p>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="mt-1 text-sm text-mugla-navy/55">{today} · Yönetici görünümü</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/admin"><Button variant="orange"><FileText size={17}/> Belediye paneli</Button></Link>
+          <Link href="/projeler"><Button variant="outline">Projeleri gör <ArrowUpRight size={17}/></Button></Link>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Link href="/admin"><Button variant="orange"><Plus size={17}/> Veri girişi</Button></Link>
-        <Link href="/projeler"><Button variant="outline">Projeleri gör <ArrowUpRight size={17}/></Button></Link>
-      </div>
+      <nav className="mt-5 flex gap-2 overflow-x-auto pb-1">
+        {menuItems.map(([id, label, Icon]) => <a key={id} href={`#${id}`} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-mugla-navy/10 bg-mugla-sand/70 px-4 py-2 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy">
+          <Icon size={16}/>{label}
+        </a>)}
+      </nav>
     </header>
 
     <div className="space-y-8 p-6 lg:p-10">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric, index) => <motion.div key={metric.label} initial={{opacity: 0, y: 15}} animate={{opacity: 1, y: 0}} transition={{delay: index * .06}}><Metric {...metric}/></motion.div>)}
+      <section id="dashboard" className="scroll-mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {metrics.map(([label, value, note, Icon], index) => <motion.div key={label} initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: index * .035}}>
+          <MetricCard label={label} value={String(value).toLocaleString()} note={note} icon={Icon}/>
+        </motion.div>)}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
+      <section id="istatistikler" className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <Card>
-          <CardHeader>
-            <p className="text-xs font-bold tracking-widest text-mugla-cyan">YÖNETİCİ ÖZETİ</p>
-            <h2 className="text-xl font-bold">Canlı veri durumu</h2>
-            <p className="text-sm text-mugla-navy/55">Belediyenin belediye panelinden girdiği proje kayıtları, vatandaş başvuruları, oylar ve CRM kayıtları bu alana yansır.</p>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {statusCards.map(([label, value, note, Icon, color]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 p-4">
-              <Icon className={color}/>
-              <p className="mt-4 text-sm text-mugla-navy/55">{label}</p>
-              <b className="text-3xl">{value}</b>
-              <p className="mt-1 text-xs text-mugla-navy/45">{note}</p>
-            </div>)}
+          <CardHeader><SectionTitle eyebrow="GRAFİKLER" title="Oy, başvuru ve kategori dağılımı" text="Veri belediye panelinden geldikçe tüm grafikler otomatik dolar."/></CardHeader>
+          <CardContent className="grid gap-6 lg:grid-cols-3">
+            <section className="space-y-4">
+              <h3 className="font-bold">Oy Dağılımı</h3>
+              <MiniBar label="Toplam oy" value={totalVotes} total={Math.max(1, totalVotes)} color="bg-mugla-orange"/>
+              <MiniBar label="Bu ay oy" value={monthlyVotes} total={Math.max(1, totalVotes)} color="bg-mugla-cyan"/>
+              <MiniBar label="Aktif katılımcı" value={activeVoters.length} total={Math.max(1, scopedCitizens.length)} color="bg-mugla-green"/>
+            </section>
+            <section className="space-y-4">
+              <h3 className="font-bold">Kategori Dağılımı</h3>
+              {categoryRows.length ? categoryRows.map(([label, value]) => <MiniBar key={label} label={label} value={value} total={scopedProjects.length}/>) : <p className="text-sm text-mugla-navy/45">Kategori verisi yok.</p>}
+            </section>
+            <section className="space-y-4">
+              <h3 className="font-bold">Vatandaş Profili</h3>
+              {genderRows.map(([label, value]) => <MiniBar key={label} label={label} value={value} total={Math.max(1, scopedCitizens.length)} color="bg-mugla-orange"/>)}
+              {ageRows.map(([label, value]) => <MiniBar key={label} label={label} value={value} total={Math.max(1, scopedCitizens.length)} color="bg-mugla-green"/>)}
+            </section>
           </CardContent>
         </Card>
 
-        <Card className="bg-mugla-navy text-white">
-          <CardHeader>
-            <Database className="text-mugla-cyan"/>
-            <p className="text-xs font-bold tracking-widest text-mugla-cyan">BELEDİYE VERİ GİRİŞİ</p>
-            <h2 className="text-xl font-bold">Bilgi alanı</h2>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">Yönetici; projeyi, başvuru durumunu, bütçeyi, ilçe bilgisini ve vatandaş kayıtlarını belediye panelinden girer. Dashboard bu kayıtları ayrı bir işlem yapmadan canlı gösterir.</p>
-            <div className="grid gap-3">
-              <Link href="/admin" className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold text-mugla-navy"><span className="flex items-center gap-2"><FileText size={16}/> Proje ve onay girişi</span><ArrowUpRight size={16}/></Link>
-              <Link href="/crm" className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold text-white"><span className="flex items-center gap-2"><UsersRound size={16}/> Vatandaş / CRM verisi</span><ArrowUpRight size={16}/></Link>
-            </div>
+        <Card>
+          <CardHeader><SectionTitle eyebrow="PROJE DURUMU" title="Süreç aşamaları"/></CardHeader>
+          <CardContent className="space-y-3">
+            {stageRows.map(([label, icon]) => {
+              const count = label === 'Başvuru' ? pendingProjects.length : label === 'Oylama' ? scopedProjects.filter(project => String(project.status) === 'Oylamada').length : label === 'Uygulama' ? scopedProjects.filter(project => String(project.status) === 'Devam Ediyor').length : label === 'Tamamlandı' ? completedProjects.length : 0
+              return <div key={label} className="flex items-center justify-between rounded-2xl bg-mugla-sand/70 px-4 py-3">
+                <span className="flex items-center gap-3 font-bold"><span>{icon}</span>{label}</span>
+                <b>{count}</b>
+              </div>
+            })}
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[.85fr_1.15fr]">
+      <section id="projeler" className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
         <Card>
           <CardHeader>
-            <p className="text-xs font-bold tracking-widest text-mugla-cyan">PERFORMANS</p>
-            <h2 className="text-xl font-bold">Anlık oranlar</h2>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <StatusBar label="Onay oranı" value={approvalRate} color="bg-mugla-green"/>
-            <StatusBar label="Oylama aktifliği" value={votingRate} color="bg-mugla-orange"/>
-            <StatusBar label="Tamamlanma oranı" value={completionRate} color="bg-mugla-blue"/>
-            <div className="rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60">
-              <BarChart3 className="mb-3 text-mugla-orange"/>
-              Veri yokken oranlar 0 görünür. İlk proje, ilk vatandaş veya ilk oy kaydı girildiğinde grafikler otomatik güncellenir.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SectionTitle eyebrow="PROJELER" title="Liste görünümü" text="Arama, kategori, mahalle, durum ve tarih filtreleri için sade kontrol alanı."/>
+              <label className="flex h-11 min-w-[240px] items-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4"><Search size={16}/><input className="w-full bg-transparent text-sm outline-none" placeholder="Proje ara"/></label>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <div>
-              <p className="text-xs font-bold tracking-widest text-mugla-cyan">PROJE AKIŞI</p>
-              <h2 className="mt-1 text-xl font-bold">{district ? `${district.name} proje kayıtları` : 'Son belediye proje kayıtları'}</h2>
-            </div>
-            <Link className="text-sm font-semibold text-mugla-blue" href="/admin">Yönet <ArrowUpRight className="inline" size={15}/></Link>
           </CardHeader>
           <CardContent className="space-y-3">
-            {scopedProjects.length ? scopedProjects.slice(0, 6).map(project => <Link href="/admin" key={project.id} className="group flex items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4 hover:border-mugla-blue/40 hover:bg-mugla-sand/60">
+            {scopedProjects.length ? scopedProjects.slice(0, 8).map(project => <Link href="/admin#proje-havuzu" key={project.id} className="flex items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4 hover:border-mugla-orange/50 hover:bg-mugla-sand/50">
               <span className="h-14 w-2 rounded-full" style={{background: project.color}}/>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-mugla-sand px-2 py-0.5 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
-                  <CategoryBadge label={project.category} color={project.color}/>
-                </div>
-                <p className="mt-2 truncate font-bold">{project.title}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/55"><span className="inline-flex items-center gap-1"><MapPin size={12}/>{project.district}</span><span>{project.moderationStatus}</span><span>{formatBudget(project.budget)}</span></div>
-              </div>
-              <div className="text-right"><strong>{project.votes.toLocaleString('tr-TR')}</strong><p className="text-xs text-mugla-navy/45">oy</p></div>
-            </Link>) : <EmptyState title="Henüz veri girişi yok." text="Belediye panelinden ilk proje girildiğinde bu alan canlı olarak dolacak."/>}
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2"><b className="truncate">{project.title}</b><CategoryBadge label={project.category} color={project.color}/></span>
+                <span className="mt-1 flex flex-wrap gap-2 text-xs text-mugla-navy/50"><span>{project.applicantDistrict || project.district}</span><span>{project.moderationStatus}</span><span>{formatBudget(project.budget)}</span></span>
+              </span>
+              <span className="text-right"><b>{project.votes.toLocaleString('tr-TR')}</b><small className="block text-mugla-navy/45">oy</small></span>
+            </Link>) : <EmptyState title="Proje yok" text="Bu ilçede henüz proje kaydı bulunmuyor."/>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><SectionTitle eyebrow="TOP 10" title="En çok oy alan projeler"/></CardHeader>
+          <CardContent className="space-y-2">
+            {topProjects.length ? topProjects.map((project, index) => <div key={project.id} className="flex items-center gap-3 rounded-xl bg-mugla-sand/65 p-3">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-black">{index + 1}</span>
+              <span className="min-w-0 flex-1"><b className="block truncate text-sm">{project.title}</b><small className="text-mugla-navy/45">{project.district}</small></span>
+              <b>{project.votes.toLocaleString('tr-TR')}</b>
+            </div>) : <p className="text-sm text-mugla-navy/45">Oy verisi yok.</p>}
           </CardContent>
         </Card>
       </section>
 
+      <section id="basvurular" className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <Card>
+          <CardHeader><SectionTitle eyebrow="BAŞVURULAR" title="Son başvurular" text="Yeni gelenler, inceleme ve komisyona gönderme akışı için özet."/></CardHeader>
+          <CardContent className="overflow-x-auto">
+            {scopedProjects.length ? <table className="w-full min-w-[620px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Proje</th><th>Mahalle</th><th>Tarih</th><th>Durum</th></tr></thead>
+              <tbody>{scopedProjects.slice(0, 8).map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-3 font-bold">{project.title}</td><td>{project.applicantDistrict || project.district}</td><td>{new Date(project.createdAt).toLocaleDateString('tr-TR')}</td><td>{project.moderationStatus}</td></tr>)}</tbody>
+            </table> : <EmptyState title="Başvuru yok" text="Yeni başvurular burada listelenir."/>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><SectionTitle eyebrow="MAHALLE HARİTASI" title={`${district?.name ?? 'Muğla'} oy yoğunluğu`}/></CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+            <div className="grid min-h-64 place-items-center rounded-2xl bg-gradient-to-br from-mugla-cyan/25 via-white to-mugla-orange/20 text-center">
+              <div><MapPin className="mx-auto mb-3 text-mugla-orange"/><b>{district?.name ?? '13 İlçe'}</b><p className="mt-1 text-sm text-mugla-navy/50">Mahalle yoğunluğu</p></div>
+            </div>
+            <div className="space-y-3">
+              {neighborhoodRows.length ? neighborhoodRows.map(([label, value]) => <MiniBar key={label} label={label} value={value} total={Math.max(1, scopedProjects.length)} color="bg-mugla-orange"/>) : <p className="text-sm text-mugla-navy/45">Mahalle verisi yok.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="oylamalar" className="grid gap-6 xl:grid-cols-3">
+        <Card><CardHeader><SectionTitle eyebrow="OYLAMA" title="Aktif oylamalar"/></CardHeader><CardContent className="space-y-3">{activeProjects.length ? activeProjects.map(project => <div key={project.id} className="rounded-xl bg-mugla-sand/70 p-4"><b>{project.title}</b><p className="mt-1 text-sm text-mugla-navy/50">{project.votes.toLocaleString('tr-TR')} oy · Katılım %{percent(project.votes, Math.max(1, totalVotes))}</p></div>) : <p className="text-sm text-mugla-navy/45">Aktif oylama yok.</p>}</CardContent></Card>
+        <Card id="vatandaslar"><CardHeader><SectionTitle eyebrow="VATANDAŞLAR" title="Kayıt ve doğrulama"/></CardHeader><CardContent className="grid gap-3"><MetricCard label="Toplam Kayıt" value={String(scopedCitizens.length)} note="İlçe vatandaşları" icon={UsersRound}/><MetricCard label="Aktif Kullanıcı" value={String(activeVoters.length)} note="Oy/katılım izi olanlar" icon={ShieldCheck}/></CardContent></Card>
+        <Card id="duyurular"><CardHeader><SectionTitle eyebrow="DUYURULAR" title="Duyuru durumu"/></CardHeader><CardContent className="space-y-3">{announcementCounts.map(([label, value]) => <MiniBar key={label} label={label} value={value} total={Math.max(1, campaigns.length)} color="bg-mugla-green"/>)}</CardContent></Card>
+      </section>
+
+      <section id="mesajlar" className="grid gap-6 xl:grid-cols-[.8fr_1.2fr]">
+        <Card><CardHeader><SectionTitle eyebrow="MESAJLAR" title="Vatandaş destek"/></CardHeader><CardContent className="space-y-3">{messageCounts.map(([label, value]) => <div key={label} className="flex justify-between rounded-xl bg-mugla-sand/70 p-4"><span>{label}</span><b>{value}</b></div>)}</CardContent></Card>
+        <Card id="takvim"><CardHeader><SectionTitle eyebrow="TAKVİM" title="İlçe süreç takvimi"/></CardHeader><CardContent className="grid gap-3 md:grid-cols-5">{['Başvuru Başlangıcı','Başvuru Sonu','Teknik İnceleme','Oylama','Sonuç'].map((item, index) => <div key={item} className="rounded-2xl border border-mugla-navy/10 p-4"><span className="grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black">{index + 1}</span><b className="mt-4 block text-sm">{item}</b><small className="mt-1 block text-mugla-navy/45">Planlanacak</small></div>)}</CardContent></Card>
+      </section>
+
+      <Card id="raporlar">
+        <CardHeader><SectionTitle eyebrow="RAPORLAR" title="PDF, Excel ve grafik çıktıları"/></CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button variant="orange"><FileDown size={17}/> PDF Rapor</Button>
+          <Button variant="outline"><FileSpreadsheet size={17}/> Excel</Button>
+          <Button variant="outline"><BarChart3 size={17}/> Grafik</Button>
+        </CardContent>
+      </Card>
+
       {!district && <Card>
-        <CardHeader>
-          <p className="text-xs font-bold tracking-widest text-mugla-cyan">İLÇE DAĞILIMI</p>
-          <h2 className="mt-1 text-xl font-bold">13 ilçe için canlı yönetici görünümü</h2>
-          <p className="mt-1 text-sm text-mugla-navy/55">Her ilçe kartı aynı veri havuzundan beslenir. İlçeye ait kayıt yoksa değerler 0 görünür.</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {muglaDistrictDashboards.map((item, index) => {
-              const districtProjects = projects.filter(project => project.district === item.name)
-              const districtCitizens = citizens.filter(citizen => citizen.district === item.name)
-              const districtVotes = districtProjects.reduce((sum, project) => sum + project.votes, 0)
-              return <motion.div key={item.slug} initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: .08 + index * .025}}>
-                <Link href={item.panelPath} className="relative flex min-h-48 overflow-hidden flex-col justify-between rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:border-mugla-cyan hover:shadow-soft">
-                  <span className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-mugla-cyan via-mugla-green to-mugla-orange"/>
-                  <span className="flex items-center justify-between gap-3"><b>{item.name}</b><span className="grid h-9 w-9 place-items-center rounded-full bg-mugla-sand text-mugla-cyan shadow-sm"><LayoutDashboard size={18}/></span></span>
-                  <span className="mt-4 grid grid-cols-3 gap-3 text-xs text-mugla-navy/55">
-                    <span><strong className="block text-base text-mugla-navy">{districtProjects.length}</strong>proje</span>
-                    <span><strong className="block text-base text-mugla-navy">{districtCitizens.length}</strong>kişi</span>
-                    <span><strong className="block text-base text-mugla-navy">{districtVotes.toLocaleString('tr-TR')}</strong>oy</span>
-                  </span>
-                </Link>
-              </motion.div>
-            })}
-          </div>
+        <CardHeader><SectionTitle eyebrow="BÜYÜKŞEHİR İZLEME" title="13 ilçenin tamamı" text="Kartlardan ilçeye geçerek aynı arayüzde sadece o ilçenin verisini görebilirsiniz."/></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {muglaDistrictDashboards.map((item, index) => {
+            const districtProjects = projects.filter(project => project.district === item.name)
+            const districtCitizens = citizens.filter(citizen => citizen.district === item.name)
+            const votes = districtProjects.reduce((sum, project) => sum + project.votes, 0)
+            const active = districtProjects.filter(isActive).length
+            return <motion.div key={item.slug} initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: index * .025}}>
+              <Link href={item.panelPath} className="block rounded-2xl border border-mugla-navy/10 bg-white p-4 transition hover:-translate-y-1 hover:border-mugla-cyan hover:shadow-soft">
+                <div className="flex items-center justify-between"><b>{item.name}</b><LayoutDashboard className="text-mugla-cyan" size={18}/></div>
+                <div className="mt-4 grid grid-cols-4 gap-2 text-xs text-mugla-navy/50">
+                  <span><b className="block text-mugla-navy">{districtProjects.length}</b>Başvuru</span>
+                  <span><b className="block text-mugla-navy">{votes.toLocaleString('tr-TR')}</b>Oy</span>
+                  <span><b className="block text-mugla-navy">{active}</b>Aktif</span>
+                  <span><b className="block text-mugla-navy">%{percent(districtCitizens.length, Math.max(1, citizens.length))}</b>Katılım</span>
+                </div>
+              </Link>
+            </motion.div>
+          })}
         </CardContent>
       </Card>}
     </div>

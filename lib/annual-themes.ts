@@ -4,7 +4,7 @@ import {projectCategories} from '@/lib/project-taxonomy'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'su-yonetimi' | 'tarim' | 'hayvan-haklari' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
 
 export type AnnualThemeSetting = {
   year: string
@@ -16,6 +16,9 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
   {id: 'all', label: 'Tüm temalar', note: 'Vatandaşlar o yıl tüm kategorilerden fikir gönderebilir.'},
   {id: 'afet', label: 'Afet ve Risk Yönetimi', note: 'Afet hazırlığı, risk azaltma ve kriz koordinasyonu fikirleri.', categories: ['Afet ve Risk Yönetimi']},
   {id: 'cevre', label: 'Çevre ve İklim Değişikliği', note: 'İklim, çevre, atık, enerji, su ve yeşil alan fikirleri.', categories: ['Çevre ve İklim Değişikliği']},
+  {id: 'su-yonetimi', label: 'Su Yönetimi', note: 'İçme suyu, yağmur suyu, atık su, tasarruf ve taşkın yönetimi fikirleri.', categories: ['Su Yönetimi']},
+  {id: 'tarim', label: 'Tarım', note: 'Tarımsal üretim, kooperatif, kırsal kalkınma ve yerel üretici desteği fikirleri.', categories: ['Tarım']},
+  {id: 'hayvan-haklari', label: 'Hayvan Hakları', note: 'Sokak hayvanları, barınak, veteriner hizmetleri ve hayvan refahı fikirleri.', categories: ['Hayvan Hakları']},
   {id: 'yesil-alan-yonetimi', label: 'Yeşil Alan Yönetimi', note: 'Park, bahçe, kent ormanı, peyzaj ve yeşil koridor fikirleri.', categories: ['Yeşil Alan Yönetimi']},
   {id: 'imar-sehircilik', label: 'İmar ve Şehircilik', note: 'İmar, şehircilik, kentsel tasarım ve mekansal planlama fikirleri.', categories: ['İmar ve Şehircilik']},
   {id: 'genclik', label: 'Gençlik', note: 'Gençlik, spor ve gençlik odaklı sosyal fikirler.', categories: ['Sosyal Yaşam', 'Spor']},
