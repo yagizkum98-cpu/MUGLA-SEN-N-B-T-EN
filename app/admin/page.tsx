@@ -29,9 +29,86 @@ const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'yetkili', label: 'Yetkili', note: 'Proje islemlerine erisir'},
 ]
 const assignableRoles = roles.filter(role => role.value !== 'super-admin')
+const portalLinks = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    url: 'https://muglabutcesenin-dashboard.vercel.app/',
+    note: 'Tum portal linklerini, veri akislarini ve panel erisimlerini kontrol etmek icin ana izleme hesabi.',
+    badge: 'Kontrol merkezi',
+  },
+  {
+    id: 'landing',
+    label: 'Landing',
+    url: 'https://muglaseninbutcen.vercel.app/',
+    note: 'Kamuya acik ana sayfa ve bilgilendirme vitrini.',
+    badge: 'Ana sayfa',
+  },
+  {
+    id: 'belediye',
+    label: 'Belediye',
+    url: 'https://muglabutcesenin-belediye.vercel.app/',
+    note: 'Belediye yonetim paneli, proje havuzu ve onay surecleri.',
+    badge: 'Yonetim',
+  },
+  {
+    id: 'kullanici',
+    label: 'Kullanıcı',
+    url: 'https://muglabutcesenin-vatandas.vercel.app/',
+    note: 'Vatandas girisi, fikir basvurusu ve kisisel panel alani.',
+    badge: 'Vatandas',
+  },
+] as const
 
 function CategoryBadge({label, color}: {label: string; color: string}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor: `${color}18`, borderColor: `${color}55`, color}}>{label}</span>
+}
+
+function SuperAdminPortalAccess() {
+  const dashboard = portalLinks[0]
+  const others = portalLinks.slice(1)
+
+  return <Card>
+    <CardHeader>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">SUPER ADMIN PORTAL ERİŞİMLERİ</p>
+          <h2 className="mt-1 text-xl font-bold">Portal erişimleri ve bağlantı kontrolü</h2>
+          <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu kart yalnızca super admin hesabında görünür. Proje alanlarının karışmaması, erişimlerin tek merkezden izlenmesi ve bağlantıların doğrulanması için dashboard en üst kontrol noktasıdır.</p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-xs font-black text-green-700"><ShieldCheck size={15}/> Sadece super admin</span>
+      </div>
+    </CardHeader>
+    <CardContent className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
+      <a href={dashboard.url} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-2xl border border-mugla-cyan/25 bg-mugla-navy p-5 text-white shadow-soft transition hover:-translate-y-0.5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/10 text-mugla-cyan"><LayoutDashboard size={27}/></span>
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/75">{dashboard.badge}<ArrowUpRight size={14}/></span>
+        </div>
+        <h3 className="mt-6 text-2xl font-black">{dashboard.label}</h3>
+        <p className="mt-2 break-all text-sm font-semibold text-mugla-cyan">{dashboard.url}</p>
+        <p className="mt-4 max-w-xl text-sm leading-6 text-white/65">{dashboard.note}</p>
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          {['Alan kontrolü', 'Veri güvenliği', 'Portal ayrımı'].map(item => <span key={item} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white/75">{item}</span>)}
+        </div>
+      </a>
+
+      <section className="grid gap-3">
+        {others.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="group flex items-center gap-4 rounded-2xl border border-mugla-navy/10 bg-white p-4 transition hover:border-mugla-orange/45 hover:bg-mugla-sand/45">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mugla-sand text-mugla-orange">{item.id === 'landing' ? <Database size={21}/> : item.id === 'belediye' ? <LockKeyhole size={21}/> : <UserPlus size={21}/>}</span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2">
+              <b>{item.label}</b>
+              <span className="rounded-full bg-mugla-sand px-2 py-0.5 text-[11px] font-bold text-mugla-navy/50">{item.badge}</span>
+            </span>
+            <span className="mt-1 block truncate text-xs font-semibold text-mugla-cyan">{item.url}</span>
+            <span className="mt-1 block text-xs leading-5 text-mugla-navy/50">{item.note}</span>
+          </span>
+          <ArrowUpRight className="shrink-0 text-mugla-navy/35 transition group-hover:text-mugla-orange" size={18}/>
+        </a>)}
+      </section>
+    </CardContent>
+  </Card>
 }
 
 function projectCategoryLabel(project: ProjectRecord) {
@@ -453,6 +530,8 @@ export default function Admin() {
 
     <div className="space-y-7 p-6 lg:p-10">
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
+
+      {adminUser?.role === 'super-admin' && <SuperAdminPortalAccess/>}
 
       <Card>
         <CardHeader>
