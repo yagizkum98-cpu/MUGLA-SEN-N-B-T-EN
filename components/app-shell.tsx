@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BarChart3, FolderKanban, Home, LogOut, Mail, Settings, ShieldCheck, ShoppingCart, UserRound, UsersRound} from 'lucide-react'
+import {BarChart3, Bell, Building2, FileBarChart, FolderKanban, Home, LogOut, MessageSquare, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
@@ -17,12 +17,15 @@ const citizen = [
 ] as const
 
 const admin = [
-  {href: '/admin', label: 'Belediye Yonetimi', icon: ShieldCheck, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
-  {href: '/dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm']},
-  {href: '/admin#iletisim', label: 'Iletisim Talepleri', icon: Mail, roles: ['super-admin', 'belediye-admin', 'crm']},
-  {href: '/crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
-  {href: '/admin#analitik', label: 'Analitik', icon: BarChart3, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
-  {href: '/admin#sistem', label: 'Sistem Ayarlari', icon: Settings, roles: ['super-admin']},
+  {href: '/admin#dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
+  {href: '/admin#projeler', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
+  {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#crm', label: 'CRM', icon: MessageSquare, roles: ['super-admin', 'belediye-admin', 'crm', 'ilce-yoneticisi', 'yetkili']},
+  {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin']},
+  {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin']},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {

@@ -7,7 +7,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
+import {ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MessageSquare, Plus, Search, ShieldCheck, Trash2, UploadCloud, UserPlus, UsersRound, Vote, XCircle} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -370,6 +370,8 @@ export default function Admin() {
   const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin
   const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
+  const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin
   const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id) : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
@@ -667,6 +669,30 @@ export default function Admin() {
     ['Oylamada', scopedProjects.filter(p => !['Bekliyor', 'Reddedildi'].includes(String(p.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(p.status))).length, 'Projeler sekmesinde', CheckCircle2],
     ['Yetkili kisi', accounts.length, 'Tanimli admin hesaplari', ShieldCheck],
   ] as const
+  const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
+  const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
+  const dashboardMetrics = [
+    ['Toplam Proje', scopedProjects.length, FolderKanban, 'bg-mugla-navy text-white'],
+    ['Bekleyen Proje', pendingProjects.length, Clock3, 'bg-orange-50 text-mugla-orange'],
+    ['Aktif Oylama', activeVotingProjects.length, Vote, 'bg-cyan-50 text-mugla-cyan'],
+    ['Toplam Oy', scopedProjects.reduce((sum, project) => sum + project.votes, 0), BarChart3, 'bg-green-50 text-green-700'],
+    ['Aktif İlçe', new Set(scopedProjects.map(project => project.district)).size, Building2, 'bg-white text-mugla-navy'],
+    ['Vatandaş', scopedCitizens.length, UsersRound, 'bg-white text-mugla-navy'],
+  ] as const
+  const recentActions = [
+    ...pendingProjects.slice(0, 2).map(project => [project.district, 'Yeni proje gönderdi', project.title]),
+    ...activeVotingProjects.slice(0, 2).map(project => [project.district, 'Oylama başladı', project.title]),
+    ...winningProjects.slice(0, 2).map(project => [project.district, 'Kazanan ilan edildi', project.title]),
+  ].slice(0, 5)
+  const projectBuckets = [
+    ['Tüm Projeler', scopedProjects.length, 'Tüm kayıtlar'],
+    ['Taslaklar', scopedProjects.filter(project => String(project.workflowStatus) === 'Taslak').length, 'Kaydedilip gönderilmeyenler'],
+    ['İncelemede', pendingProjects.length, 'Onay/red bekleyenler'],
+    ['Oylamadakiler', activeVotingProjects.length, 'Vatandaş oylamasında'],
+    ['Kazananlar', winningProjects.length, 'Kazanan ilan edilenler'],
+    ['Arşiv', archivedProjects.length, 'Reddedilen veya arşivlenenler'],
+  ] as const
 
   const contactGroups = [
     ['Vatandas verileri', scopedContactRecords, 'Formu dolduran kisilerin iletisim bilgileri'],
@@ -694,6 +720,80 @@ export default function Admin() {
 
     <div className="space-y-7 p-6 lg:p-10">
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
+
+      <section id="dashboard" className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <Card>
+          <CardHeader>
+            <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">HOŞGELDİNİZ</p>
+            <h2 className="text-2xl font-black">Muğla Senin Bütçen</h2>
+            <p className="text-sm text-mugla-navy/55">Görev odaklı yönetim ekranı; proje, oylama, vatandaş ve rapor işlemleri tek bakışta izlenir.</p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {dashboardMetrics.map(([label, value, Icon, tone]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+                <span className={`mb-4 grid h-11 w-11 place-items-center rounded-xl ${tone}`}><Icon size={20}/></span>
+                <p className="text-sm text-mugla-navy/55">{label}</p>
+                <b className="mt-1 block text-3xl">{Number(value).toLocaleString('tr-TR')}</b>
+              </div>)}
+            </div>
+            <section>
+              <h3 className="font-bold">Son İşlemler</h3>
+              <div className="mt-3 divide-y divide-mugla-navy/10 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45">
+                {recentActions.length ? recentActions.map(([district, action, title]) => <div key={`${district}-${action}-${title}`} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <span><b>{district}</b><span className="ml-2 text-sm text-mugla-navy/55">{action}</span><small className="mt-1 block text-mugla-navy/45">{title}</small></span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/45">canlı</span>
+                </div>) : <div className="p-5 text-sm font-semibold text-mugla-navy/45">Henüz son işlem yok.</div>}
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><h2 className="text-xl font-bold">Hızlı İşlemler</h2></CardHeader>
+          <CardContent className="grid gap-3">
+            {canCreateMunicipalProject && <Button variant="orange" onClick={() => setOpen(true)}><Plus size={17}/> Yeni Proje</Button>}
+            <a href="#oylamalar"><Button variant="outline" className="w-full justify-start"><Vote size={17}/> Oylama Oluştur</Button></a>
+            {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(true)}><UserPlus size={17}/> Kullanıcı Ekle</Button>}
+            <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileBarChart size={17}/> Rapor Al</Button></a>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card id="projeler">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">PROJELER</p>
+              <h2 className="mt-1 text-xl font-bold">Proje merkezi</h2>
+              <p className="mt-1 text-sm text-mugla-navy/55">Tüm proje akışı; taslak, inceleme, oylama, kazanan ve arşiv durumlarıyla tek ekranda izlenir.</p>
+            </div>
+            {canCreateMunicipalProject && <Button variant="orange" onClick={() => setOpen(true)}><Plus size={17}/> Yeni Proje</Button>}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 lg:grid-cols-[1fr_160px_160px_160px_auto]">
+            <label className="flex items-center gap-2 rounded-xl border border-mugla-navy/15 bg-white px-4 py-3"><Search size={16}/><input className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Ara"/></label>
+            <select className={field} defaultValue=""><option value="">Kategori</option>{categories.map(([item]) => <option key={item}>{item}</option>)}</select>
+            <select className={field} defaultValue=""><option value="">İlçe</option>{districts.map(item => <option key={item}>{item}</option>)}</select>
+            <select className={field} defaultValue=""><option value="">Durum</option><option>Taslak</option><option>İncelemede</option><option>Oylamada</option><option>Kazandı</option><option>Arşiv</option></select>
+            <Button variant="outline">Filtrele</Button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            {projectBuckets.map(([label, value, note]) => <a key={label} href="#proje-havuzu" className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4 hover:border-mugla-cyan hover:bg-white">
+              <b className="block text-2xl">{value}</b>
+              <span className="mt-1 block font-bold">{label}</span>
+              <small className="mt-1 block text-mugla-navy/45">{note}</small>
+            </a>)}
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            {scopedProjects.slice(0, 6).map(project => <button key={project.id} type="button" onClick={() => setManagedProjectId(project.id)} className="text-left rounded-2xl border border-mugla-navy/10 bg-white p-4 hover:border-mugla-orange">
+              <span className="flex items-center gap-2 text-xs font-bold text-mugla-navy/45"><Building2 size={14}/>{project.district}</span>
+              <b className="mt-2 block truncate">{project.title}</b>
+              <span className="mt-3 flex flex-wrap gap-2 text-xs"><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/><span className="rounded-full bg-orange-50 px-2 py-1 font-bold text-mugla-orange">{project.workflowStatus ?? project.moderationStatus}</span></span>
+            </button>)}
+          </div>
+        </CardContent>
+      </Card>
 
       {isSuperAdmin && <SuperAdminPortalAccess/>}
       {canSeeSystem && <SuperAdminSystemSecurity auditRecords={auditRecords}/>}
@@ -769,7 +869,7 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {canSeeCategories && <Card>
+      {canSeeCategories && <Card id="ayarlar">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">YILLIK TEMA KURALLARI</p>
           <h2 className="text-xl font-bold">Vatandas fikir gonderim temalari</h2>
@@ -851,7 +951,7 @@ export default function Admin() {
 
       <section id="analitik" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
 
-      {canSeeCrm && <Card>
+      {canSeeCrm && <Card id="vatandaslar">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAS DEMOGRAFISI</p>
           <h2 className="text-xl font-bold">Yaş aralığı verileri</h2>
@@ -870,7 +970,7 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {canSeeCrm && <Card id="iletisim">
+      {canSeeCrm && <Card id="crm">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">KATILIMCI BUTCE ILETISIM</p>
           <h2 className="text-xl font-bold">Vatandas iletisim talepleri</h2>
@@ -908,7 +1008,39 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {canSeeDistricts && <Card>
+      {canSeeNotifications && <Card id="bildirimler">
+        <CardHeader>
+          <h2 className="text-xl font-bold">Bildirimler</h2>
+          <p className="text-sm text-mugla-navy/55">Yeni bildirim, toplu bildirim ve gönderilmiş bildirimler sade bir akışta yönetilir.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {['Yeni Bildirim', 'Toplu Bildirim', 'Gönderilmişler'].map((item, index) => <button key={item} type="button" className="rounded-2xl border border-mugla-navy/10 bg-white p-5 text-left hover:border-mugla-cyan">
+            <Bell className={index === 0 ? 'text-mugla-orange' : 'text-mugla-cyan'} />
+            <b className="mt-4 block">{item}</b>
+            <small className="mt-1 block text-mugla-navy/45">Bildirim işlemi</small>
+          </button>)}
+        </CardContent>
+      </Card>}
+
+      {canSeeReports && <Card id="raporlar">
+        <CardHeader>
+          <h2 className="text-xl font-bold">Raporlar</h2>
+          <p className="text-sm text-mugla-navy/55">PDF, Excel ve CSV çıktıları ile oy, ilçe, kategori, vatandaş ve proje raporları.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {['PDF', 'Excel', 'CSV'].map(item => <Button key={item} variant="outline"><FileBarChart size={17}/> {item}</Button>)}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {['Oy Raporu', 'İlçe Raporu', 'Kategori', 'Vatandaş', 'Proje'].map(item => <div key={item} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+              <b>{item}</b>
+              <p className="mt-1 text-sm text-mugla-navy/45">Hazır rapor görünümü</p>
+            </div>)}
+          </div>
+        </CardContent>
+      </Card>}
+
+      {canSeeDistricts && <Card id="ilceler">
         <CardHeader className="flex-row items-center justify-between">
           <div>
             <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE DASHBOARDLARI</p>
@@ -942,7 +1074,7 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {canSeeVoting && <Card>
+      {canSeeVoting && <Card id="oylamalar">
         <CardHeader>
           <h2 className="text-xl font-bold">Oylama leaderboard</h2>
           <p className="text-sm text-mugla-navy/55">Onaylı projeler oy sayısına göre sıralanır. Bu tablo hangi projenin ne kadar oylandığını sayısal olarak gösterir.</p>
