@@ -319,6 +319,7 @@ export default function Admin() {
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [mergeSelection, setMergeSelection] = useState<string[]>([])
+  const [mergeFormOpen, setMergeFormOpen] = useState(false)
   const [expandedProjectDetails, setExpandedProjectDetails] = useState<string | null>(null)
   const [managedProjectId, setManagedProjectId] = useState<string | null>(null)
   const [ownPassword, setOwnPassword] = useState<string | null>(null)
@@ -412,12 +413,14 @@ export default function Admin() {
 
   function toggleAllPendingSelection() {
     setMergeSelection(allPendingSelected ? [] : pendingProjects.map(project => project.id))
+    if (allPendingSelected) setMergeFormOpen(false)
   }
 
   function reviewMany(ids: string[], moderationStatus: 'Onaylandı' | 'Reddedildi') {
     ids.forEach(id => reviewProject(id, moderationStatus))
     writeAuditLog(adminUser, `Toplu proje ${moderationStatus}`, {target: ids.join(','), details: `${ids.length} proje`})
     setMergeSelection(value => value.filter(id => !ids.includes(id)))
+    setMergeFormOpen(false)
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
     setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
   }
@@ -472,6 +475,7 @@ export default function Admin() {
       })
       event.currentTarget.reset()
       setMergeSelection([])
+      setMergeFormOpen(false)
       writeAuditLog(adminUser, 'Projeleri birlestirdi', {target: project.projectCode, details: mergeSelection.join(',')})
       setMessage(`${project.title} birleştirilmiş proje olarak onaylandı ve oylamaya açıldı.`)
     } catch (cause) {
@@ -872,12 +876,13 @@ export default function Admin() {
               <Button size="sm" variant="outline" type="button" onClick={() => setMergeSelection([])} disabled={!mergeSelection.length}>Seçimi temizle</Button>
               <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(mergeSelection, 'Onaylandı')} disabled={!mergeSelection.length}><CheckCircle2 size={15}/> Seçilenleri onayla</Button>
               <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(mergeSelection, 'Reddedildi')} disabled={!mergeSelection.length}><XCircle size={15}/> Seçilenleri reddet</Button>
+              <Button size="sm" variant="outline" type="button" onClick={() => setMergeFormOpen(value => !value)} disabled={selectedMergeProjects.length < 2}><FolderKanban size={15}/> Manuel proje birleştir</Button>
               <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Onaylandı')}><CheckCircle2 size={15}/> Tümünü onayla</Button>
               <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Reddedildi')}><XCircle size={15}/> Tümünü reddet</Button>
             </div>
-            {mergeSelection.length >= 2 && <p className="w-full text-xs font-semibold text-mugla-navy/55">{mergeSelection.length} başvuru seçildi. Aynı proje başvuruları için aşağıdaki birleştirme alanını kullanabilirsiniz.</p>}
+            {mergeSelection.length >= 2 && <p className="w-full text-xs font-semibold text-mugla-navy/55">{mergeSelection.length} başvuru seçildi. Aynı proje başvurularını tek kayıtta toplamak için Manuel proje birleştir butonunu kullanın.</p>}
           </div>}
-          {selectedMergeProjects.length >= 2 && <form onSubmit={submitMergedProject} className="grid gap-4 rounded-2xl border border-mugla-cyan/30 bg-cyan-50/40 p-4 md:grid-cols-2 xl:grid-cols-3">
+          {selectedMergeProjects.length >= 2 && mergeFormOpen && <form onSubmit={submitMergedProject} className="grid gap-4 rounded-2xl border border-mugla-cyan/30 bg-cyan-50/40 p-4 md:grid-cols-2 xl:grid-cols-3">
             <div className="md:col-span-2 xl:col-span-3">
               <p className="text-xs font-bold tracking-[.18em] text-mugla-cyan">BIRLESTIRILMIS PROJE</p>
               <h3 className="mt-1 text-lg font-bold">{selectedMergeProjects.length} benzer basvuru tek projeye donusturulecek.</h3>
@@ -893,7 +898,7 @@ export default function Admin() {
             <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirme gerekçesi</span><textarea className={`${field} min-h-24`} name="mergeNote" placeholder="Aynı mahalle, aynı ihtiyaç veya aynı uygulama konusu nedeniyle birleştirildi." required/></label>
             <label><span className="mb-2 block text-sm font-semibold">Enlem</span><input className={field} name="lat" type="number" step="any" placeholder="37.08"/></label>
             <label><span className="mb-2 block text-sm font-semibold">Boylam</span><input className={field} name="lng" type="number" step="any" placeholder="28.45"/></label>
-            <div className="flex items-end gap-2"><Button type="submit" variant="orange"><CheckCircle2 size={16}/> Birleştir ve onayla</Button><Button type="button" variant="outline" onClick={() => setMergeSelection([])}>Seçimi temizle</Button></div>
+            <div className="flex items-end gap-2"><Button type="submit" variant="orange"><CheckCircle2 size={16}/> Birleştir ve onayla</Button><Button type="button" variant="outline" onClick={() => {setMergeSelection([]); setMergeFormOpen(false)}}>Seçimi temizle</Button></div>
           </form>}
 
           {pendingProjects.length ? pendingProjects.map(project => <PendingProjectCard

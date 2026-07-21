@@ -48,7 +48,8 @@ export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
-const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi']
+const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'
+const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi','sosyal duraklar','sosyal duraklar projesi']
 
 function normalizeText(value:unknown){
   return String(value??'').trim().toLocaleLowerCase('tr')
@@ -58,9 +59,14 @@ function hasApplicantData(project:Partial<ProjectRecord>){
   return Boolean(project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
 }
 
+function isBeforeSocialStopsCleanup(project:Partial<ProjectRecord>){
+  const createdAt=new Date(project.createdAt??'').getTime()
+  return !Number.isFinite(createdAt)||createdAt<=new Date(SOCIAL_STOPS_CLEANUP_CUTOFF).getTime()
+}
+
 function isRemovedProject(project:Partial<ProjectRecord>&Pick<ProjectRecord,'title'>){
   const isLegacySocialStops=REMOVED_PROJECT_TITLES.includes(normalizeText(project.title))
-  return isLegacySocialStops&&!hasApplicantData(project)
+  return isLegacySocialStops&&isBeforeSocialStopsCleanup(project)
 }
 
 function readProjects():ProjectRecord[]{
