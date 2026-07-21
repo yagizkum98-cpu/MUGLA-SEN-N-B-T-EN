@@ -1,7 +1,8 @@
 'use client'
 
 import {useCallback,useEffect,useState} from 'react'
-import {AUTH_USERS_CHANGED_EVENT,listLocalUsers} from '@/lib/local-auth'
+import {AUTH_USERS_CHANGED_EVENT,listLocalUsers,readRemoteUsers,type LocalUser} from '@/lib/local-auth'
+import {ageFromBirthDate} from '@/lib/demographics'
 
 export type CrmRole='Vatandaş'|'STK'|'Akademisyen'|'Turist'|'Girişimci'|'İlçe Admin'|'Belediye Admin'|'Süper Admin'
 export type Channel='SMS'|'E-posta'|'Push'|'WhatsApp'|'Telegram'
@@ -17,6 +18,7 @@ export type Citizen={
   district:string
   role:CrmRole
   age:number
+  birthDate?:string
   gender:'Kadın'|'Erkek'|'Belirtmek istemiyor'
   interests:string[]
   participationCount:number
@@ -35,9 +37,8 @@ const EVENT='mugla-crm-changed'
 
 function read<T>(key:string):T[]{if(typeof window==='undefined')return[];try{const data=JSON.parse(localStorage.getItem(key)??'[]');return Array.isArray(data)?data:[]}catch{return[]}}
 
-function liveCitizens():Citizen[]{
-  if(typeof window==='undefined')return[]
-  return listLocalUsers().map(user=>({
+function userToCitizen(user:LocalUser):Citizen{
+  return {
     id:`auth-${user.id}`,
     name:user.name,
     email:user.email,
@@ -47,7 +48,8 @@ function liveCitizens():Citizen[]{
     province:user.province,
     district:user.district,
     role:'Vatandaş' as CrmRole,
-    age:0,
+    age:ageFromBirthDate(user.birthDate),
+    birthDate:user.birthDate,
     gender:'Belirtmek istemiyor' as const,
     interests:[],
     participationCount:0,
@@ -56,17 +58,29 @@ function liveCitizens():Citizen[]{
     badges:[user.verifiedBadge],
     lastLogin:user.verifiedAt,
     createdAt:user.createdAt,
-  }))
+  }
 }
 
-function mergedCitizens(){
-  const manual=read<Citizen>(CITIZENS)
+function liveCitizens():Citizen[]{
+  if(typeof window==='undefined')return[]
+  return listLocalUsers().map(userToCitizen)
+}
+
+function mergeCitizenSources(manual:Citizen[],live:Citizen[]){
   const manualEmails=new Set(manual.map(citizen=>citizen.email.toLocaleLowerCase('tr')))
-  return [...liveCitizens().filter(citizen=>!manualEmails.has(citizen.email.toLocaleLowerCase('tr'))),...manual.map(citizen=>({
+  return [...live.filter(citizen=>!manualEmails.has(citizen.email.toLocaleLowerCase('tr'))),...manual.map(citizen=>({
     ...citizen,
     nationality:citizen.nationality??'tc',
     province:citizen.province??'Mugla',
+    age:citizen.age||ageFromBirthDate(citizen.birthDate),
   }))]
+}
+
+function mergedCitizens(remote:Citizen[]=[]){
+  const manual=read<Citizen>(CITIZENS)
+  const byEmail=new Map<string,Citizen>()
+  ;[...remote,...liveCitizens()].forEach(citizen=>byEmail.set(citizen.email.toLocaleLowerCase('tr'),citizen))
+  return mergeCitizenSources(manual,Array.from(byEmail.values()))
 }
 
 export function engagementScore(citizen:Citizen){
@@ -78,7 +92,7 @@ export function engagementScore(citizen:Citizen){
 export function useCrm(){
   const[citizens,setCitizens]=useState<Citizen[]>([])
   const[campaigns,setCampaigns]=useState<Campaign[]>([])
-  useEffect(()=>{const sync=()=>{setCitizens(mergedCitizens());setCampaigns(read<Campaign>(CAMPAIGNS))};sync();window.addEventListener('storage',sync);window.addEventListener(EVENT,sync);window.addEventListener(AUTH_USERS_CHANGED_EVENT,sync);return()=>{window.removeEventListener('storage',sync);window.removeEventListener(EVENT,sync);window.removeEventListener(AUTH_USERS_CHANGED_EVENT,sync)}},[])
+  useEffect(()=>{const sync=()=>{setCitizens(mergedCitizens());setCampaigns(read<Campaign>(CAMPAIGNS));void readRemoteUsers().then(users=>setCitizens(mergedCitizens(users.map(userToCitizen))))};sync();window.addEventListener('storage',sync);window.addEventListener(EVENT,sync);window.addEventListener(AUTH_USERS_CHANGED_EVENT,sync);return()=>{window.removeEventListener('storage',sync);window.removeEventListener(EVENT,sync);window.removeEventListener(AUTH_USERS_CHANGED_EVENT,sync)}},[])
   const save=useCallback(<T,>(key:string,value:T[])=>{localStorage.setItem(key,JSON.stringify(value));window.dispatchEvent(new Event(EVENT))},[])
   const addCitizen=useCallback((input:Omit<Citizen,'id'|'createdAt'>)=>save(CITIZENS,[{...input,id:crypto.randomUUID(),createdAt:new Date().toISOString()},...read<Citizen>(CITIZENS)]),[save])
   const removeCitizen=useCallback((id:string)=>save(CITIZENS,read<Citizen>(CITIZENS).filter(x=>x.id!==id)),[save])

@@ -10,6 +10,7 @@ import {engagementScore, Channel, CrmRole, useCrm, type Citizen} from '@/lib/crm
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {turkiyeProvinces} from '@/lib/turkiye-locations'
 import {getCurrentAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {ageFromBirthDate, ageGroup, ageGroups, birthDateInputToIso, formatBirthDateInput, isoToBirthDateInput} from '@/lib/demographics'
 import {Activity, BarChart3, BellRing, Bot, Building2, ChevronRight, CircleDollarSign, Coins, FolderKanban, LockKeyhole, MapPinned, Megaphone, PieChart, Plus, Search, ShieldAlert, ShieldCheck, Trash2, UserRound, UsersRound, Vote} from 'lucide-react'
 
 const ProjectMap = dynamic(() => import('@/components/project-map'), {
@@ -56,16 +57,6 @@ function budgetByCategory(projects: ProjectRecord[]) {
     value: projects.filter(project => project.category === label).reduce((sum, project) => sum + Number(project.budget || 0), 0),
     color: palette[index % palette.length],
   }))
-}
-
-function ageGroup(age: number) {
-  if (!age || age < 18) return 'Belirsiz'
-  if (age <= 24) return '18-24'
-  if (age <= 34) return '25-34'
-  if (age <= 44) return '35-44'
-  if (age <= 54) return '45-54'
-  if (age <= 64) return '55-64'
-  return '65+'
 }
 
 function genderLabel(gender: Citizen['gender']) {
@@ -121,6 +112,7 @@ export default function CrmPage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [showCitizenForm, setShowCitizenForm] = useState(false)
   const [showCampaignForm, setShowCampaignForm] = useState(false)
+  const [birthDateText, setBirthDateText] = useState('')
   const [query, setQuery] = useState('')
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const citizen = citizens.find(item => item.id === selected)
@@ -140,7 +132,7 @@ export default function CrmPage() {
       districtDistribution: byCount(projects.map(project => project.district), districts),
       categoryDistribution: byCount(projects.map(project => project.category)),
       genderDistribution: byCount(citizens.map(item => genderLabel(item.gender)), ['Kadin', 'Erkek', 'Belirtmeyen']),
-      ageDistribution: byCount(citizens.map(item => ageGroup(Number(item.age))), ['18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Belirsiz']),
+      ageDistribution: byCount(citizens.map(item => ageGroup(Number(item.age))), [...ageGroups]),
       budgetDistribution: budgetByCategory(projects),
       mapProjects: published.filter(project => Number.isFinite(project.lat) && Number.isFinite(project.lng)),
     }
@@ -180,6 +172,8 @@ export default function CrmPage() {
   function createCitizen(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    const birthDate = birthDateInputToIso(birthDateText)
+    const age = ageFromBirthDate(birthDate)
     addCitizen({
       name: String(data.get('name')),
       email: String(data.get('email')),
@@ -188,7 +182,8 @@ export default function CrmPage() {
       province: 'Mugla',
       district: String(data.get('district')),
       role: String(data.get('role')) as CrmRole,
-      age: Number(data.get('age')),
+      age: age || Number(data.get('age')),
+      birthDate: birthDate || undefined,
       gender: String(data.get('gender')) as Citizen['gender'],
       interests: data.getAll('interests').map(String),
       participationCount: 0,
@@ -198,6 +193,7 @@ export default function CrmPage() {
       lastLogin: '',
     })
     event.currentTarget.reset()
+    setBirthDateText('')
     setShowCitizenForm(false)
   }
 
@@ -232,11 +228,11 @@ export default function CrmPage() {
 
       {view === 'citizens' && <>
         <div className="flex flex-wrap items-center justify-between gap-3"><label className="flex min-w-[280px] flex-1 items-center gap-2 rounded-full border bg-white px-4"><Search size={17}/><input value={query} onChange={event => setQuery(event.target.value)} className="w-full bg-transparent py-3 outline-none" placeholder="Ad, ilce veya role gore ara"/></label><Button variant="orange" onClick={() => setShowCitizenForm(value => !value)}><Plus size={17}/> Vatandas ekle</Button></div>
-        {showCitizenForm && <Card><CardHeader><h2 className="text-xl font-bold">Yeni CRM profili</h2></CardHeader><CardContent><form onSubmit={createCitizen} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><input required name="name" className={input} placeholder="Ad Soyad"/><input required type="email" name="email" className={input} placeholder="E-posta"/><input name="phone" className={input} placeholder="Telefon"/><select name="district" className={input}>{districts.map(item => <option key={item}>{item}</option>)}</select><select name="role" className={input}>{roles.map(item => <option key={item}>{item}</option>)}</select><input required name="age" type="number" min="15" max="120" className={input} placeholder="Yas"/><select name="gender" className={input}><option>Kadin</option><option>Erkek</option><option>Belirtmek istemiyor</option></select><fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 text-sm font-semibold">Ilgi alanlari</legend><div className="flex flex-wrap gap-2">{interests.map(item => <label key={item} className="rounded-full border bg-white px-3 py-2 text-sm"><input className="mr-2" type="checkbox" name="interests" value={item}/>{item}</label>)}</div></fieldset><Button type="submit" variant="orange">Profili kaydet</Button></form></CardContent></Card>}
+        {showCitizenForm && <Card><CardHeader><h2 className="text-xl font-bold">Yeni CRM profili</h2></CardHeader><CardContent><form onSubmit={createCitizen} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><input required name="name" className={input} placeholder="Ad Soyad"/><input required type="email" name="email" className={input} placeholder="E-posta"/><input name="phone" className={input} placeholder="Telefon"/><select name="district" className={input}>{districts.map(item => <option key={item}>{item}</option>)}</select><select name="role" className={input}>{roles.map(item => <option key={item}>{item}</option>)}</select><label><span className="mb-2 block text-sm font-semibold">Dogum tarihi</span><input name="birthDateText" inputMode="numeric" className={input} placeholder="gg/aa/yyyy" value={birthDateText} onChange={event => setBirthDateText(formatBirthDateInput(event.target.value))} maxLength={10}/></label><label><span className="mb-2 block text-sm font-semibold">Hizli sec</span><input type="date" min="1900-01-01" max={new Date().toISOString().slice(0, 10)} className={input} onChange={event => setBirthDateText(isoToBirthDateInput(event.target.value))}/></label><input name="age" type="number" min="15" max="120" className={input} placeholder="Yas yoksa manuel"/><select name="gender" className={input}><option>Kadin</option><option>Erkek</option><option>Belirtmek istemiyor</option></select><fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 text-sm font-semibold">Ilgi alanlari</legend><div className="flex flex-wrap gap-2">{interests.map(item => <label key={item} className="rounded-full border bg-white px-3 py-2 text-sm"><input className="mr-2" type="checkbox" name="interests" value={item}/>{item}</label>)}</div></fieldset><Button type="submit" variant="orange">Profili kaydet</Button></form></CardContent></Card>}
         <section className="grid gap-6 xl:grid-cols-[1.3fr_1fr]"><Card><CardContent className="pt-6">{filtered.length ? <div className="divide-y">{filtered.map(item => <button key={item.id} onClick={() => setSelected(item.id)} className="flex w-full items-center gap-4 py-4 text-left hover:bg-mugla-sand/60"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mugla-blue text-sm font-bold text-white">{item.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</span><span className="min-w-0 flex-1"><b className="block truncate">{item.name}</b><small className="text-mugla-navy/50">{item.district} - {item.role}</small></span><span className="text-right"><b>{engagementScore(item)}/100</b><small className="block text-mugla-navy/45">katilim</small></span></button>)}</div> : <Empty icon={UsersRound} title="Vatandas kaydi yok" text="Ilk 360 profili ekleyerek CRM'i baslatin."/>}</CardContent></Card><Card>{citizen ? <><CardHeader className="border-b"><div className="flex items-start justify-between"><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">360 PROFIL</p><h2 className="mt-1 text-xl font-bold">{citizen.name}</h2><p className="text-sm text-mugla-navy/50">{citizen.district} - {citizen.role}</p></div><button onClick={() => {removeCitizen(citizen.id); setSelected(null)}} className="rounded-full p-2 text-red-600 hover:bg-red-50"><Trash2 size={17}/></button></div></CardHeader><CardContent className="pt-6"><div className="mb-6 flex items-center gap-5"><div className="grid h-24 w-24 place-items-center rounded-full bg-mugla-navy text-2xl font-bold text-white">{engagementScore(citizen)}</div><div><b>Katilim puani</b><p className="text-sm text-mugla-navy/50">AI destekli etkilesim skoru</p></div></div><div className="grid grid-cols-3 gap-3 text-center">{[['Katilim', citizen.participationCount], ['Oy', citizen.voteCount], ['Oneri', citizen.proposalCount]].map(([label, value]) => <div key={label} className="rounded-2xl bg-mugla-sand p-3"><b className="text-xl">{value}</b><small className="block text-mugla-navy/50">{label}</small></div>)}</div><p className="mb-2 mt-6 text-sm font-semibold">Ilgi alanlari</p><div className="flex flex-wrap gap-2">{citizen.interests.length ? citizen.interests.map(item => <span key={item} className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-mugla-cyan">{item}</span>) : <span className="text-sm text-mugla-navy/40">Tanimlanmadi</span>}</div></CardContent></> : <CardContent><Empty icon={UserRound} title="Profil secilmedi" text="Detaylari gormek icin listeden bir vatandas secin."/></CardContent>}</Card></section>
       </>}
 
-      {view === 'citizens' && citizen && <Card><CardHeader><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-mugla-navy text-white">{canSeeUserInfo ? <ShieldCheck size={20}/> : <LockKeyhole size={20}/>}</span><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">KULLANICI BILGILERI</p><h2 className="text-xl font-bold">Super admin gorunumu</h2></div></div></CardHeader><CardContent>{canSeeUserInfo ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{[['Ad Soyad', citizen.name], ['E-posta', citizen.email], ['Telefon', citizen.phone || 'Yok'], ['Uyruk', citizen.nationality === 'foreign' ? 'Yabanci uyruklu' : 'T.C. vatandasi'], ['Ulke', citizen.country || 'Turkiye'], ['Il', citizen.province], ['Ilce', citizen.district], ['Rol', citizen.role], ['Dogrulama', citizen.badges.join(', ') || 'Yok'], ['Kayit tarihi', citizen.createdAt ? new Date(citizen.createdAt).toLocaleString('tr-TR') : 'Yok'], ['Son giris', citizen.lastLogin ? new Date(citizen.lastLogin).toLocaleString('tr-TR') : 'Yok'], ['CRM ID', citizen.id]].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/35 p-4"><p className="text-xs font-semibold text-mugla-navy/45">{label}</p><b className="mt-1 block break-words text-sm">{value}</b></div>)}</div> : <div className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/50 p-5 text-sm leading-6 text-mugla-navy/60"><b className="text-mugla-navy">Bu alan sadece super admin tarafindan gorulebilir.</b><br/>Admin ve yetkili rollerinde vatandas iletisim ve kayit detaylari gizlenir.</div>}</CardContent></Card>}
+      {view === 'citizens' && citizen && <Card><CardHeader><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-mugla-navy text-white">{canSeeUserInfo ? <ShieldCheck size={20}/> : <LockKeyhole size={20}/>}</span><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">KULLANICI BILGILERI</p><h2 className="text-xl font-bold">Super admin gorunumu</h2></div></div></CardHeader><CardContent>{canSeeUserInfo ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{[['Ad Soyad', citizen.name], ['E-posta', citizen.email], ['Telefon', citizen.phone || 'Yok'], ['Uyruk', citizen.nationality === 'foreign' ? 'Yabanci uyruklu' : 'T.C. vatandasi'], ['Ulke', citizen.country || 'Turkiye'], ['Il', citizen.province], ['Ilce', citizen.district], ['Rol', citizen.role], ['Dogum tarihi', citizen.birthDate ? new Date(`${citizen.birthDate}T00:00:00`).toLocaleDateString('tr-TR') : 'Yok'], ['Yas araligi', ageGroup(Number(citizen.age))], ['Dogrulama', citizen.badges.join(', ') || 'Yok'], ['Kayit tarihi', citizen.createdAt ? new Date(citizen.createdAt).toLocaleString('tr-TR') : 'Yok'], ['Son giris', citizen.lastLogin ? new Date(citizen.lastLogin).toLocaleString('tr-TR') : 'Yok'], ['CRM ID', citizen.id]].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/35 p-4"><p className="text-xs font-semibold text-mugla-navy/45">{label}</p><b className="mt-1 block break-words text-sm">{value}</b></div>)}</div> : <div className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/50 p-5 text-sm leading-6 text-mugla-navy/60"><b className="text-mugla-navy">Bu alan sadece super admin tarafindan gorulebilir.</b><br/>Admin ve yetkili rollerinde vatandas iletisim ve kayit detaylari gizlenir.</div>}</CardContent></Card>}
 
       {view === 'segments' && <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{segments.map(([name, count], index) => <Card key={name}><CardContent className="pt-6"><div className={`mb-5 grid h-12 w-12 place-items-center rounded-2xl ${['bg-orange-50 text-mugla-orange', 'bg-violet-50 text-violet-600', 'bg-cyan-50 text-mugla-cyan'][index % 3]}`}><UsersRound/></div><h2 className="font-bold">{name}</h2><strong className="mt-3 block text-3xl">{count}</strong><p className="text-sm text-mugla-navy/45">kullanici</p><Button onClick={() => setView('communication')} variant="ghost" className="mt-4 px-0">Kampanya olustur <ChevronRight size={15}/></Button></CardContent></Card>)}</section>}
 

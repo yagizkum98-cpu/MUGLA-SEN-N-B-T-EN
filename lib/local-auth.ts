@@ -1,5 +1,7 @@
 'use client'
 
+import {createClient} from '@/lib/supabase/client'
+
 export type VerificationMethod = 'phone' | 'email' | 'passport' | 'international-id'
 
 export type LocalUser = {
@@ -9,6 +11,7 @@ export type LocalUser = {
   phone: string
   nationality: 'tc' | 'foreign'
   country?: string
+  birthDate?: string
   province: string
   district: string
   passwordHash: string
@@ -25,24 +28,52 @@ export type LocalUser = {
 
 const USERS = 'mugla-auth-users-v1'
 const SESSION = 'mugla-auth-session-v1'
+const REMOTE_TABLE = 'citizen_records'
 export const AUTH_USERS_CHANGED_EVENT = 'mugla-auth-users-changed'
 const TRANSFER_TTL_MS = 2 * 60 * 1000
+
+export function normalizeLocalUser(user: LocalUser): LocalUser {
+  return {
+    ...user,
+    verificationMethod: user.verificationMethod === 'phone' || user.verificationMethod === 'passport' || user.verificationMethod === 'international-id' ? user.verificationMethod : 'email',
+    verifiedAt: user.verifiedAt ?? user.createdAt,
+    verifiedBadge: user.verifiedBadge ?? 'Dogrulanmis Kullanici',
+    nationality: user.nationality ?? 'tc',
+    country: user.country,
+    birthDate: user.birthDate,
+    province: user.province ?? 'Mugla',
+    district: user.district ?? 'Mentese',
+    panelPath: user.panelPath ?? '/vatandas/panel',
+    apiPath: user.apiPath ?? `/api/vatandas/${user.id}`,
+  }
+}
+
+export async function readRemoteUsers() {
+  if (typeof window === 'undefined') return []
+  try {
+    const {data, error} = await createClient().from(REMOTE_TABLE).select('data')
+    if (error || !Array.isArray(data)) return []
+    return data.map(row => row.data).filter(Boolean).map(user => normalizeLocalUser(user as LocalUser))
+  } catch {
+    return []
+  }
+}
+
+async function upsertRemoteUsers(users: LocalUser[]) {
+  if (typeof window === 'undefined' || !users.length) return
+  try {
+    await createClient().from(REMOTE_TABLE).upsert(users.map(user => ({
+      id: user.id,
+      data: normalizeLocalUser(user),
+      updated_at: new Date().toISOString(),
+    })), {onConflict: 'id'})
+  } catch {}
+}
 
 export function listLocalUsers(): LocalUser[] {
   try {
     const value = JSON.parse(localStorage.getItem(USERS) ?? '[]')
-    return Array.isArray(value) ? value.map(user => ({
-      ...user,
-      verificationMethod: user.verificationMethod === 'phone' || user.verificationMethod === 'passport' || user.verificationMethod === 'international-id' ? user.verificationMethod : 'email',
-      verifiedAt: user.verifiedAt ?? user.createdAt,
-      verifiedBadge: user.verifiedBadge ?? 'Dogrulanmis Kullanici',
-      nationality: user.nationality ?? 'tc',
-      country: user.country,
-      province: user.province ?? 'Mugla',
-      district: user.district ?? 'Mentese',
-      panelPath: user.panelPath ?? '/vatandas/panel',
-      apiPath: user.apiPath ?? `/api/vatandas/${user.id}`,
-    })) : []
+    return Array.isArray(value) ? value.map(user => normalizeLocalUser(user as LocalUser)) : []
   } catch {
     return []
   }
@@ -70,6 +101,7 @@ export async function registerUser(input: {
   phone: string
   nationality: 'tc' | 'foreign'
   country?: string
+  birthDate: string
   province: string
   district: string
   password: string
@@ -89,6 +121,7 @@ export async function registerUser(input: {
   if ((input.verificationMethod === 'phone' || input.verificationMethod === 'email') && input.verificationCode.trim() !== input.verificationExpected.trim()) throw new Error('Dogrulama kodu hatali.')
   if ((input.verificationMethod === 'passport' || input.verificationMethod === 'international-id') && String(input.identityReference ?? '').trim().length < 6) throw new Error('Kimlik/pasaport referansi en az 6 karakter olmalidir.')
   if (input.nationality === 'foreign' && !input.country?.trim()) throw new Error('Yabanci uyruklu katilimci icin ulke secimi zorunludur.')
+  if (!input.birthDate) throw new Error('Dogum tarihi zorunludur.')
 
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const passwordHash = await derive(input.password, salt)
@@ -101,6 +134,7 @@ export async function registerUser(input: {
     phone: input.phone.trim(),
     nationality: input.nationality,
     country: input.nationality === 'foreign' ? input.country?.trim() : undefined,
+    birthDate: input.birthDate,
     province: input.province.trim() || 'Mugla',
     district: input.district.trim() || 'Mentese',
     passwordHash,
@@ -115,6 +149,7 @@ export async function registerUser(input: {
     identityReference: input.identityReference?.trim(),
   }
   localStorage.setItem(USERS, JSON.stringify([...users, user]))
+  void upsertRemoteUsers([user])
   window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
   return user
 }
@@ -148,6 +183,7 @@ export function consumeCitizenSessionTransfer(value: string | null) {
     if (!user?.id || !user?.email || payload.sessionId !== user.id) return false
     const users = listLocalUsers()
     localStorage.setItem(USERS, JSON.stringify([user, ...users.filter(item => item.id !== user.id && item.email !== user.email)]))
+    void upsertRemoteUsers([user])
     localStorage.setItem(SESSION, user.id)
     window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
     window.dispatchEvent(new Event('mugla-auth-session-changed'))
@@ -159,6 +195,7 @@ export function consumeCitizenSessionTransfer(value: string | null) {
 
 function saveUsers(users: LocalUser[]) {
   localStorage.setItem(USERS, JSON.stringify(users))
+  void upsertRemoteUsers(users)
   window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
   window.dispatchEvent(new Event('mugla-auth-session-changed'))
 }

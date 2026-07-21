@@ -7,13 +7,15 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UserPlus, XCircle} from 'lucide-react'
+import {ArrowUpRight, CheckCircle2, Clock3, Database, Eye, EyeOff, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, Plus, ShieldCheck, Trash2, UploadCloud, UserPlus, XCircle} from 'lucide-react'
 import {formatBudget, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
+import {useCrm} from '@/lib/crm-store'
+import {ageGroup, ageGroups} from '@/lib/demographics'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -100,9 +102,78 @@ function PendingProjectCard({
   </div>
 }
 
+function readImageFile(file: File) {
+  return new Promise<ProjectRecord['image']>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve({name: file.name, size: file.size, type: file.type, dataUrl: String(reader.result)})
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+function ProjectManagementPanel({
+  project,
+  onClose,
+  onImage,
+  onRemoveImage,
+}: {
+  project: ProjectRecord
+  onClose: () => void
+  onImage: (file: File) => void
+  onRemoveImage: () => void
+}) {
+  const detailItems = [
+    ['Proje kodu', project.projectCode],
+    ['Durum', project.status],
+    ['Onay', project.moderationStatus],
+    ['İlçe', project.district],
+    ['Kategori', `${project.category}${project.subcategory ? ` / ${project.subcategory}` : ''}`],
+    ['Hedef grup', project.targetGroup ?? 'Herkes'],
+    ['Bütçe', formatBudget(project.budget)],
+    ['Oy', project.votes.toLocaleString('tr-TR')],
+    ['Başvuru sahibi', project.ownerName || project.ownerEmail || 'Belirtilmedi'],
+    ['Amaç', project.purpose],
+    ['Özet', project.summary],
+    ['Faaliyetler', project.activities],
+    ['Beklenen sonuçlar', project.expectedResults],
+  ]
+
+  return <Card>
+    <CardHeader className="flex-row items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-bold tracking-widest text-mugla-cyan">PROJE KARTI YÖNETİMİ</p>
+        <h2 className="mt-1 text-xl font-bold">{project.title}</h2>
+        <p className="mt-1 text-sm text-mugla-navy/55">Bu alandan yalnızca belediye panelinde görünen tek proje görseli yüklenir; proje oylamaya sunulduğunda vatandaş kartında otomatik gösterilir.</p>
+      </div>
+      <button type="button" onClick={onClose} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
+    </CardHeader>
+    <CardContent className="grid gap-5 xl:grid-cols-[360px_1fr]">
+      <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+        <div className="overflow-hidden rounded-xl border border-mugla-navy/10 bg-white">
+          {project.image?.dataUrl ? <img src={project.image.dataUrl} alt={`${project.title} proje görseli`} className="h-56 w-full object-cover"/> : <div className="grid h-56 place-items-center text-center text-mugla-navy/45"><div><ImagePlus className="mx-auto mb-2"/><p className="text-sm font-semibold">Proje görseli yok</p></div></div>}
+        </div>
+        {project.image && <p className="mt-3 truncate text-xs font-semibold text-mugla-navy/55">{project.image.name} - {(project.image.size / 1024 / 1024).toFixed(1)} MB</p>}
+        <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 py-3 text-sm font-bold text-white">
+          <UploadCloud size={17}/>
+          Görsel yükle / güncelle
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => {const file = event.target.files?.[0]; if (file) onImage(file); event.currentTarget.value = ''}}/>
+        </label>
+        {project.image && <button type="button" onClick={onRemoveImage} className="mt-2 w-full rounded-full border border-mugla-navy/10 bg-white px-4 py-3 text-sm font-bold text-mugla-navy/60 hover:text-red-600"><Trash2 className="mr-2 inline" size={16}/> Görseli kaldır</button>}
+      </section>
+      <section className="grid gap-3 md:grid-cols-2">
+        {detailItems.map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+          <p className="text-xs font-black uppercase tracking-wider text-mugla-cyan">{label}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-mugla-navy/70">{value || 'Belirtilmedi'}</p>
+        </div>)}
+      </section>
+    </CardContent>
+  </Card>
+}
+
 export default function Admin() {
-  const {projects, addProject, mergeProjects, removeProject, reviewProject} = useProjects()
+  const {projects, addProject, mergeProjects, removeProject, reviewProject, updateProject} = useProjects()
   const {records: contactRecords, removeContactRecord} = useContactRecords()
+  const {citizens} = useCrm()
   const [open, setOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(true)
   const [message, setMessage] = useState('')
@@ -110,6 +181,7 @@ export default function Admin() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [mergeSelection, setMergeSelection] = useState<string[]>([])
   const [expandedProjectDetails, setExpandedProjectDetails] = useState<string | null>(null)
+  const [managedProjectId, setManagedProjectId] = useState<string | null>(null)
   const [ownPassword, setOwnPassword] = useState<string | null>(null)
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [passwordChanging, setPasswordChanging] = useState(false)
@@ -119,6 +191,7 @@ export default function Admin() {
   const canManagePeople = adminUser?.role === 'super-admin'
   const pendingProjects = projects.filter(project => project.moderationStatus === 'Bekliyor')
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
+  const managedProject = projects.find(project => project.id === managedProjectId) ?? null
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
   const voteLeaderboard = projects
     .filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
@@ -180,6 +253,31 @@ export default function Admin() {
     setMergeSelection(value => value.filter(id => !ids.includes(id)))
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
     setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
+  }
+
+  async function uploadProjectImage(project: ProjectRecord, file: File) {
+    if (!file.type.startsWith('image/')) {
+      setMessage('Lutfen PNG, JPG veya WEBP formatinda bir gorsel secin.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage('Proje gorseli en fazla 2 MB olabilir.')
+      return
+    }
+    try {
+      const image = await readImageFile(file)
+      updateProject(project.id, {image})
+      setManagedProjectId(project.id)
+      setMessage(`${project.title} icin proje gorseli guncellendi.`)
+    } catch {
+      setMessage('Proje gorseli okunamadi. Lutfen farkli bir dosya deneyin.')
+    }
+  }
+
+  function removeProjectImage(project: ProjectRecord) {
+    updateProject(project.id, {image: undefined})
+    setManagedProjectId(project.id)
+    setMessage(`${project.title} icin proje gorseli kaldirildi.`)
   }
 
   function submitMergedProject(event: FormEvent<HTMLFormElement>) {
@@ -325,6 +423,11 @@ export default function Admin() {
     ['Gorus ve oneriler', contactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
     ['Sorular', contactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
   ] as const
+  const ageDistribution = ageGroups.map(group => ({
+    label: group,
+    value: citizens.filter(citizen => ageGroup(Number(citizen.age)) === group).length,
+  }))
+  const maxAgeGroup = Math.max(1, ...ageDistribution.map(item => item.value))
 
   return <AdminAuthGate><AppShell role="admin">
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
@@ -466,6 +569,25 @@ export default function Admin() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
 
+      <Card>
+        <CardHeader>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAS DEMOGRAFISI</p>
+          <h2 className="text-xl font-bold">Yaş aralığı verileri</h2>
+          <p className="text-sm text-mugla-navy/55">Üye ol formundaki doğum tarihi CRM ile birlikte otomatik yaş aralığına dönüştürülür.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {ageDistribution.map(item => <div key={item.label} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <b>{item.label}</b>
+              <span className="text-2xl font-black">{item.value}</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+              <span className="block h-full rounded-full bg-mugla-cyan" style={{width: `${item.value / maxAgeGroup * 100}%`}}/>
+            </div>
+          </div>)}
+        </CardContent>
+      </Card>
+
       <Card id="iletisim">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">KATILIMCI BUTCE ILETISIM</p>
@@ -548,7 +670,7 @@ export default function Admin() {
             <thead className="text-xs uppercase tracking-wider text-mugla-navy/45">
               <tr><th className="pb-4">Sıra</th><th>Proje</th><th>İlçe</th><th>Kategori</th><th>Durum</th><th className="text-right">Oy</th></tr>
             </thead>
-            <tbody>{voteLeaderboard.map((project, index) => <tr key={project.id} className="border-t border-mugla-navy/10">
+            <tbody>{voteLeaderboard.map((project, index) => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45">
               <td className="py-4"><span className="inline-grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black text-mugla-navy/65">{index + 1}</span></td>
               <td className="font-semibold">{project.title}</td>
               <td>{project.district}</td>
@@ -611,8 +733,15 @@ export default function Admin() {
 
       <Card id="proje-havuzu">
         <CardHeader><h2 className="text-xl font-bold">Proje Havuzu</h2><p className="text-sm text-mugla-navy/55">Onaylanan, reddedilen veya süreçteki tüm proje kayıtları veri havuzu olarak burada kalır.</p></CardHeader>
-        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={() => removeProject(project.id)}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
+        <CardContent className="overflow-x-auto">{projects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th>Gorsel</th><th className="text-right">Islem</th></tr></thead><tbody>{projects.map(project => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td><span className={`rounded-full px-3 py-1 text-xs font-bold ${project.image ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/45'}`}>{project.image ? 'Var' : 'Yok'}</span></td><td className="text-right"><button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={(event) => {event.stopPropagation(); removeProject(project.id)}}><Trash2 size={17}/></button></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
       </Card>
+
+      {managedProject && <ProjectManagementPanel
+        project={managedProject}
+        onClose={() => setManagedProjectId(null)}
+        onImage={(file) => void uploadProjectImage(managedProject, file)}
+        onRemoveImage={() => removeProjectImage(managedProject)}
+      />}
 
     </div>
   </AppShell></AdminAuthGate>

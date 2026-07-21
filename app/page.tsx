@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, UserRound, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
-import {isMunicipalityDomain} from '@/lib/domain-routing'
+import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 
 function Stat({label, value, note}: {label: string; value: string; note: string}) {
@@ -146,8 +146,14 @@ export default function Home() {
   const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
   const [municipalityRedirecting, setMunicipalityRedirecting] = useState(false)
+  const [citizenRedirecting, setCitizenRedirecting] = useState(false)
 
   useEffect(() => {
+    if (location.hostname === CITIZEN_DOMAIN) {
+      setCitizenRedirecting(true)
+      location.replace('/giris?mode=login&next=/vatandas/panel')
+      return
+    }
     if (isMunicipalityDomain()) {
       setMunicipalityRedirecting(true)
       location.replace('/admin/giris')
@@ -157,6 +163,12 @@ export default function Home() {
   if (municipalityRedirecting) return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6 text-mugla-navy">
     <section className="rounded-3xl bg-white p-8 text-center shadow-soft">
       <p className="text-sm font-bold text-mugla-orange">Belediye paneline yönlendiriliyorsunuz...</p>
+    </section>
+  </main>
+
+  if (citizenRedirecting) return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6 text-mugla-navy">
+    <section className="rounded-3xl bg-white p-8 text-center shadow-soft">
+      <p className="text-sm font-bold text-mugla-orange">Vatandaş girişine yönlendiriliyorsunuz...</p>
     </section>
   </main>
 
@@ -178,7 +190,7 @@ export default function Home() {
           <Link href="/iletisim">İletişim</Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/giris?mode=login&next=/vatandas/panel" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
+          <Link href={citizenUrl('/')} className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
             Giriş yap <UserRound size={16}/>
           </Link>
         </div>

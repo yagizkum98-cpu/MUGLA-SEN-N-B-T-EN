@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {useMemo, useState, type ReactNode} from 'react'
 import {ArrowLeft, CheckCircle2, FileText, MapPin, Search, ShoppingCart, SlidersHorizontal} from 'lucide-react'
+import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser} from '@/lib/local-auth'
 import {projectCategories, subcategoriesFor, targetGroups} from '@/lib/project-taxonomy'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
@@ -78,6 +79,12 @@ function CategoryBadge({project}:{project:ProjectRecord}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{project.category}</span>
 }
 
+function ProjectImage({project, className = 'h-36'}: {project: ProjectRecord; className?: string}) {
+  return <div className={`overflow-hidden rounded-lg border border-mugla-navy/10 bg-mugla-sand ${className}`}>
+    {project.image?.dataUrl ? <img src={project.image.dataUrl} alt={`${project.title} proje görseli`} className="h-full w-full object-cover"/> : <div className="grid h-full place-items-center text-center text-xs font-bold text-mugla-navy/35"><span>Proje görseli</span></div>}
+  </div>
+}
+
 function applicationYear(project: ProjectRecord) {
   const year = new Date(project.createdAt).getFullYear()
   return Number.isFinite(year) ? String(year) : ''
@@ -128,8 +135,9 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
   const status = String(project.status)
   const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
 
-  return <article className="fade-up-card border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 md:px-5">
-    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_130px] md:items-center">
+  return <article onClick={() => onShowDetails(project)} className="fade-up-card cursor-pointer border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 hover:bg-mugla-sand/35 md:px-5">
+    <div className="grid gap-4 md:grid-cols-[150px_minmax(0,1fr)_180px_130px] md:items-center">
+      <ProjectImage project={project} className="h-28"/>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
@@ -155,11 +163,11 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
       </div>
 
       <div className="grid gap-2">
-        <button type="button" onClick={() => onShowDetails(project)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy">
+        <button type="button" onClick={(event) => {event.stopPropagation(); onShowDetails(project)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy">
           <FileText size={16}/>
           Detay
         </button>
-        <button disabled={!canVote || confirmed} onClick={() => onAdd(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
+        <button disabled={!canVote || confirmed} onClick={(event) => {event.stopPropagation(); onAdd(project.id)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
           <ShoppingCart size={16}/>
           {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Sepete ekle') : 'Takvim bekleniyor'}
         </button>
@@ -259,7 +267,7 @@ export default function Projects() {
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-mugla-navy/70 hover:text-mugla-navy">
           <ArrowLeft size={16}/> Ana sayfa
         </Link>
-        <Link href="/giris?mode=login&next=/vatandas/panel" className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Vatandaş Paneli</Link>
+        <Link href={citizenUrl('/')} className="rounded-full bg-mugla-orange px-4 py-2 text-sm font-bold text-white">Vatandaş Paneli</Link>
       </div>
     </header>
 
@@ -275,7 +283,7 @@ export default function Projects() {
         <div className="mt-8 rounded-2xl border border-white/30 bg-white/20 p-3 shadow-2xl backdrop-blur-xl">
           <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
             <p className="rounded-xl bg-white/85 px-4 py-3 text-sm font-black text-mugla-navy shadow-sm">{filtered.length} / {approved.length} proje</p>
-            <Link href={user?'/vatandas/panel#sepetim':'/giris?next=/vatandas/panel'} className="rounded-xl bg-mugla-orange px-4 py-3 text-center text-sm font-black text-white shadow-sm">Sepetim: {basket.length} · Kredi: {remaining}</Link>
+            <Link href={user?'/vatandas/panel#sepetim':citizenUrl('/')} className="rounded-xl bg-mugla-orange px-4 py-3 text-center text-sm font-black text-white shadow-sm">Sepetim: {basket.length} · Kredi: {remaining}</Link>
           </div>
         </div>
       </div>
@@ -290,7 +298,7 @@ export default function Projects() {
         </div>
         <div className="flex flex-wrap gap-2">
           <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-mugla-navy/60">{filtered.length} / {approved.length} proje</p>
-          <Link href={user?'/vatandas/panel#sepetim':'/giris?next=/vatandas/panel'} className="rounded-full bg-mugla-navy px-3 py-1 text-sm font-bold text-white">Sepetim: {basket.length} · Kredi: {remaining}</Link>
+          <Link href={user?'/vatandas/panel#sepetim':citizenUrl('/')} className="rounded-full bg-mugla-navy px-3 py-1 text-sm font-bold text-white">Sepetim: {basket.length} · Kredi: {remaining}</Link>
         </div>
       </div>
       {message && <div className="mt-4 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-mugla-navy/65">{message} {availableForBasket === 0 && remaining > 0 ? 'Sepeti onaylayabilir veya bir proje cikarabilirsiniz.' : ''}</div>}
@@ -379,9 +387,12 @@ export default function Projects() {
             {votingProjects.length ? votingProjects.map(project => {
               const inBasket = basket.includes(project.id)
               const done = confirmed.includes(project.id)
-              return <article key={project.id} className="fade-up-card grid gap-3 rounded-lg border border-mugla-navy/10 bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
+              return <article key={project.id} onClick={() => showDetails(project)} className="fade-up-card cursor-pointer overflow-hidden rounded-lg border border-mugla-navy/10 bg-white hover:border-mugla-orange/45">
+                <ProjectImage project={project} className="h-44 rounded-none border-0"/>
+                <div className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span>
                     <CategoryBadge project={project}/>
                     {project.mergedFrom?.length ? <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">Birleştirilmiş proje</span> : null}
@@ -390,8 +401,9 @@ export default function Projects() {
                   <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => showDetails(project)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
-                  <button type="button" disabled={!votingOpen || done || inBasket || availableForBasket === 0} onClick={() => addToBasket(project.id)} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45"><ShoppingCart size={16}/>{done ? 'Oy alındı' : inBasket ? 'Sepette' : 'Sepete ekle'}</button>
+                  <button type="button" onClick={(event) => {event.stopPropagation(); showDetails(project)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
+                  <button type="button" disabled={!votingOpen || done || inBasket || availableForBasket === 0} onClick={(event) => {event.stopPropagation(); addToBasket(project.id)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45"><ShoppingCart size={16}/>{done ? 'Oy alındı' : inBasket ? 'Sepette' : 'Sepete ekle'}</button>
+                </div>
                 </div>
               </article>
             }) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Oylamaya sunulan proje bulunmuyor.</div>}
@@ -399,16 +411,20 @@ export default function Projects() {
 
           {participationStep === 'winners' && <div className="mt-4 grid gap-3">
             <p className="text-sm font-bold text-mugla-navy">Kazanan proje ilanları</p>
-            {winnerProjects.length ? winnerProjects.map(project => <article key={project.id} className="fade-up-card rounded-lg border border-mugla-navy/10 bg-white p-4">
-              <div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span><CategoryBadge project={project}/></div>
+            {winnerProjects.length ? winnerProjects.map(project => <article key={project.id} onClick={() => showDetails(project)} className="fade-up-card cursor-pointer overflow-hidden rounded-lg border border-mugla-navy/10 bg-white hover:border-mugla-orange/45">
+              <ProjectImage project={project} className="h-44 rounded-none border-0"/>
+              <div className="p-4">
+              <div className="flex flex-wrap gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span><CategoryBadge project={project}/></div>
               <h3 className="mt-2 font-black">{project.title}</h3>
               <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
+              </div>
             </article>) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Kazanan projeler henüz ilan edilmedi.</div>}
           </div>}
         </div>
       </section>
 
       {selectedProject && <section className="mt-4 rounded-lg border border-mugla-navy/10 bg-white p-5 shadow-sm">
+        <ProjectImage project={selectedProject} className="mb-5 h-72"/>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-mugla-orange">Detaylı proje açıklaması</p>

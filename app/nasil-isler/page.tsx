@@ -46,6 +46,7 @@ import {
   Video,
   Vote,
 } from 'lucide-react'
+import { citizenUrl } from '@/lib/domain-routing'
 import { formatBudget, useProjects, type ProjectRecord } from '@/lib/projects-store'
 
 const ideaFields = [
@@ -272,7 +273,7 @@ export default function NasilIslerPage() {
             üretebildiği dijital katılımcı bütçe platformu.
           </p>
           <div>
-            <Link href="/giris?mode=login&next=/vatandas/panel" className="how-cta primary"><Send size={18} /> Vatandaş Paneline Gir</Link>
+            <Link href={citizenUrl('/')} className="how-cta primary"><Send size={18} /> Vatandaş Paneline Gir</Link>
             <a href="#uygulama-demo" className="how-cta secondary"><Play size={18} /> Nasıl Çalıştığını İzle</a>
           </div>
         </motion.div>
@@ -634,7 +635,7 @@ export default function NasilIslerPage() {
           <h2>Muğla'nın Geleceği Birlikte Yazılıyor.</h2>
           <p>Bugün katıl. Yarının Muğla'sını birlikte tasarlayalım.</p>
           <div>
-            <Link href="/giris?mode=login&next=/vatandas/panel" className="how-cta primary"><Lightbulb size={18} /> Vatandaş Paneline Gir</Link>
+            <Link href={citizenUrl('/')} className="how-cta primary"><Lightbulb size={18} /> Vatandaş Paneline Gir</Link>
             <Link href="/projeler" className="how-cta secondary"><MousePointer2 size={18} /> Projeleri Keşfet</Link>
           </div>
         </motion.div>

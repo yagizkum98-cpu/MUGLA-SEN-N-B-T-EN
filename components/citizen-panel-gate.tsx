@@ -39,7 +39,7 @@ export function CitizenPanelGate({children}: {children: React.ReactNode}) {
       <p className="mt-3 leading-7 text-mugla-navy/55">Paneline girmek için önce hesap oluştur, e-posta veya telefon aktivasyon kodunu doğrula ve hesabınla giriş yap.</p>
       <div className="mt-7 grid gap-3 sm:grid-cols-2">
         <Link href={publicUrl('/giris?mode=register&next=/vatandas/panel')}><Button variant="orange" className="w-full"><UserPlus size={17}/> Kayıt ol</Button></Link>
-        <Link href={publicUrl('/giris?mode=login&next=/vatandas/panel')}><Button variant="outline" className="w-full"><LockKeyhole size={17}/> Giriş yap</Button></Link>
+        <Link href={citizenUrl('/')}><Button variant="outline" className="w-full"><LockKeyhole size={17}/> Giriş yap</Button></Link>
       </div>
       <Link href={publicUrl('/')} className="mt-5 inline-flex text-sm font-semibold text-mugla-navy/50 hover:text-mugla-navy">Ana sayfaya dön</Link>
     </section>

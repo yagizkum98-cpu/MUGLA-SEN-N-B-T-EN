@@ -9,6 +9,7 @@ import {createCitizenSessionTransfer, loginUser, registerUser} from '@/lib/local
 import {countries} from '@/lib/locations'
 import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
 import {citizenUrl, isCitizenDomain} from '@/lib/domain-routing'
+import {birthDateInputToIso, formatBirthDateInput, isoToBirthDateInput} from '@/lib/demographics'
 
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 
@@ -18,6 +19,7 @@ type PendingRegistration={
   phone:string
   nationality:'tc'|'foreign'
   country?:string
+  birthDate:string
   province:string
   district:string
   password:string
@@ -59,10 +61,16 @@ export default function Login(){
   const[activationCode,setActivationCode]=useState('')
   const[nationality,setNationality]=useState<'tc'|'foreign'>('tc')
   const[selectedProvince,setSelectedProvince]=useState('Mugla')
+  const[birthDateText,setBirthDateText]=useState('')
   const provinceDistricts=districtsForProvince(selectedProvince)
   const countryOptions=countries().filter(country=>country.code!=='TR')
 
   useEffect(()=>{
+    const params=new URLSearchParams(location.search)
+    if(!isCitizenDomain()&&params.get('mode')==='login'&&params.get('next')==='/vatandas/panel'){
+      location.replace(citizenUrl('/'))
+      return
+    }
     setMode(initialMode())
   },[])
 
@@ -85,12 +93,15 @@ export default function Login(){
     if(password!==repeat){setError('Sifreler birbiriyle eslesmiyor.');return}
     const botAnswer=String(data.get('botAnswer')??'')
     if(botAnswer.trim()!==botCheck.answer){setBotCheck(createBotCheck());setError('Lutfen bot kontrolu sorusunu dogru yanitlayin.');return}
+    const birthDate=birthDateInputToIso(birthDateText)
+    if(!birthDate){setError('Dogum tarihini gg/aa/yyyy formatinda, 1900 ile bugun arasinda yazin veya hizli seciciden secin.');return}
     setPendingRegistration({
       name:String(data.get('name')),
       email:String(data.get('email')),
       phone:String(data.get('phone')),
       nationality,
       country:nationality==='foreign'?String(data.get('country')):undefined,
+      birthDate,
       province:nationality==='foreign'?'Yurtdisi':String(data.get('province')),
       district:nationality==='foreign'?'Yurtdisi':String(data.get('district')),
       password,
@@ -190,6 +201,14 @@ export default function Login(){
               <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input required name="email" type="email" autoComplete="email" className={field}/></label>
               <label><span className="mb-2 block text-sm font-semibold">Telefon numarasi</span><input required name="phone" type="tel" autoComplete="tel" className={field} pattern="[0-9+() -]{10,20}"/></label>
             </div>
+            <fieldset className="rounded-2xl bg-white p-4">
+              <legend className="mb-3 text-sm font-semibold">Doğum tarihi</legend>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <label><span className="mb-2 block text-sm font-semibold">Gün / Ay / Yıl</span><input required name="birthDateText" inputMode="numeric" autoComplete="bday" className={field} placeholder="gg/aa/yyyy" value={birthDateText} onChange={event=>setBirthDateText(formatBirthDateInput(event.target.value))} maxLength={10}/></label>
+                <label className="block"><span className="mb-2 block text-sm font-semibold">Hızlı seç</span><input type="date" min="1900-01-01" max={new Date().toISOString().slice(0,10)} className={`${field} sm:w-44`} onChange={event=>setBirthDateText(isoToBirthDateInput(event.target.value))}/></label>
+              </div>
+              <p className="mt-2 text-xs text-mugla-navy/45">Yaş aralığı belediye paneli ve CRM analizlerinde otomatik hesaplanır.</p>
+            </fieldset>
             <fieldset className="rounded-2xl bg-white p-4">
               <legend className="mb-3 text-sm font-semibold">Uyruk</legend>
               <div className="grid gap-3 sm:grid-cols-2">

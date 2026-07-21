@@ -33,6 +33,7 @@ export type ProjectRecord={
   activities?:string
   expectedResults?:string
   attachments?:{name:string;size:number;type:string}[]
+  image?:{name:string;size:number;type:string;dataUrl:string}
   ownerId?:string
   ownerName?:string
   ownerEmail?:string
@@ -173,6 +174,15 @@ export function useProjects(){
   },[save])
 
   const removeProject=useCallback((id:string)=>{save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id)},[save])
+  const updateProject=useCallback((id:string,patch:Partial<ProjectRecord>)=>{
+    let updated:ProjectRecord|null=null
+    save(readProjects().map(project=>{
+      if(project.id!==id)return project
+      updated={...project,...patch}
+      return updated
+    }))
+    return updated
+  },[save])
   const mergeProjects=useCallback((ids:string[],input:NewProject&{mergeNote?:string})=>{
     const uniqueIds=Array.from(new Set(ids))
     const current=readProjects().map(normalizeProject)
@@ -207,7 +217,7 @@ export function useProjects(){
     }))
   },[save])
 
-  return{projects,ready,addProject,mergeProjects,removeProject,reviewProject,voteProject}
+  return{projects,ready,addProject,mergeProjects,removeProject,reviewProject,voteProject,updateProject}
 }
 
 export function formatBudget(value:number){return new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',maximumFractionDigits:0}).format(value)}
