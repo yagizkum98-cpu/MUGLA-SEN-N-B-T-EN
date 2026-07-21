@@ -706,15 +706,24 @@ export default function Admin() {
   const maxAgeGroup = Math.max(1, ...ageDistribution.map(item => item.value))
 
   return <AdminAuthGate><AppShell role="admin">
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
-      <div>
-        <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YONETIM MERKEZI</p>
-        <h1 className="text-2xl font-bold">Belediye Paneli</h1>
-        <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kisileri kapat' : 'Yetkili kisiler'}</Button>}
-        {canCreateMunicipalProject && <Button variant="orange" onClick={() => setOpen(value => !value)}><Plus size={17}/>{open ? 'Formu kapat' : 'Proje sihirbazı'}</Button>}
+    <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/95 px-6 py-4 backdrop-blur lg:px-10">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YONETIM MERKEZI</p>
+          <h1 className="text-2xl font-bold">Muğla Senin Bütçen Yönetim Paneli</h1>
+          <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="hidden h-11 min-w-[260px] items-center gap-2 rounded-xl border border-mugla-navy/10 bg-mugla-sand/55 px-4 lg:flex">
+            <Search size={16}/>
+            <input className="w-full bg-transparent text-sm outline-none" placeholder="Ara: proje, ilçe, vatandaş"/>
+          </label>
+          {canCreateMunicipalProject && <Button variant="orange" onClick={() => setOpen(true)}><Plus size={17}/> Yeni</Button>}
+          <a href="#projeler"><Button variant="outline"><Search size={17}/> Filtre</Button></a>
+          <a href="#raporlar"><Button variant="outline"><FileBarChart size={17}/> Dışa Aktar</Button></a>
+          <a href="#bildirimler" className="grid h-11 w-11 place-items-center rounded-xl border border-mugla-navy/10 bg-white text-mugla-navy/65 hover:text-mugla-orange"><Bell size={18}/></a>
+          {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(value => !value)}><UserPlus size={17}/>{peopleOpen ? 'Kapat' : 'Kullanıcı'}</Button>}
+        </div>
       </div>
     </header>
 
@@ -905,9 +914,12 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
-      {open && canCreateMunicipalProject && <Card>
+      {open && canCreateMunicipalProject && <div className="fixed inset-0 z-50 grid place-items-center bg-mugla-navy/45 p-4 backdrop-blur-sm">
+        <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto">
+      <Card>
         <CardHeader><h2 className="text-xl font-bold">8 adımlı proje başvuru sihirbazı</h2><p className="text-sm text-mugla-navy/55">Yetkili kayıtları yayınlanmaz; ilçe admin incelemesine düşer. Süper admin son kararla oylamaya açar.</p></CardHeader>
         <CardContent><form onSubmit={submitProject} className="space-y-5">
+          <div className="flex justify-end"><button type="button" onClick={() => setOpen(false)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button></div>
           <div className="h-2 overflow-hidden rounded-full bg-mugla-sand"><span className="block h-full w-full rounded-full bg-mugla-orange"/></div>
           <section className="grid gap-4 rounded-2xl border border-mugla-navy/10 p-4 md:grid-cols-2 xl:grid-cols-3">
             <p className="md:col-span-2 xl:col-span-3 text-xs font-black tracking-widest text-mugla-cyan">1. GENEL BİLGİLER</p>
@@ -947,7 +959,9 @@ export default function Admin() {
             <div className="flex items-end"><Button type="submit" variant="orange">{isDistrictStaff ? 'İncelemeye Gönder' : 'Taslak Kaydet / İncelemeye Gönder'}</Button></div>
           </section>
         </form></CardContent>
-      </Card>}
+      </Card>
+        </div>
+      </div>}
 
       <section id="analitik" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note, Icon], i) => <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{delay: i * .07}} key={label}><Card><CardContent className="pt-6"><Icon className="mb-5 text-mugla-cyan"/><p className="text-sm text-mugla-navy/55">{label}</p><p className="text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-mugla-orange">{note}</p></CardContent></Card></motion.div>)}</section>
 
@@ -1154,25 +1168,31 @@ export default function Admin() {
         <CardContent className="overflow-x-auto">{scopedProjects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th>Gorsel</th><th className="text-right">Islem</th></tr></thead><tbody>{scopedProjects.map(project => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td><span className={`rounded-full px-3 py-1 text-xs font-bold ${project.image ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/45'}`}>{project.image ? 'Var' : 'Yok'}</span></td><td className="text-right">{canReviewProjects ? <button aria-label={`${project.title} projesini sil`} className="rounded-full p-2 text-red-600 hover:bg-red-50" onClick={(event) => {event.stopPropagation(); writeAuditLog(adminUser, 'Proje sildi', {target: project.projectCode, details: project.title}); removeProject(project.id)}}><Trash2 size={17}/></button> : <span className="text-xs font-bold text-mugla-navy/35">Goruntu</span>}</td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
       </Card>}
 
-      {managedProject && <ProjectManagementPanel
-        project={managedProject}
-        onClose={() => setManagedProjectId(null)}
-        onImage={(file) => void uploadProjectImage(managedProject, file)}
-        onRemoveImage={() => removeProjectImage(managedProject)}
-      />}
+      {managedProject && <div className="fixed inset-0 z-50 bg-mugla-navy/35 backdrop-blur-[1px]" onClick={() => setManagedProjectId(null)}>
+        <aside onClick={event => event.stopPropagation()} className="ml-auto h-full w-full max-w-3xl overflow-y-auto bg-mugla-sand p-4 shadow-2xl md:p-6">
+          <div className="space-y-4">
+            <ProjectManagementPanel
+              project={managedProject}
+              onClose={() => setManagedProjectId(null)}
+              onImage={(file) => void uploadProjectImage(managedProject, file)}
+              onRemoveImage={() => removeProjectImage(managedProject)}
+            />
 
-      {managedProject && isSuperAdmin && <Card>
-        <CardHeader><h2 className="text-xl font-bold">Süper admin kararları</h2><p className="text-sm text-mugla-navy/55">Son karar mercii bu alandan projeyi oylama, kazanan, uygulama ve arşiv aşamalarına taşır.</p></CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProject(managedProject.id, {workflowStatus: 'Yayında', status: 'Oylamada'}); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Aç</Button>
-          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'})}>Oylama Tarihini Belirle</Button>
-          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır'})}>Planlandı</Button>
-          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'})}>Kazanan İlan Et</Button>
-          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor'})}>İlçeye Geri Gönder</Button>
-          <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Tamamlandı', status: 'Tamamlandı'})}>Projeyi Kilitle</Button>
-          <Button variant="outline" onClick={() => {rejectPendingProject(managedProject); setManagedProjectId(null)}}>Projeyi Arşivle</Button>
-        </CardContent>
-      </Card>}
+            {isSuperAdmin && <Card>
+              <CardHeader><h2 className="text-xl font-bold">Süper admin kararları</h2><p className="text-sm text-mugla-navy/55">Son karar mercii bu alandan projeyi oylama, kazanan, uygulama ve arşiv aşamalarına taşır.</p></CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProject(managedProject.id, {workflowStatus: 'Yayında', status: 'Oylamada'}); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Aç</Button>
+                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'})}>Oylama Tarihini Belirle</Button>
+                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır'})}>Planlandı</Button>
+                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'})}>Kazanan İlan Et</Button>
+                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor'})}>İlçeye Geri Gönder</Button>
+                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Tamamlandı', status: 'Tamamlandı'})}>Projeyi Kilitle</Button>
+                <Button variant="outline" onClick={() => {rejectPendingProject(managedProject); setManagedProjectId(null)}}>Projeyi Arşivle</Button>
+              </CardContent>
+            </Card>}
+          </div>
+        </aside>
+      </div>}
 
     </div>
   </AppShell></AdminAuthGate>

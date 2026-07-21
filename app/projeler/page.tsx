@@ -336,7 +336,8 @@ export default function Projects() {
         </aside>
 
         <div className="min-w-0">
-      <section className="rounded-lg border border-mugla-navy/10 bg-white p-4 shadow-sm">
+      <span id="sonuclar" className="block scroll-mt-24"/>
+      <section id="oy-ver" className="scroll-mt-24 rounded-lg border border-mugla-navy/10 bg-white p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-2">
           {participationSteps.map(step => (
             <button

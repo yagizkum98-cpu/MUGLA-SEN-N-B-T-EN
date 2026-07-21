@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {useEffect, useMemo, useState} from 'react'
-import {BookOpen, FolderKanban, Home, LogOut, Mail, MessageCircleQuestion, UserRound} from 'lucide-react'
+import {ArrowUpRight, BookOpen, FolderKanban, Home, LogOut, Mail, MessageCircleQuestion, UserRound} from 'lucide-react'
 import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {useProjects} from '@/lib/projects-store'
@@ -70,6 +70,13 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
           <p className="truncate text-sm font-black">{user.name}</p>
           <p className="truncate text-xs font-semibold text-mugla-navy/50">{user.email}</p>
         </div>
+      </div>
+
+      <div className="border-b border-mugla-navy/10 p-3">
+        <Link href="https://muglabutcesenin-vatandas.vercel.app/vatandas/panel#panelim" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl bg-mugla-navy px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-mugla-blue">
+          <span className="inline-flex items-center gap-2"><UserRound size={17}/> Panelim</span>
+          <ArrowUpRight size={16}/>
+        </Link>
       </div>
 
       <nav className="grid grid-cols-2 gap-2 p-3">

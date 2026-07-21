@@ -6,6 +6,9 @@ const nextConfig = {
   async redirects() {
     return [
       {source: '/nasil-calisir', destination: '/nasil-isler', permanent: false},
+      {source: '/oy-ver', destination: '/projeler#oy-ver', permanent: false},
+      {source: '/sonuclar', destination: '/projeler#sonuclar', permanent: false},
+      {source: '/kazanan-projeler', destination: '/projeler#sonuclar', permanent: false},
       {source: '/kayit', destination: '/giris?mode=register', permanent: false},
       {source: '/sifremi-unuttum', destination: '/giris', permanent: false},
       {source: '/vatandas/basvurularim', destination: '/vatandas/panel#oylar', permanent: false},

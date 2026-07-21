@@ -4,16 +4,17 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BarChart3, Bell, Building2, FileBarChart, FolderKanban, Home, LogOut, MessageSquare, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
+import {BarChart3, Bell, Building2, FileBarChart, FolderKanban, Home, Lightbulb, LogOut, MessageSquare, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
 
 const citizen = [
-  ['/vatandas/panel#panelim', 'Panelim', Home],
+  ['/', 'Ana Sayfa', Home],
   ['/projeler', 'Projeler', FolderKanban],
-  ['/vatandas/panel#sepetim', 'Sepetim', ShoppingCart],
-  ['/vatandas/panel#profil', 'Profil', UserRound],
+  ['/fikir-gonder', 'Fikir Gönder', Lightbulb],
+  ['/projeler#oy-ver', 'Oy Ver', Vote],
+  ['/vatandas/panel#panelim', 'Hesabım', UserRound],
 ] as const
 
 const admin = [
@@ -63,18 +64,18 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
   const displayNote = role === 'admin' ? adminUser?.role : user ? `${user.district} - dogrulanmis` : 'MVP panel'
 
   return <div className="min-h-screen bg-mugla-sand md:flex">
-    <aside className="flex bg-mugla-navy p-4 text-white md:sticky md:top-0 md:h-screen md:w-64 md:flex-col md:p-6">
-      <Link href="/" className="mb-8 flex items-center gap-3">
+    <aside className={cn('bg-mugla-navy text-white md:sticky md:top-0 md:h-screen md:w-64 md:p-6', role === 'citizen' ? 'fixed inset-x-0 bottom-0 z-40 order-last p-2 md:relative md:inset-auto md:flex md:flex-col' : 'flex p-4 md:flex-col')}>
+      <Link href="/" className={cn('mb-8 flex items-center gap-3', role === 'citizen' && 'hidden md:flex')}>
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
           <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
         </span>
         <span className="font-bold leading-tight">Mugla<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
       </Link>
-      <nav className="flex gap-2 overflow-x-auto md:flex-col">
+      <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {
           const [href, label, Icon] = Array.isArray(link) ? link : [link.href, link.label, link.icon]
           const active = path === href.split('#')[0].split('?')[0]
-          return <Link key={href} href={href} className={cn('flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-sm text-white/65 hover:bg-white/10 hover:text-white', active && 'bg-white text-mugla-navy hover:bg-white hover:text-mugla-navy')}>
+          return <Link key={href} href={href} className={cn('flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-sm text-white/65 hover:bg-white/10 hover:text-white', role === 'citizen' && 'flex-1 flex-col gap-1 px-2 py-2 text-center text-[11px] md:flex-row md:gap-3 md:px-4 md:py-3 md:text-sm', active && 'bg-white text-mugla-navy hover:bg-white hover:text-mugla-navy')}>
             <Icon size={18}/>{label}
           </Link>
         })}
@@ -85,6 +86,6 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         {(user || adminUser) && <button type="button" onClick={signOut} className="mt-3 flex items-center gap-2 text-xs text-white/55 hover:text-white"><LogOut size={14}/> Cikis</button>}
       </div>
     </aside>
-    <div className="min-w-0 flex-1">{children}</div>
+    <div className={cn('min-w-0 flex-1', role === 'citizen' && 'pb-20 md:pb-0')}>{children}</div>
   </div>
 }

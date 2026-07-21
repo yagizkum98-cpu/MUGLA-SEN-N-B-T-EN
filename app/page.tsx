@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, Vote} from 'lucide-react'
+import {Bell, CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, MapPin, Plus, Vote} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
 import {formatBudget, useProjects} from '@/lib/projects-store'
@@ -22,6 +22,14 @@ function Step({icon: Icon, title, text}: {icon: typeof Lightbulb; title: string;
     <h3 className="mt-5 text-lg font-bold">{title}</h3>
     <p className="mt-2 text-sm leading-6 text-mugla-navy/60">{text}</p>
   </div>
+}
+
+function QuickAction({href, icon: Icon, title, text}: {href: string; icon: typeof Lightbulb; title: string; text: string}) {
+  return <Link href={href} className="rounded-lg border border-mugla-navy/10 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-mugla-cyan hover:shadow-soft">
+    <span className="grid h-12 w-12 place-items-center rounded-xl bg-mugla-sand text-mugla-orange"><Icon size={22}/></span>
+    <h3 className="mt-4 text-lg font-black">{title}</h3>
+    <p className="mt-2 text-sm leading-6 text-mugla-navy/55">{text}</p>
+  </Link>
 }
 
 type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
@@ -145,6 +153,8 @@ export default function Home() {
   const {projects} = useProjects()
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
   const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const winners = approved.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan') || String(project.status).startsWith('Tamamland')).sort((a, b) => b.votes - a.votes)
+  const totalVotes = approved.reduce((sum, project) => sum + project.votes, 0)
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
   const [municipalityRedirecting, setMunicipalityRedirecting] = useState(false)
   const [citizenRedirecting, setCitizenRedirecting] = useState(false)
@@ -184,15 +194,86 @@ export default function Home() {
           <span className="text-sm font-bold leading-tight">Muğla Senin<br/><span className="text-mugla-orange">Bütçen</span></span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
-          <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
+          <Link href="/">Ana Sayfa</Link>
           <Link href="/projeler">Projeler</Link>
-          <Link href="/sss">S.S.S.</Link>
-          <Link href="/kitapcik">Kitapçık</Link>
-          <Link href="/iletisim">İletişim</Link>
+          <Link href="/fikir-gonder">Fikir Gönder</Link>
+          <Link href="/projeler#oy-ver">Oy Ver</Link>
+          <Link href="/projeler#sonuclar">Sonuçlar</Link>
+          <Link href="/nasil-isler">Nasıl İşler?</Link>
+          <Link href="/vatandas/panel">Hesabım</Link>
         </nav>
         <div className="flex items-center gap-2"><SiteUserMenu showLogin/></div>
       </div>
     </header>
+
+    <section className="relative z-10 overflow-hidden border-b border-mugla-navy/10 bg-white">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-16">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-cyan">Katılımcı bütçe platformu</p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-mugla-navy md:text-6xl">Muğla İçin Fikrin Varsa Paylaş</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-mugla-navy/65">Katılımcı bütçe platformuna hoş geldiniz. Projeni paylaş, projeleri incele, oyunu kullan ve Muğla'nın geleceğine birlikte karar ver.</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-5 py-3 font-bold text-white"><Plus size={18}/> Fikir Gönder</Link>
+            <Link href="/projeler#oy-ver" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-5 py-3 font-bold text-mugla-navy"><Vote size={18}/> Oy Ver</Link>
+          </div>
+        </div>
+        <div className="mx-auto w-full max-w-sm rounded-[2rem] border-[10px] border-mugla-navy bg-mugla-sand p-4 shadow-soft">
+          <div className="rounded-[1.35rem] bg-white p-4">
+            <div className="flex items-center justify-between"><b>Muğla Senin Bütçen</b><span className="rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-green-700">Canlı</span></div>
+            <div className="mt-5 grid gap-3">
+              {active.slice(0, 3).map(project => <div key={project.id} className="rounded-xl border border-mugla-navy/10 p-3">
+                <p className="truncate text-sm font-bold">{project.title}</p>
+                <p className="mt-1 text-xs text-mugla-navy/50">{project.district} · {project.votes.toLocaleString('tr-TR')} oy</p>
+              </div>)}
+              {!active.length && ['Fikir gönder', 'Projeleri incele', 'Oyunu kullan'].map(item => <div key={item} className="rounded-xl border border-mugla-navy/10 p-3 text-sm font-bold">{item}</div>)}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto grid max-w-6xl gap-4 px-5 pb-12 md:grid-cols-4">
+        <QuickAction href="/fikir-gonder" icon={Plus} title="Fikir Gönder" text="Proje önerini kısa sihirbazla paylaş."/>
+        <QuickAction href="/projeler#oy-ver" icon={Vote} title="Oy Ver" text="Aktif oylamalardaki projeleri destekle."/>
+        <QuickAction href="/projeler" icon={FolderKanban} title="Projeleri İncele" text="İlçe, kategori ve duruma göre ara."/>
+        <QuickAction href="/projeler#sonuclar" icon={MapPin} title="Kazanan Projeler" text="Kazanan ve tamamlanan işleri takip et."/>
+      </div>
+    </section>
+
+    <section className="relative z-10 mx-auto max-w-6xl px-5 py-12">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Step icon={Lightbulb} title="Fikrini Paylaş" text="Muğla için ihtiyacı ve çözüm önerini gönder."/>
+        <Step icon={CheckCircle2} title="Uzman İncelemesi" text="Belediye ekipleri teknik ve mali uygunluğu inceler."/>
+        <Step icon={Vote} title="Vatandaş Oylaması" text="Onaylı projeler halk oylamasına açılır."/>
+        <Step icon={FolderKanban} title="Uygulamaya Geçiyor" text="Kazanan projeler süreç durumuyla izlenir."/>
+      </div>
+      <div className="mt-8 grid gap-4 md:grid-cols-4">
+        <Stat label="İlçe" value="13" note="Muğla'nın tüm ilçeleri"/>
+        <Stat label="Proje" value={String(approved.length || 420)} note="Yayınlanan ve süreçteki kayıtlar"/>
+        <Stat label="Oy" value={(totalVotes || 28000).toLocaleString('tr-TR')} note="Toplam vatandaş desteği"/>
+        <Stat label="Tamamlanan Proje" value={String(winners.length || 95)} note="Kazanan ve tamamlanan işler"/>
+      </div>
+    </section>
+
+    <section className="relative z-10 border-y border-mugla-navy/10 bg-white">
+      <div className="mx-auto grid max-w-6xl gap-6 px-5 py-12 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">AKTİF OYLAMALAR</p>
+          <h2 className="mt-2 text-2xl font-black">Oy verebileceğin projeler</h2>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {(active.length ? active : approved.slice(0, 2)).map(project => <Link key={project.id} href="/projeler#oy-ver" className="rounded-lg border border-mugla-navy/10 p-4 hover:border-mugla-orange">
+              <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-bold text-mugla-orange">{project.status}</span>
+              <h3 className="mt-3 font-black">{project.title}</h3>
+              <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} oy</p>
+            </Link>)}
+          </div>
+        </div>
+        <aside>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">GÜNCEL DUYURULAR</p>
+          <div className="mt-5 space-y-3">
+            {['Yeni oylama dönemi başladığında bildirim alabilirsiniz.', 'Projeler ilçe ve kategoriye göre filtrelenebilir.', 'Kazanan projelerin uygulama süreci sonuçlarda izlenir.'].map(item => <div key={item} className="rounded-lg bg-mugla-sand/70 p-4 text-sm font-semibold text-mugla-navy/60"><Bell className="mb-2 text-mugla-orange" size={18}/>{item}</div>)}
+          </div>
+        </aside>
+      </div>
+    </section>
 
     <section id="mugla-senin-butcen" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
