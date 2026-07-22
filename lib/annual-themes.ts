@@ -4,7 +4,7 @@ import {projectCategories} from '@/lib/project-taxonomy'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'su-yonetimi' | 'tarim' | 'hayvan-haklari' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'kultur-sanat' | 'spor' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'su-yonetimi' | 'tarim' | 'hayvan-haklari' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'ulasim' | 'kultur-sanat' | 'spor' | 'egitim' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
 
 export type AnnualThemeSetting = {
   year: string
@@ -25,6 +25,7 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
   {id: 'sosyal-politikalar', label: 'Sosyal politikalar', note: 'Kadın, çocuk, yaşlı, engelli, aile ve sosyal destek fikirleri.', categories: ['Sosyal Yaşam']},
   {id: 'ulasim', label: 'Ulaşım', note: 'Ulaşım, trafik, yaya, bisiklet ve erişilebilirlik fikirleri.', categories: ['Ulaşım']},
   {id: 'spor', label: 'Spor', note: 'Spor tesisleri, etkinlikler ve açık spor alanları fikirleri.', categories: ['Spor']},
+  {id: 'egitim', label: 'Eğitim', note: 'Okul, kütüphane, dijital öğrenme, mesleki eğitim ve yaşam boyu öğrenme fikirleri.', categories: ['Eğitim']},
   {id: 'kulturel-miras-turizm', label: 'Kültürel Miras ve Eşsiz Yaşam', note: 'Kültürel miras, tanıtım, rota, gastronomi ve ziyaretçi deneyimi fikirleri.', categories: ['Kültürel Miras ve Eşsiz Yaşam']},
   {id: 'yapay-zeka-dijitallesme', label: 'Yapay Zeka ve Dijitalleşme', note: 'Akıllı şehir, açık veri, dijital katılım ve yapay zeka fikirleri.', categories: ['Yapay Zeka ve Dijitalleşme']},
   {id: 'katilimci-yenilikci-yonetim', label: 'Katılımcı ve Yenilikçi Yönetim', note: 'Katılımcı bütçe, ortak akıl, şeffaflık ve yenilikçi hizmet fikirleri.', categories: ['Katılımcı ve Yenilikçi Yönetim']},
@@ -94,3 +95,4 @@ export function allowedSubcategoriesForYear(year: string, category: string) {
 export function isProjectThemeAllowed(year: string, category: string, subcategory: string) {
   return allowedCategoriesForYear(year).some(([name]) => name === category)
 }
+

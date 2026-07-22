@@ -8,6 +8,7 @@ export const projectCategories=[
   ['İmar ve Şehircilik','#9333ea'],
   ['Sosyal Yaşam','#00a6c8'],
   ['Spor','#2563eb'],
+  ['Eğitim','#7c3aed'],
   ['Kültürel Miras ve Eşsiz Yaşam','#0891b2'],
   ['Afet ve Risk Yönetimi','#dc2626'],
   ['Yapay Zeka ve Dijitalleşme','#0ea5e9'],
@@ -30,6 +31,7 @@ export const projectSubcategories:Record<ProjectCategory,string[]>={
   'İmar ve Şehircilik':['İmar Planları','Kentsel Tasarım','Mekansal Planlama','Kentsel Dönüşüm','Kamusal Alan Tasarımı','Yapılaşma ve Ruhsat','Kent Estetiği','Sokak Sağlıklaştırma','Meydan Düzenlemeleri','Kıyı Planlaması','Diğer'],
   'Sosyal Yaşam':['Kadın Hizmetleri','Çocuk Hizmetleri','Yaşlı Destek Hizmetleri','Engelli Hizmetleri','Gençlik','Aile Destek Programları','Sosyal Yardımlar','Mahalle Yaşamı','Halk Sağlığı','Psikolojik Destek','Gıda Destekleri','Toplum Merkezleri','Gönüllülük','Dijital Belediyecilik','Vatandaş Katılımı','Afet ve Acil Durum','Güvenlik','Diğer'],
   'Spor':['Spor Tesisleri','Açık Spor Alanları','Yüzme Havuzları','Fitness Alanları','Bisiklet Sporları','Koşu Parkurları','Yürüyüş Rotaları','Çocuk Spor Alanları','Amatör Spor Kulüpleri','Su Sporları','Engelli Sporları','Gençlik Sporları','Turnuvalar','E-Spor','Spor Etkinlikleri','Diğer'],
+  'Eğitim':['Okul Destekleri','Derslik ve Atölye','Kütüphane','Dijital Eğitim','Mesleki Eğitim','Yaşam Boyu Öğrenme','Çocuk Eğitim Programları','Gençlik Eğitimleri','Engelli Eğitim Erişimi','Bilim ve Teknoloji Atölyeleri','Diğer'],
   'Kültürel Miras ve Eşsiz Yaşam':['Kültür Merkezleri','Müzeler','Kütüphaneler','Sanat Galerileri','Tiyatro','Sinema','Konser','Festival','Sergi','Halk Dansları','Yerel Kültür','Somut Kültürel Miras','Dijital Kültür','Sokak Sanatları','Sanat Atölyeleri','Kültür Rotaları','Turizm Entegrasyonu','Kültürel Mirasın Korunması','Somut Olmayan Kültürel Miras','Yerel Bellek','Tarihi Yapılar','Gastronomi Mirası','Yerel Üretim','Ege ve Akdeniz Yaşamı','Doğa ve Kültür Deneyimi','Müze ve Arşiv','Tanıtım Faaliyetleri','Dijital Turizm','Turizm Rotaları','Gastronomi','Kırsal Turizm','Ekoturizm','Kültür Turizmi','Deniz Turizmi','Kamp ve Karavan','Bisiklet Turizmi','Yürüyüş Rotaları','Likya Yolu','Akıllı Turizm','QR Rehber Sistemleri','Ziyaretçi Deneyimi','Turizm Etkinlikleri','Konaklama','Yat Limanları','Diğer'],
   'Afet ve Risk Yönetimi':['Afet Hazırlığı','Risk Azaltma','Acil Durum Toplanma Alanları','Deprem Güvenliği','Yangınla Mücadele','Sel ve Taşkın Yönetimi','Erken Uyarı Sistemleri','Kriz Koordinasyonu','Gönüllü Afet Ekipleri','İklim Afetleri','Diğer'],
   'Yapay Zeka ve Dijitalleşme':['Yapay Zeka Uygulamaları','Akıllı Şehir Sistemleri','Açık Veri','Dijital Katılım','Mobil Uygulamalar','Veri Analitiği','Dijital Yetkinlik','Siber Güvenlik','Sensör ve IoT','Dijital Erişilebilirlik','Diğer'],
@@ -38,7 +40,6 @@ export const projectSubcategories:Record<ProjectCategory,string[]>={
 }
 
 export function normalizeProjectCategory(category:string){
-  if(category==='Eğitim')return 'Diğer'
   return ['Turizm','Kültür ve Sanat','Kültürel Miras ve Turizm'].includes(category) ? 'Kültürel Miras ve Eşsiz Yaşam' : category
 }
 

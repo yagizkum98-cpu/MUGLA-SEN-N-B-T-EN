@@ -6,7 +6,7 @@ import {ArrowUpRight, Bell, Camera, CheckCircle2, FileText, KeyRound, Lightbulb,
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
-import {changeCurrentUserPassword, getCurrentUser, logoutUser, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
+import {changeCurrentUserPassword, consumeCitizenSessionTransfer, getCurrentUser, logoutUser, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 import {useVoteBasket, VOTE_CREDIT_LIMIT} from '@/lib/vote-basket'
 
@@ -43,6 +43,11 @@ export function CitizenDashboard() {
   const [profileTab, setProfileTab] = useState<'profile' | 'security' | 'preferences'>('profile')
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (consumeCitizenSessionTransfer(params.get('auth_transfer'))) {
+      params.delete('auth_transfer')
+      window.history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}${location.hash || '#panelim'}`)
+    }
     const current = getCurrentUser()
     if (!current) {
       location.replace('/giris?next=/vatandas/panel')

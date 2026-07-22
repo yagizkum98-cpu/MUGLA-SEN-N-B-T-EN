@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import {useEffect, useMemo, useState} from 'react'
 import {ArrowUpRight, LogOut, UserRound} from 'lucide-react'
-import {citizenUrl} from '@/lib/domain-routing'
-import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
+import {citizenUrl, isCitizenDomain} from '@/lib/domain-routing'
+import {createCitizenSessionTransfer, getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {useProjects} from '@/lib/projects-store'
 
 function initials(name: string) {
@@ -42,6 +42,13 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
     location.href = '/'
   }
 
+  function panelHref() {
+    const target = '/vatandas/panel#panelim'
+    if (!user) return citizenUrl(target)
+    if (isCitizenDomain()) return target
+    return citizenUrl(`/vatandas/panel?auth_transfer=${encodeURIComponent(createCitizenSessionTransfer(user))}#panelim`)
+  }
+
   if (!user) {
     if (!showLogin) return null
     return <Link href={citizenUrl('/')} className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-4 py-2 text-sm font-bold text-mugla-navy hover:border-mugla-orange">
@@ -65,7 +72,7 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
       </div>
 
       <div className="border-b border-mugla-navy/10 p-3">
-        <Link href="https://muglabutcesenin-vatandas.vercel.app/vatandas/panel#panelim" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl bg-mugla-navy px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-mugla-blue">
+        <Link href={panelHref()} onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl bg-mugla-navy px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-mugla-blue">
           <span className="inline-flex items-center gap-2"><UserRound size={17}/> Panelim</span>
           <ArrowUpRight size={16}/>
         </Link>

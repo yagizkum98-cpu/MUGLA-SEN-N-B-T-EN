@@ -23,7 +23,21 @@ const statuses: ProjectStatus[] = ['Başvuru', 'İncelemede', 'Uygun', 'Oylamada
 const field = 'w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan'
 const adminPanel = 'rounded-xl border border-mugla-navy/10 bg-white shadow-sm'
 const tableAction = 'inline-flex h-8 items-center gap-1 rounded-lg border border-mugla-navy/10 bg-white px-2.5 text-xs font-bold text-mugla-navy/60 hover:border-mugla-cyan hover:text-mugla-navy'
+const VOTINGS_KEY = 'mugla-admin-votings-v1'
 type QuickTarget = {label: string; href: string; count: number; icon: LucideIcon; note: string}
+type VotingRecord = {
+  id: string
+  name: string
+  description: string
+  startDate: string
+  endDate: string
+  districts: string[]
+  projectIds: string[]
+  votesPerPerson: 1 | 3 | 5
+  rules: string[]
+  status: 'Taslak' | 'Planlandı' | 'Aktif' | 'Tamamlandı' | 'Sonuçlandı' | 'Arşiv'
+  createdAt: string
+}
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'super-admin', label: 'Super admin', note: 'Platform sahibi; sistem, API, backup, audit ve lisans kontrolu'},
@@ -440,6 +454,10 @@ export default function Admin() {
   const [poolKeyword, setPoolKeyword] = useState('')
   const [projectCenterTab, setProjectCenterTab] = useState('Tümü')
   const [notificationTab, setNotificationTab] = useState('Yeni Bildirim')
+  const [votingWizardOpen, setVotingWizardOpen] = useState(false)
+  const [votingWizardStep, setVotingWizardStep] = useState(1)
+  const [selectedVotingProjects, setSelectedVotingProjects] = useState<string[]>([])
+  const [votingRecords, setVotingRecords] = useState<VotingRecord[]>([])
   const activeRole = normalizeAdminRole(adminUser?.role)
   const isSuperAdmin = activeRole === 'super-admin'
   const isMunicipalityAdmin = activeRole === 'belediye-admin'
@@ -498,6 +516,10 @@ export default function Admin() {
   const activeVoterEstimate = Math.max(0, Math.round(voteTotal * 2.07))
   const participationRate = Math.min(100, Math.round(voteTotal / Math.max(1, activeVoterEstimate) * 100))
   const voteNeighborhoodOptions = Array.from(new Set(voteBaseProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
+  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
+  const activeVotingRecords = votingRecords.filter(record => record.status === 'Aktif')
+  const votingProjectCount = votingRecords.reduce((sum, record) => sum + record.projectIds.length, 0)
+  const votingRecordsVoteTotal = votingRecords.reduce((sum, record) => sum + record.projectIds.reduce((projectSum, id) => projectSum + (projects.find(project => project.id === id)?.votes ?? 0), 0), 0)
   const districtScope = isDistrictManager || isDistrictStaff ? muglaDistrictDashboards.filter(district => district.name === adminUser?.district) : muglaDistrictDashboards
   const visibleDistrictDashboards = districtScope.filter(district => district.name.toLocaleLowerCase('tr').includes(districtSearch.trim().toLocaleLowerCase('tr')))
   const districtScopeProjects = projects.filter(project => districtScope.some(district => district.name === project.district))
@@ -532,6 +554,20 @@ export default function Admin() {
       window.removeEventListener(annualThemeChangeEvent, syncThemes)
     }
   }, [])
+
+  useEffect(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem(VOTINGS_KEY) ?? '[]')
+      setVotingRecords(Array.isArray(value) ? value : [])
+    } catch {
+      setVotingRecords([])
+    }
+  }, [])
+
+  function saveVotingRecords(next: VotingRecord[]) {
+    setVotingRecords(next)
+    localStorage.setItem(VOTINGS_KEY, JSON.stringify(next))
+  }
 
   function submitProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -931,6 +967,41 @@ export default function Admin() {
     saveNotificationFromForm(event.currentTarget, status)
   }
 
+  function toggleVotingProject(id: string) {
+    setSelectedVotingProjects(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
+  }
+
+  function submitVotingWizard(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManageVoting) return
+    const form = new FormData(event.currentTarget)
+    const districtsValue = form.getAll('districts').map(String)
+    const rules = ['e-Devlet doğrulaması', 'Tek cihaz', 'Tek IP kontrolü', 'CAPTCHA', 'AI dolandırıcılık kontrolü'].filter(rule => form.get(rule))
+    const record: VotingRecord = {
+      id: crypto.randomUUID(),
+      name: String(form.get('name') || '2027 Katılımcı Bütçe Oylaması'),
+      description: String(form.get('description') || ''),
+      startDate: String(form.get('startDate') || ''),
+      endDate: String(form.get('endDate') || ''),
+      districts: districtsValue.length ? districtsValue : districts,
+      projectIds: selectedVotingProjects,
+      votesPerPerson: Number(form.get('votesPerPerson') || 5) as 1 | 3 | 5,
+      rules,
+      status: 'Taslak',
+      createdAt: new Date().toISOString(),
+    }
+    saveVotingRecords([record, ...votingRecords])
+    setVotingWizardOpen(false)
+    setSelectedVotingProjects([])
+    setVotingWizardStep(1)
+    setMessage('Oylama taslak olarak oluşturuldu. Vatandaşlar henüz göremez.')
+  }
+
+  function updateVotingStatus(id: string, status: VotingRecord['status']) {
+    saveVotingRecords(votingRecords.map(record => record.id === id ? {...record, status} : record))
+    setMessage(status === 'Aktif' ? 'Oylama yayınlandı; vatandaş panelinde oylama süreci açılır ve bildirim gönderilir.' : `Oylama ${status} durumuna alındı.`)
+  }
+
   const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
@@ -961,8 +1032,8 @@ export default function Admin() {
   const dashboardMetrics = [
     ['Toplam Proje', scopedProjects.length, FolderKanban, 'bg-mugla-navy text-white'],
     ['Onay Bekleyen', pendingProjects.length, Clock3, 'bg-orange-50 text-mugla-orange'],
-    ['Aktif Oylama', activeVotingProjects.length, Vote, 'bg-cyan-50 text-mugla-cyan'],
-    ['Toplam Oy', scopedProjects.reduce((sum, project) => sum + project.votes, 0), BarChart3, 'bg-green-50 text-green-700'],
+    ['Aktif Oylama', activeVotingRecords.length, Vote, 'bg-cyan-50 text-mugla-cyan'],
+    ['Toplam Oy', votingRecordsVoteTotal, BarChart3, 'bg-green-50 text-green-700'],
     ['Vatandaş Sayısı', scopedCitizens.length, UsersRound, 'bg-white text-mugla-navy'],
     ['13 İlçe', 13, Building2, 'bg-white text-mugla-navy'],
   ] as const
@@ -1090,8 +1161,8 @@ export default function Admin() {
           <CardHeader><h2 className="text-xl font-bold">Hızlı İşlemler</h2></CardHeader>
           <CardContent className="grid gap-3">
             {canCreateMunicipalProject && <Button variant="orange" className="rounded-xl bg-mugla-cyan hover:bg-mugla-blue" onClick={() => setOpen(true)}><Plus size={17}/> Yeni Proje</Button>}
-            <a href="#oylamalar"><Button variant="outline" className="w-full justify-start"><Vote size={17}/> Oylama Oluştur</Button></a>
-            {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(true)}><UserPlus size={17}/> Kullanıcı Ekle</Button>}
+            <Button variant="outline" className="w-full justify-start" disabled={!canManageVoting} onClick={() => {setVotingWizardOpen(true); setVotingWizardStep(1)}}><Vote size={17}/> Oylama Oluştur</Button>
+            {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(true)}><UserPlus size={17}/> Yeni Yetkili Ekle</Button>}
             <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileBarChart size={17}/> Rapor Al</Button></a>
           </CardContent>
         </Card>
@@ -1252,7 +1323,7 @@ export default function Admin() {
       {peopleOpen && canManagePeople && <Card id="yetkililer">
         <CardHeader>
           <h2 className="text-xl font-bold">Yetkili kisiler</h2>
-          <p className="text-sm text-mugla-navy/55">Sadece tanimli super admin, admin ve yetkili hesaplar belediye paneline girebilir. Admin ve yetkili hesaplarini yalnizca super admin ekleyip silebilir.</p>
+          <p className="text-sm text-mugla-navy/55">Bu alan vatandaş hesabı oluşturmaz. Vatandaşlar üye ol ekranından kendileri kayıt olur; burada yalnızca belediye personeli için yetkili hesap tanımlanır.</p>
         </CardHeader>
         <CardContent className="space-y-5">
           {canManagePeople ? <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1769,6 +1840,40 @@ export default function Admin() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
+          {canManageVoting && <section className="grid gap-3 md:grid-cols-4">
+            {[
+              ['Aktif Oylama', activeVotingRecords.length],
+              ['Oylamadaki Proje', votingProjectCount],
+              ['Toplam Oy', votingRecordsVoteTotal],
+              ['Katılım', votingRecordsVoteTotal ? `${Math.min(100, Math.round(votingRecordsVoteTotal / Math.max(1, votingProjectCount * 120) * 100))}%` : '0%'],
+            ].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm"><p className="text-sm text-mugla-navy/50">{label}</p><b className="mt-1 block text-2xl">{value}</b></div>)}
+          </section>}
+
+          {canManageVoting && <section className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-black">Oylama taslakları ve süreçleri</h3>
+              <Button variant="orange" onClick={() => {setVotingWizardOpen(true); setVotingWizardStep(1)}}><Plus size={17}/> Oylama Oluştur</Button>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Oylama</th><th>Proje</th><th>İlçe</th><th>Tarih</th><th>Durum</th><th className="text-right">İşlem</th></tr></thead>
+                <tbody>{votingRecords.length ? votingRecords.map(record => <tr key={record.id} className="border-t border-mugla-navy/10">
+                  <td className="py-3 font-bold">{record.name}<span className="block text-xs font-normal text-mugla-navy/45">{record.description || 'Açıklama yok'}</span></td>
+                  <td>{record.projectIds.length}</td>
+                  <td>{record.districts.length === districts.length ? 'Muğla Geneli' : record.districts.join(', ')}</td>
+                  <td>{record.startDate || '-'} / {record.endDate || '-'}</td>
+                  <td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/60">{record.status}</span></td>
+                  <td className="text-right"><div className="flex justify-end gap-1">
+                    {record.status === 'Taslak' && <button type="button" className={tableAction} onClick={() => updateVotingStatus(record.id, 'Planlandı')}>Planla</button>}
+                    {(record.status === 'Taslak' || record.status === 'Planlandı') && <button type="button" className={tableAction} onClick={() => updateVotingStatus(record.id, 'Aktif')}>Yayınla</button>}
+                    {record.status === 'Aktif' && <button type="button" className={tableAction} onClick={() => updateVotingStatus(record.id, 'Tamamlandı')}>Bitir</button>}
+                    {record.status === 'Tamamlandı' && <button type="button" className={tableAction} onClick={() => updateVotingStatus(record.id, 'Sonuçlandı')}>Sonuç Açıkla</button>}
+                  </div></td>
+                </tr>) : <tr><td colSpan={6} className="py-8 text-center text-mugla-navy/45">Henüz oylama taslağı yok. Sayaçlar sıfırdan başlayacak.</td></tr>}</tbody>
+              </table>
+            </div>
+          </section>}
+
           <div className="grid gap-3 md:grid-cols-4">
             <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} value={effectiveVoteDistrict} disabled={isDistrictManager} onChange={event => setVoteDistrictFilter(event.target.value)}><option value="">Tum ilceler</option>{voteDistrictOptions.map(item => <option key={item}>{item}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} value={voteCategoryFilter} onChange={event => setVoteCategoryFilter(event.target.value)}><option value="">Tumu</option>{categories.map(([label]) => <option key={label}>{label}</option>)}</select></label>
@@ -1995,6 +2100,54 @@ export default function Admin() {
             </Card>}
           </div>
         </aside>
+      </div>}
+
+      {votingWizardOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-mugla-navy/45 p-4 backdrop-blur-sm">
+        <form onSubmit={submitVotingWizard} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="text-xs font-black tracking-[.2em] text-mugla-cyan">OYLAMA OLUŞTURMA SİHİRBAZI</p><h2 className="mt-1 text-2xl font-black">Güvenli oylama taslağı oluştur</h2><p className="mt-1 text-sm text-mugla-navy/55">Oylama önce Taslak oluşur; yayınlanmadan vatandaş panelinde görünmez.</p></div>
+            <button type="button" onClick={() => setVotingWizardOpen(false)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
+          </div>
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">{[1,2,3,4,5].map(step => <button key={step} type="button" onClick={() => setVotingWizardStep(step)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-black ${votingWizardStep === step ? 'bg-mugla-navy text-white' : 'bg-mugla-sand text-mugla-navy/60'}`}>Adım {step}</button>)}</div>
+
+          {votingWizardStep === 1 && <section className="mt-5 grid gap-4 md:grid-cols-2">
+            <label><span className="mb-2 block text-sm font-semibold">Oylama Adı</span><input className={field} name="name" required defaultValue="2027 Katılımcı Bütçe Oylaması"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Başlangıç Tarihi</span><input className={field} name="startDate" type="date" required/></label>
+            <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Açıklama</span><textarea className={`${field} min-h-24`} name="description" placeholder="Oylama kapsamı ve duyuru metni"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Bitiş Tarihi</span><input className={field} name="endDate" type="date" required/></label>
+            <fieldset className="md:col-span-2"><legend className="mb-2 text-sm font-black">İlçeler</legend><div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">{districts.map(item => <label key={item} className="rounded-xl bg-mugla-sand/55 p-3 text-sm font-bold"><input type="checkbox" name="districts" value={item} defaultChecked className="mr-2 accent-mugla-orange"/>{item}</label>)}</div></fieldset>
+          </section>}
+
+          {votingWizardStep === 2 && <section className="mt-5 space-y-4">
+            <div className="grid gap-3 md:grid-cols-4"><select className={field}><option>İlçe</option>{districts.map(item => <option key={item}>{item}</option>)}</select><select className={field}><option>Kategori</option>{categories.map(([item]) => <option key={item}>{item}</option>)}</select><input className={field} placeholder="Mahalle"/><input className={field} placeholder="Bütçe / Tema"/></div>
+            <div className="grid gap-3 md:grid-cols-2">{approvedVotingCandidates.length ? approvedVotingCandidates.map(project => <label key={project.id} className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 bg-white p-4"><input type="checkbox" checked={selectedVotingProjects.includes(project.id)} onChange={() => toggleVotingProject(project.id)} className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">{project.title}</b><small className="mt-1 block text-mugla-navy/50">{project.district} · {projectCategoryLabel(project)} · {formatBudget(project.budget)}</small></span></label>) : <div className="rounded-2xl bg-mugla-sand p-6 text-center text-mugla-navy/50 md:col-span-2">Onaylandı durumunda proje yok.</div>}</div>
+          </section>}
+
+          {votingWizardStep === 3 && <section className="mt-5 grid gap-4 md:grid-cols-2">
+            <fieldset className="rounded-2xl bg-mugla-sand/55 p-4"><legend className="mb-3 text-sm font-black">Bir kişi</legend>{[1,3,5].map(value => <label key={value} className="mr-4 text-sm font-bold"><input type="radio" name="votesPerPerson" value={value} defaultChecked={value === 5} className="mr-2 accent-mugla-orange"/>{value} oy</label>)}</fieldset>
+            <fieldset className="rounded-2xl bg-mugla-sand/55 p-4"><legend className="mb-3 text-sm font-black">Güvenlik kuralları</legend>{['e-Devlet doğrulaması','Tek cihaz','Tek IP kontrolü','CAPTCHA','AI dolandırıcılık kontrolü'].map(rule => <label key={rule} className="mb-2 block text-sm font-bold"><input type="checkbox" name={rule} defaultChecked className="mr-2 accent-mugla-orange"/>{rule}</label>)}</fieldset>
+          </section>}
+
+          {votingWizardStep === 4 && <section className="mt-5 grid gap-3 md:grid-cols-5">
+            {[['Toplam Proje', selectedVotingProjects.length], ['Toplam İlçe', districts.length], ['Tahmini Katılımcı', '650.000'], ['Toplam Oy', 0], ['Katılım', '0%']].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4"><p className="text-sm text-mugla-navy/50">{label}</p><b className="mt-1 block text-2xl">{value}</b></div>)}
+          </section>}
+
+          {votingWizardStep === 5 && <section className="mt-5 grid gap-3 md:grid-cols-2">
+            {[
+              ['Başlangıç ve bitiş tarihi girilmiş mi?', true],
+              ['En az 1 proje seçilmiş mi?', selectedVotingProjects.length > 0],
+              ['Tüm seçilen projeler Onaylandı durumunda mı?', selectedVotingProjects.every(id => approvedVotingCandidates.some(project => project.id === id))],
+              ['Her projenin kapak görseli var mı?', selectedVotingProjects.every(id => Boolean(projects.find(project => project.id === id)?.image))],
+              ['Proje açıklamaları eksiksiz mi?', selectedVotingProjects.every(id => Boolean(projects.find(project => project.id === id)?.summary || projects.find(project => project.id === id)?.shortDescription))],
+              ['Oylama kuralları belirlenmiş mi?', true],
+            ].map(([label, ok]) => <div key={String(label)} className={`rounded-2xl p-4 text-sm font-black ${ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{ok ? '✓' : '×'} {String(label)}</div>)}
+          </section>}
+
+          <div className="mt-6 flex flex-wrap justify-between gap-2">
+            <Button type="button" variant="outline" disabled={votingWizardStep === 1} onClick={() => setVotingWizardStep(step => Math.max(1, step - 1))}>Geri</Button>
+            {votingWizardStep < 5 ? <Button type="button" variant="orange" onClick={() => setVotingWizardStep(step => Math.min(5, step + 1))}>Devam</Button> : <Button type="submit" variant="orange" disabled={!selectedVotingProjects.length}><Vote size={17}/> Oylamayı Oluştur</Button>}
+          </div>
+        </form>
       </div>}
 
     </div>
