@@ -6,7 +6,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MessageSquare, Pencil, Plus, Search, ShieldCheck, Trash2, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
+import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -177,6 +177,34 @@ function topicLabel(topic: ContactRecord['topic']) {
 
 function csvCell(value: unknown) {
   return `"${String(value ?? '').replace(/"/g, '""')}"`
+}
+
+const projectPoolStages = ['Tümü', 'Başvuru Alındı', 'İncelemede', 'Revizyon', 'Onaylandı', 'Oylamada', 'Kazanan', 'Uygulanıyor', 'Tamamlandı', 'Arşiv'] as const
+
+function projectLifecycleLabel(project: ProjectRecord) {
+  const workflow = String(project.workflowStatus ?? '')
+  const status = String(project.status ?? '')
+  const moderation = String(project.moderationStatus ?? '')
+  if (workflow === 'Reddedildi' || moderation === 'Reddedildi') return 'Arşiv'
+  if (workflow.includes('Revizyon') || workflow.includes('Eksik')) return 'Revizyon'
+  if (workflow.includes('Kazand') || status.includes('Kazanan')) return 'Kazanan'
+  if (workflow.includes('Uygulan') || status.includes('Devam')) return 'Uygulanıyor'
+  if (workflow.includes('Tamam') || status.includes('Tamam')) return 'Tamamlandı'
+  if (status.includes('Oylamada') || workflow.includes('Yay')) return 'Oylamada'
+  if (moderation.includes('Onay')) return 'Onaylandı'
+  if (status.includes('İnceleme') || workflow.includes('İnceleme')) return 'İncelemede'
+  return 'Başvuru Alındı'
+}
+
+function projectHistory(project: ProjectRecord) {
+  const base = project.processHistory?.length ? project.processHistory : [{
+    id: `${project.id}-created`,
+    date: project.createdAt,
+    actor: project.ownerName || project.createdByAdminName || 'Sistem',
+    action: 'Başvuru oluşturuldu.',
+    note: project.source === 'citizen' ? 'Vatandaş başvurusu proje havuzuna eklendi.' : 'Belediye proje kaydı oluşturdu.',
+  }]
+  return [...base].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
 function ProjectDetailBlock({project}: {project: ProjectRecord}) {
@@ -400,6 +428,17 @@ export default function Admin() {
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
   const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
   const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([])
+  const [districtSearch, setDistrictSearch] = useState('')
+  const [voteDistrictFilter, setVoteDistrictFilter] = useState('')
+  const [voteCategoryFilter, setVoteCategoryFilter] = useState('')
+  const [voteNeighborhoodFilter, setVoteNeighborhoodFilter] = useState('')
+  const [votePeriodFilter, setVotePeriodFilter] = useState('2027')
+  const [poolStatusFilter, setPoolStatusFilter] = useState('Tümü')
+  const [poolDistrictFilter, setPoolDistrictFilter] = useState('')
+  const [poolNeighborhoodFilter, setPoolNeighborhoodFilter] = useState('')
+  const [poolCategoryFilter, setPoolCategoryFilter] = useState('')
+  const [poolKeyword, setPoolKeyword] = useState('')
+  const [projectCenterTab, setProjectCenterTab] = useState('Tümü')
   const activeRole = normalizeAdminRole(adminUser?.role)
   const isSuperAdmin = activeRole === 'super-admin'
   const isMunicipalityAdmin = activeRole === 'belediye-admin'
@@ -413,13 +452,18 @@ export default function Admin() {
   const canReviewProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canPublishProjects = isSuperAdmin || isMunicipalityAdmin
   const canEditProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
-  const canRemoveProjects = isSuperAdmin || isMunicipalityAdmin
+  const canArchiveProjects = isSuperAdmin || isMunicipalityAdmin
+  const canRestoreProjects = isSuperAdmin || isMunicipalityAdmin
+  const canPermanentDeleteProjects = isSuperAdmin
+  const canSendProjectsToVote = isSuperAdmin || isMunicipalityAdmin
   const canCreateMunicipalProject = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
   const canSeeCrm = isSuperAdmin || isMunicipalityAdmin || isCrmRole
   const canSeeLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.liveCitizenData)
   const canExportLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.citizenDataExport)
-  const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin
+  const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
   const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canManageVoting = isSuperAdmin || isMunicipalityAdmin
+  const canSeeVoteDetails = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
   const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
   const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin
@@ -430,9 +474,30 @@ export default function Admin() {
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const managedProject = projects.find(project => project.id === managedProjectId) ?? null
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
-  const voteLeaderboard = projects
-    .filter(project => scopedProjects.some(item => item.id === project.id) && project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
+  const voteBaseProjects = isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : projects
+  const voteDistrictOptions = isDistrictManager && adminUser?.district ? [adminUser.district] : districts
+  const effectiveVoteDistrict = isDistrictManager ? adminUser?.district ?? '' : voteDistrictFilter
+  const voteFilteredProjects = voteBaseProjects.filter(project => {
+    const projectYear = new Date(project.createdAt).getFullYear().toString()
+    return (!effectiveVoteDistrict || project.district === effectiveVoteDistrict)
+      && (!voteCategoryFilter || project.category === voteCategoryFilter)
+      && (!voteNeighborhoodFilter || (project.neighborhood || project.applicantDistrict || project.district) === voteNeighborhoodFilter)
+      && (!votePeriodFilter || projectYear === votePeriodFilter || votePeriodFilter === '2027')
+  })
+  const voteLeaderboard = voteFilteredProjects
+    .filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
     .sort((a, b) => b.votes - a.votes)
+    .slice(0, isMunicipalityAdmin ? 100 : 50)
+  const voteTotal = voteLeaderboard.reduce((sum, project) => sum + project.votes, 0)
+  const activeVoterEstimate = Math.max(0, Math.round(voteTotal * 2.07))
+  const participationRate = Math.min(100, Math.round(voteTotal / Math.max(1, activeVoterEstimate) * 100))
+  const voteNeighborhoodOptions = Array.from(new Set(voteBaseProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
+  const districtScope = isDistrictManager || isDistrictStaff ? muglaDistrictDashboards.filter(district => district.name === adminUser?.district) : muglaDistrictDashboards
+  const visibleDistrictDashboards = districtScope.filter(district => district.name.toLocaleLowerCase('tr').includes(districtSearch.trim().toLocaleLowerCase('tr')))
+  const districtScopeProjects = projects.filter(project => districtScope.some(district => district.name === project.district))
+  const districtScopeVotes = districtScopeProjects.reduce((sum, project) => sum + project.votes, 0)
+  const districtScopeActiveVotes = districtScopeProjects.filter(project => project.status === 'Oylamada').length
+  const districtScopeParticipation = Math.min(100, Math.round(districtScopeVotes / Math.max(1, districtScopeProjects.length * 120) * 100))
 
   async function refreshAccounts() {
     const [current, nextAccounts] = await Promise.all([getCurrentAdmin(), listAdminAccounts()])
@@ -522,19 +587,19 @@ export default function Admin() {
     setMergeSelection(value => value.filter(id => !ids.includes(id)))
     setMergeFormOpen(false)
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
+    setProjectCenterTab(moderationStatus === 'Onaylandı' ? 'Onaylanan' : 'Reddedilenler')
     setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
   }
 
   function approvePendingProject(project: ProjectRecord) {
     if (isDistrictManager && !canPublishProjects) {
-      updateProject(project.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor', status: 'İncelemede'})
-      writeAuditLog(adminUser, 'Ilce proje onayi', {target: project.projectCode, details: project.title})
+      updateProjectWithHistory(project, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor', status: 'İncelemede'}, 'İlçe yöneticisi inceledi', project.title)
       setMessage('Proje Muğla Büyükşehir incelemesine gönderildi.')
       return
     }
     reviewProject(project.id, 'Onaylandı')
-    updateProject(project.id, {workflowStatus: 'Yayında'})
-    writeAuditLog(adminUser, 'Super admin oylamaya acti', {target: project.projectCode, details: project.title})
+    updateProjectWithHistory(project, {workflowStatus: 'Yayında'}, 'Proje onaylandı', project.title)
+    setProjectCenterTab('Onaylanan')
     setMessage('Proje oylamaya açıldı ve yayınlandı.')
   }
 
@@ -557,24 +622,50 @@ export default function Admin() {
     setMessage('Proje bilgileri güncellendi.')
   }
 
+  function updateProjectWithHistory(project: ProjectRecord, patch: Partial<ProjectRecord>, action: string, note?: string) {
+    updateProject(project.id, {
+      ...patch,
+      processHistory: [...projectHistory(project), {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        actor: adminUser?.name ?? 'Sistem',
+        action,
+        note,
+      }],
+    })
+    writeAuditLog(adminUser, action, {target: project.projectCode, details: note ?? project.title})
+  }
+
+  function archiveProject(project: ProjectRecord) {
+    if (!canArchiveProjects) return
+    updateProjectWithHistory(project, {workflowStatus: 'Reddedildi', moderationStatus: 'Reddedildi', status: 'Ertelendi'}, 'Proje arşive taşındı', project.title)
+    setMessage('Proje arşive taşındı. Kayıt havuzda korunuyor.')
+  }
+
+  function restoreProject(project: ProjectRecord) {
+    if (!canRestoreProjects) return
+    updateProjectWithHistory(project, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor', status: 'İncelemede'}, 'Proje geri yüklendi', project.title)
+    setMessage('Proje arşivden geri yüklendi.')
+  }
+
   function deleteManagedProject(project: ProjectRecord) {
-    if (!canRemoveProjects) return
-    if (!confirm(`${project.title} projesini havuzdan çıkarmak istiyor musunuz?`)) return
-    writeAuditLog(adminUser, 'Proje havuzdan cikardi', {target: project.projectCode, details: project.title})
+    if (!canPermanentDeleteProjects) return
+    if (!confirm(`${project.title} projesini kalıcı silmek için ilk onayı veriyor musunuz? Bu işlem geri alınamaz.`)) return
+    if (!confirm(`İkinci doğrulama: ${project.projectCode} kalıcı olarak silinsin mi?`)) return
+    writeAuditLog(adminUser, 'Proje kalici sildi', {target: project.projectCode, details: project.title})
     removeProject(project.id)
     setManagedProjectId(null)
-    setMessage('Proje havuzdan çıkarıldı.')
+    setMessage('Proje kalıcı olarak silindi.')
   }
 
   function rejectPendingProject(project: ProjectRecord) {
-    updateProject(project.id, {workflowStatus: 'Reddedildi', moderationStatus: 'Reddedildi'})
-    writeAuditLog(adminUser, 'Proje reddetti', {target: project.projectCode, details: project.title})
+    updateProjectWithHistory(project, {workflowStatus: 'Reddedildi', moderationStatus: 'Reddedildi'}, 'Proje reddedildi', project.title)
+    setProjectCenterTab('Reddedilenler')
     setMessage('Proje reddedildi.')
   }
 
   function requestProjectRevision(project: ProjectRecord, workflowStatus: 'Revizyon İstendi' | 'Eksik Belge') {
-    updateProject(project.id, {workflowStatus, moderationStatus: 'Bekliyor', status: 'İncelemede'})
-    writeAuditLog(adminUser, workflowStatus, {target: project.projectCode, details: project.title})
+    updateProjectWithHistory(project, {workflowStatus, moderationStatus: 'Bekliyor', status: 'İncelemede'}, workflowStatus, project.title)
     setMessage(workflowStatus === 'Eksik Belge' ? 'Eksik belge isteği oluşturuldu.' : 'Revizyon isteği oluşturuldu.')
   }
 
@@ -807,8 +898,28 @@ export default function Admin() {
   }
 
   const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
   const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
+  const projectCenterProjects = scopedProjects.filter(project => {
+    if (projectCenterTab === 'Onay Bekleyen') return isPendingReviewProject(project)
+    if (projectCenterTab === 'Onaylanan') return project.moderationStatus === 'Onaylandı'
+    if (projectCenterTab === 'Yayında') return activeVotingProjects.some(item => item.id === project.id)
+    if (projectCenterTab === 'Reddedilenler') return project.moderationStatus === 'Reddedildi' || String(project.workflowStatus) === 'Reddedildi'
+    if (projectCenterTab === 'Arşiv') return projectLifecycleLabel(project) === 'Arşiv'
+    return true
+  })
+  const poolDistrictOptions = isDistrictManager && adminUser?.district ? [adminUser.district] : districts
+  const poolNeighborhoodOptions = Array.from(new Set(scopedProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
+  const filteredPoolProjects = scopedProjects.filter(project => {
+    const lifecycle = projectLifecycleLabel(project)
+    const keyword = poolKeyword.trim().toLocaleLowerCase('tr')
+    return (poolStatusFilter === 'Tümü' || lifecycle === poolStatusFilter)
+      && (!poolDistrictFilter || project.district === poolDistrictFilter)
+      && (!poolNeighborhoodFilter || (project.neighborhood || project.applicantDistrict || project.district) === poolNeighborhoodFilter)
+      && (!poolCategoryFilter || project.category === poolCategoryFilter)
+      && (!keyword || `${project.title} ${project.projectCode} ${project.summary ?? ''} ${project.shortDescription ?? ''}`.toLocaleLowerCase('tr').includes(keyword))
+  })
   const dashboardMetrics = [
     ['Toplam Proje', scopedProjects.length, FolderKanban, 'bg-mugla-navy text-white'],
     ['Onay Bekleyen', pendingProjects.length, Clock3, 'bg-orange-50 text-mugla-orange'],
@@ -858,7 +969,7 @@ export default function Admin() {
   ]
   const reportDistrictOptions = isSuperAdmin || isMunicipalityAdmin ? ['Tüm Muğla', ...districts] : isDistrictManager && adminUser?.district ? [adminUser.district] : ['Atanan projeler']
   const quickTargets: QuickTarget[] = [
-    {label: 'Onay kutusu', href: '#onay-kutusu', count: pendingProjects.length, icon: Clock3, note: 'Vatandaş fikirleri otomatik buraya düşer.'},
+    {label: 'Onay kutusu', href: '#projeler', count: pendingProjects.length, icon: Clock3, note: 'Vatandaş fikirleri otomatik buraya düşer.'},
     {label: 'Proje havuzu', href: '#proje-havuzu', count: scopedProjects.length, icon: FolderKanban, note: 'Tüm canlı kayıtlar tek tabloda.'},
     ...(canSeeLiveCitizenData ? [{label: 'Canlı veri', href: '#canli-veri-listesi', count: scopedCitizens.length, icon: Database, note: 'Giriş ve kayıt bilgileri.'}] : []),
     {label: 'Yetkililer', href: '#yetkililer', count: accounts.length, icon: UsersRound, note: 'Sadece süper admin kapsam belirler.'},
@@ -894,7 +1005,7 @@ export default function Admin() {
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {quickTargets.map(({label, href, count, icon: Icon, note}) => <a key={label} href={href} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-cyan">
+        {quickTargets.map(({label, href, count, icon: Icon, note}) => <a key={label} href={href} onClick={() => {if (label === 'Onay kutusu') setProjectCenterTab('Onay Bekleyen')}} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-cyan">
           <span className="flex items-center justify-between gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-mugla-sand text-mugla-cyan"><Icon size={19}/></span>
             <span className="text-2xl font-black">{Number(count).toLocaleString('tr-TR')}</span>
@@ -965,10 +1076,11 @@ export default function Admin() {
               ['Tümü', scopedProjects.length],
               ['Proje Havuzu', scopedProjects.length],
               ['Onay Bekleyen', pendingProjects.length],
+              ['Onaylanan', approvedProjects.length],
               ['Yayında', activeVotingProjects.length],
-              ['Reddedilen', archivedProjects.length],
+              ['Reddedilenler', archivedProjects.length],
               ['Arşiv', archivedProjects.length],
-            ].map(([label, count], index) => <a key={label} href="#proje-havuzu" className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold ${index === 0 ? 'border-mugla-cyan bg-cyan-50 text-mugla-navy' : 'border-mugla-navy/10 bg-white text-mugla-navy/55 hover:text-mugla-navy'}`}>{label} <span className="ml-1 text-xs opacity-60">{count}</span></a>)}
+            ].map(([label, count]) => <button key={label} type="button" onClick={() => setProjectCenterTab(String(label))} className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold ${projectCenterTab === label ? 'border-mugla-cyan bg-cyan-50 text-mugla-navy' : 'border-mugla-navy/10 bg-white text-mugla-navy/55 hover:text-mugla-navy'}`}>{label} <span className="ml-1 text-xs opacity-60">{count}</span></button>)}
           </div>
           <div className="grid gap-3 lg:grid-cols-[1fr_160px_160px_160px_auto_auto_auto]">
             <label className="flex items-center gap-2 rounded-xl border border-mugla-navy/15 bg-white px-4 py-3"><Search size={16}/><input className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Ara"/></label>
@@ -979,10 +1091,60 @@ export default function Admin() {
             <Button variant="outline" className="rounded-xl">Excel</Button>
             <Button variant="outline" className="rounded-xl">PDF</Button>
           </div>
+          {projectCenterTab === 'Onay Bekleyen' && <section className="space-y-4 rounded-2xl border border-mugla-orange/20 bg-orange-50/30 p-4">
+            <div>
+              <h3 className="text-lg font-black">Onay bekleyen başvurular</h3>
+              <p className="mt-1 text-sm text-mugla-navy/55">Fikir gönder formundan gelen başvurular otomatik bu alana düşer. Onaylanan projeler proje listesinde oylamaya açılır.</p>
+            </div>
+            {pendingProjects.length > 0 && canReviewProjects && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <label className="flex items-center gap-3 text-sm font-bold text-mugla-navy">
+                <input type="checkbox" className="h-4 w-4 accent-mugla-orange" checked={allPendingSelected} onChange={toggleAllPendingSelection}/>
+                Tüm onay kutularını seç
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" type="button" onClick={() => setMergeSelection([])} disabled={!mergeSelection.length}>Seçimi temizle</Button>
+                <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(mergeSelection, 'Onaylandı')} disabled={!mergeSelection.length}><CheckCircle2 size={15}/> Seçilenleri onayla</Button>
+                <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(mergeSelection, 'Reddedildi')} disabled={!mergeSelection.length}><XCircle size={15}/> Seçilenleri reddet</Button>
+                <Button size="sm" variant="outline" type="button" onClick={() => setMergeFormOpen(value => !value)} disabled={selectedMergeProjects.length < 2}><FolderKanban size={15}/> Manuel proje birleştir</Button>
+                <Button size="sm" variant="orange" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Onaylandı')}><CheckCircle2 size={15}/> Tümünü onayla</Button>
+                <Button size="sm" variant="outline" type="button" onClick={() => reviewMany(pendingProjects.map(project => project.id), 'Reddedildi')}><XCircle size={15}/> Tümünü reddet</Button>
+              </div>
+              {mergeSelection.length >= 2 && <p className="w-full text-xs font-semibold text-mugla-navy/55">{mergeSelection.length} başvuru seçildi. Aynı proje başvurularını tek kayıtta toplamak için Manuel proje birleştir butonunu kullanın.</p>}
+            </div>}
+            {selectedMergeProjects.length >= 2 && mergeFormOpen && <form onSubmit={submitMergedProject} className="grid gap-4 rounded-2xl border border-mugla-cyan/30 bg-cyan-50/40 p-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="md:col-span-2 xl:col-span-3">
+                <p className="text-xs font-bold tracking-[.18em] text-mugla-cyan">BIRLESTIRILMIS PROJE</p>
+                <h3 className="text-lg font-black">Seçili başvuruları tek projeye dönüştür</h3>
+                <p className="mt-1 text-sm text-mugla-navy/55">{selectedMergeProjects.map(project => project.projectCode).join(', ')}</p>
+              </div>
+              <label><span className="mb-2 block text-sm font-semibold">Yeni proje adı</span><input className={field} name="title" required defaultValue={selectedMergeProjects[0]?.title}/></label>
+              <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} name="district" required defaultValue={selectedMergeProjects[0]?.district}>{districts.map(x => <option key={x}>{x}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category" required defaultValue={selectedMergeProjects[0]?.category}>{categories.map(([label]) => <option key={label}>{label}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Tahmini bütçe</span><input className={field} name="budget" type="number" min={0} required defaultValue={selectedMergeProjects.reduce((sum, project) => sum + Number(project.budget || 0), 0)}/></label>
+              <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" defaultValue="Oylamada">{statuses.map(status => <option key={status}>{status}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Hedef Grup</span><select className={field} name="targetGroup" defaultValue={selectedMergeProjects[0]?.targetGroup ?? targetGroups[0]}>{targetGroups.map(group => <option key={group}>{group}</option>)}</select></label>
+              <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Açıklama</span><textarea className={field} name="summary" rows={4} defaultValue={selectedMergeProjects.map(project => project.summary || project.shortDescription || project.title).join('\n\n')}/></label>
+              <label className="md:col-span-2 xl:col-span-3"><span className="mb-2 block text-sm font-semibold">Birleştirme notu</span><textarea className={field} name="mergeNote" rows={3} placeholder="Aynı ihtiyacı anlatan başvurular tek projede toplandı."/></label>
+              <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-3"><Button type="submit" variant="orange"><FolderKanban size={17}/> Projeye dönüştür</Button><Button type="button" variant="outline" onClick={() => setMergeFormOpen(false)}>Vazgeç</Button></div>
+            </form>}
+            {pendingProjects.length ? pendingProjects.map(project => <PendingProjectCard
+              key={project.id}
+              project={project}
+              selected={mergeSelection.includes(project.id)}
+              expanded={expandedProjectDetails === project.id}
+              onToggleMerge={() => toggleMergeSelection(project.id)}
+              onToggleDetails={() => setExpandedProjectDetails(value => value === project.id ? null : project.id)}
+              onApprove={() => approvePendingProject(project)}
+              onReject={() => rejectPendingProject(project)}
+              onRevision={() => requestProjectRevision(project, 'Revizyon İstendi')}
+              onMissingDocument={() => requestProjectRevision(project, 'Eksik Belge')}
+              canReview={canReviewProjects}
+            />) : <div className="py-12 text-center text-mugla-navy/50"><Clock3 className="mx-auto mb-3"/><p className="font-semibold">Onay bekleyen başvuru yok.</p></div>}
+          </section>}
           <div className="overflow-x-auto rounded-xl border border-mugla-navy/10 bg-white">
             <table className="w-full min-w-[1040px] text-left text-sm">
               <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Proje</th><th>İlçe</th><th>Tarih</th><th>Durum</th><th className="text-right">İşlem</th></tr></thead>
-              <tbody>{scopedProjects.length ? scopedProjects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10 hover:bg-mugla-sand/35">
+              <tbody>{projectCenterProjects.length ? projectCenterProjects.map(project => <tr key={project.id} className="border-t border-mugla-navy/10 hover:bg-mugla-sand/35">
                 <td className="p-3"><b className="block">{project.title}</b><span className="text-xs text-mugla-navy/45">{project.projectCode} · {projectCategoryLabel(project)}</span></td>
                 <td>{project.district}</td>
                 <td>{project.createdAt ? new Date(project.createdAt).toLocaleDateString('tr-TR') : '-'}</td>
@@ -990,13 +1152,14 @@ export default function Admin() {
                 <td className="p-3">
                   <div className="flex justify-end gap-1">
                     <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Eye size={14}/> İncele</button>
-                    {canReviewProjects && <button type="button" className={tableAction} onClick={() => approvePendingProject(project)}><CheckCircle2 size={14}/> Onayla</button>}
-                    {canReviewProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => rejectPendingProject(project)}><XCircle size={14}/> Reddet</button>}
+                    {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={tableAction} onClick={() => approvePendingProject(project)}><CheckCircle2 size={14}/> Onayla</button>}
+                    {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => rejectPendingProject(project)}><XCircle size={14}/> Reddet</button>}
                     {canEditProjects && <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Pencil size={14}/> Düzenle</button>}
-                    {canRemoveProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => deleteManagedProject(project)}><Trash2 size={14}/> Çıkar</button>}
+                    {canArchiveProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => archiveProject(project)}><Trash2 size={14}/> Arşiv</button>}
+                    {canPermanentDeleteProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => deleteManagedProject(project)}><Trash2 size={14}/> Kalıcı Sil</button>}
                   </div>
                 </td>
-              </tr>) : <tr><td colSpan={5} className="p-8 text-center text-mugla-navy/45">Henüz proje yok.</td></tr>}</tbody>
+              </tr>) : <tr><td colSpan={5} className="p-8 text-center text-mugla-navy/45">Bu sekmede proje yok.</td></tr>}</tbody>
             </table>
           </div>
         </CardContent>
@@ -1385,61 +1548,170 @@ export default function Admin() {
       </Card>}
 
       {canSeeDistricts && <Card id="ilceler">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE DASHBOARDLARI</p>
-            <h2 className="mt-1 text-xl font-bold">13 ilcenin panel ve API bilgileri</h2>
-            <p className="mt-1 text-sm text-mugla-navy/55">Bu alan yalnizca belediye panelindedir; vatandas panelinde ilce dashboard adresleri ve kodlari gosterilmez.</p>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">ILCE YONETIMI</p>
+              <h2 className="mt-1 text-xl font-bold">{isDistrictManager || isDistrictStaff ? `${adminUser?.district ?? 'Ilce'} Dashboard` : '13 ilce anlik yonetim ekrani'}</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Belediye kullanicilari yalnizca is akisi, proje, oy ve katilim bilgisini gorur. API, kod, token ve entegrasyon detaylari belediye personeline gosterilmez.</p>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mugla-navy/35" size={17}/>
+              <input value={districtSearch} onChange={event => setDistrictSearch(event.target.value)} placeholder="Ilce ara" className="w-full rounded-full border border-mugla-navy/10 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-mugla-cyan"/>
+            </div>
           </div>
-          <Link href="/dashboard" className="hidden text-sm font-semibold text-mugla-blue sm:inline-flex">Tam dashboard <ArrowUpRight className="ml-1" size={15}/></Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {[
+              ['Ilce', districtScope.length.toLocaleString('tr-TR')],
+              ['Toplam Proje', districtScopeProjects.length.toLocaleString('tr-TR')],
+              ['Toplam Oy', districtScopeVotes.toLocaleString('tr-TR')],
+              ['Aktif Oylama', districtScopeActiveVotes.toLocaleString('tr-TR')],
+              ['Katilim', `%${districtScopeParticipation}`],
+            ].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm">
+              <p className="text-sm text-mugla-navy/50">{label}</p>
+              <b className="mt-1 block text-2xl">{value}</b>
+            </div>)}
+          </div>
+
+          <div className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {visibleDistrictDashboards.map(item => <Link key={item.slug} href={item.panelPath} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/65 shadow-sm hover:text-mugla-blue"><MapPin size={14}/>{item.name}</Link>)}
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {muglaDistrictDashboards.map((item) => {
-              const districtProjects = scopedProjects.filter(project => project.district === item.name)
-              return <div key={item.slug} className="relative flex min-h-52 flex-col justify-between overflow-hidden rounded-xl border border-mugla-navy/10 bg-white p-4 shadow-sm">
-                <span className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-mugla-cyan"/>
-                <span className="flex items-center justify-between gap-3"><b>{item.name}</b><span className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-mugla-cyan"><LayoutDashboard size={18}/></span></span>
-                <div className="mt-4 grid grid-cols-4 gap-3 text-xs text-mugla-navy/55">
-                  <span><strong className="block text-base text-mugla-navy">{districtProjects.length}</strong>proje</span>
-                  <span><strong className="block text-base text-mugla-navy">{districtProjects.reduce((sum, project) => sum + project.votes, 0).toLocaleString('tr-TR')}</strong>oy</span>
-                  <span><strong className="block text-base text-mugla-navy">{pendingProjects.filter(project => project.district === item.name).length}</strong>bekleyen</span>
-                  <span><strong className="block text-base text-mugla-navy">{districtProjects.filter(project => project.status === 'Tamamlandı').length}</strong>tamam</span>
+            {visibleDistrictDashboards.map((item) => {
+              const districtProjects = projects.filter(project => project.district === item.name)
+              const districtPending = districtProjects.filter(isPendingReviewProject).length
+              const districtCompleted = districtProjects.filter(project => project.status === 'Tamamlandı').length
+              const districtVotes = districtProjects.reduce((sum, project) => sum + project.votes, 0)
+              const participation = Math.min(100, Math.round(districtVotes / Math.max(1, districtProjects.length * 120) * 100))
+              const workloadTone = districtPending > 20 ? 'bg-red-500' : districtPending > 8 ? 'bg-yellow-400' : 'bg-green-500'
+              const lastProject = [...districtProjects].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+              return <div key={item.slug} className="relative flex min-h-72 flex-col justify-between overflow-hidden rounded-xl border border-mugla-navy/10 bg-white p-4 shadow-sm">
+                <span className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${workloadTone}`}/>
+                <div>
+                  <span className="flex items-center justify-between gap-3">
+                    <b className="inline-flex items-center gap-2"><MapPin size={17} className="text-mugla-orange"/>{item.name}</b>
+                    <span className="grid h-9 w-9 place-items-center rounded-full bg-mugla-sand text-mugla-cyan"><LayoutDashboard size={18}/></span>
+                  </span>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-mugla-navy/55">
+                    <span><strong className="block text-lg text-mugla-navy">{districtProjects.length}</strong>Proje</span>
+                    <span><strong className="block text-lg text-mugla-navy">{districtVotes.toLocaleString('tr-TR')}</strong>Oy</span>
+                    <span><strong className="block text-lg text-mugla-navy">{districtPending}</strong>Bekleyen</span>
+                    <span><strong className="block text-lg text-mugla-navy">{districtCompleted}</strong>Tamamlandi</span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="mb-2 flex items-center justify-between text-xs font-bold text-mugla-navy/55"><span>Katilim</span><span>%{participation}</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-mugla-navy/10"><span className="block h-full rounded-full bg-mugla-cyan" style={{width: `${participation}%`}}/></div>
+                  </div>
+                  <div className="mt-4 rounded-xl bg-mugla-sand/55 px-3 py-2 text-xs text-mugla-navy/60">
+                    <b className="block text-mugla-navy">Son hareket</b>
+                    {lastProject ? `${new Date(lastProject.createdAt).toLocaleString('tr-TR')} - ${lastProject.title}` : 'Henuz yeni hareket yok.'}
+                  </div>
                 </div>
-                <div className="mt-4 grid gap-2">
-                  <Link href={`/dashboard/giris?district=${item.slug}`} className="flex items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-semibold text-white hover:bg-mugla-blue"><LockKeyhole size={15}/> Panel girisi</Link>
-                  <Link href={item.apiPath} className="flex items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white/85 px-4 py-2 text-xs font-semibold text-mugla-navy/60 hover:text-mugla-blue"><Database size={14}/> {item.apiPath}</Link>
-                  <div className="rounded-xl bg-white/75 px-3 py-2 text-xs text-mugla-navy/60"><b className="text-mugla-navy">Kod:</b> {item.accessCode}</div>
-                </div>
+                <Link href={item.panelPath} className="mt-4 flex items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-semibold text-white hover:bg-mugla-blue"><ArrowUpRight size={15}/>{isDistrictManager || isDistrictStaff ? 'Dashboarda Git' : 'Yonet'}</Link>
               </div>
             })}
           </div>
+
+          {isSuperAdmin && <div className="rounded-2xl border border-mugla-cyan/25 bg-cyan-50/35 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-black">Sistem Yonetimi</h3>
+                <p className="mt-1 text-sm text-mugla-navy/55">Bu teknik alan yalnizca Super Admin icindir. Belediye kullanicilari API, webhook, cache, log, token ve ilce kodlarini gormez.</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-mugla-cyan">Super Admin</span>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {muglaDistrictDashboards.map(item => <div key={item.slug} className="rounded-xl bg-white p-3 text-xs text-mugla-navy/60">
+                <b className="block text-sm text-mugla-navy">{item.name}</b>
+                <span className="mt-2 block"><b>API:</b> {item.apiPath}</span>
+                <span className="block"><b>Kod:</b> {item.accessCode}</span>
+                <div className="mt-2 flex flex-wrap gap-2">{['Webhook', 'Database', 'Cache', 'Log', 'Token', 'Yetkiler'].map(label => <span key={label} className="rounded-full bg-mugla-sand px-2 py-1 font-bold">{label}</span>)}</div>
+              </div>)}
+            </div>
+          </div>}
         </CardContent>
       </Card>}
 
       {canSeeVoting && <Card id="oylamalar">
         <CardHeader>
-          <h2 className="text-xl font-bold">Oylama leaderboard</h2>
-          <p className="text-sm text-mugla-navy/55">Onaylı projeler oy sayısına göre sıralanır. Bu tablo hangi projenin ne kadar oylandığını sayısal olarak gösterir.</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">ROL BAZLI CANLI OYLAMA</p>
+              <h2 className="mt-1 flex items-center gap-2 text-xl font-bold"><Trophy size={21} className="text-mugla-orange"/> Oylama liderleri</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">{isDistrictManager ? `${adminUser?.district ?? 'Kendi ilceniz'} kapsamindaki projeler listelenir.` : 'Yetkili roller icin karar destek amacli siralama, katilim ve oylama ozeti.'} Teknik komisyon, CRM ve vatandas ekranlarinda canli siralama acilmaz.</p>
+            </div>
+            {canManageVoting && <div className="flex flex-wrap gap-2">
+              <Button variant="outline"><Clock3 size={16}/> Takvimi Yonet</Button>
+              <Button variant="orange"><Vote size={16}/> Oylamayi Yonet</Button>
+            </div>}
+          </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {voteLeaderboard.length ? <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wider text-mugla-navy/45">
-              <tr><th className="pb-4">Sıra</th><th>Proje</th><th>İlçe</th><th>Kategori</th><th>Durum</th><th className="text-right">Oy</th></tr>
-            </thead>
-            <tbody>{voteLeaderboard.map((project, index) => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45">
-              <td className="py-4"><span className="inline-grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black text-mugla-navy/65">{index + 1}</span></td>
-              <td className="font-semibold">{project.title}</td>
-              <td>{project.district}</td>
-              <td><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/></td>
-              <td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td>
-              <td className="text-right text-lg font-black">{project.votes.toLocaleString('tr-TR')}</td>
-            </tr>)}</tbody>
-          </table> : <div className="py-12 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz oy verisi yok.</p><p className="mt-1 text-sm">Vatandaşlar sepetlerini onayladığında leaderboard otomatik güncellenir.</p></div>}
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-4">
+            <label><span className="mb-2 block text-sm font-semibold">Ilce</span><select className={field} value={effectiveVoteDistrict} disabled={isDistrictManager} onChange={event => setVoteDistrictFilter(event.target.value)}><option value="">Tum ilceler</option>{voteDistrictOptions.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} value={voteCategoryFilter} onChange={event => setVoteCategoryFilter(event.target.value)}><option value="">Tumu</option>{categories.map(([label]) => <option key={label}>{label}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Mahalle</span><select className={field} value={voteNeighborhoodFilter} onChange={event => setVoteNeighborhoodFilter(event.target.value)}><option value="">Tumu</option>{voteNeighborhoodOptions.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Donem</span><select className={field} value={votePeriodFilter} onChange={event => setVotePeriodFilter(event.target.value)}>{['2027','2026','2025'].map(item => <option key={item}>{item}</option>)}</select></label>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
+            <div className="overflow-x-auto rounded-2xl border border-mugla-navy/10 bg-white">
+              {voteLeaderboard.length ? <table className="w-full min-w-[820px] text-left text-sm">
+                <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45">
+                  <tr><th className="p-4">Sira</th><th>Proje</th><th>Ilce</th><th>Kategori</th><th>Durum</th><th className="text-right">Oy</th></tr>
+                </thead>
+                <tbody>{voteLeaderboard.map((project, index) => <tr key={project.id} onClick={() => canSeeVoteDetails && setManagedProjectId(project.id)} className="border-t border-mugla-navy/10 hover:bg-mugla-sand/45">
+                  <td className="p-4"><span className="inline-grid h-8 w-8 place-items-center rounded-full bg-mugla-sand text-xs font-black text-mugla-navy/65">{index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</span></td>
+                  <td className="font-semibold">{project.title}<span className="mt-1 block text-xs font-normal text-mugla-navy/45">{project.neighborhood || project.applicantDistrict || 'Mahalle ozeti yok'}</span></td>
+                  <td>{project.district}</td>
+                  <td><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/></td>
+                  <td><span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">{project.status}</span></td>
+                  <td className="text-right text-lg font-black">{project.votes.toLocaleString('tr-TR')}</td>
+                </tr>)}</tbody>
+              </table> : <div className="py-12 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz oy verisi yok.</p><p className="mt-1 text-sm">Canlı sayaçlar vatandaş oyları geldikçe sıfırdan otomatik artar.</p></div>}
+            </div>
+
+            <aside className="space-y-3">
+              {[
+                ['Katilim', `%${participationRate}`],
+                ['Toplam Oy', voteTotal.toLocaleString('tr-TR')],
+                ['Aktif Secmen', activeVoterEstimate.toLocaleString('tr-TR')],
+              ].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm">
+                <p className="text-sm text-mugla-navy/50">{label}</p>
+                <b className="mt-1 block text-2xl">{value}</b>
+              </div>)}
+              <div className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/55 p-4 text-sm leading-6 text-mugla-navy/60">
+                <b className="text-mugla-navy">Gizlilik</b>
+                <p className="mt-1">Vatandas isimleri ve kim kime oy verdi bilgisi bu ekranda gosterilmez.</p>
+              </div>
+            </aside>
+          </div>
+
+          {isSuperAdmin && <div className="rounded-2xl border border-mugla-cyan/25 bg-cyan-50/35 p-4">
+            <h3 className="flex items-center gap-2 font-black"><ShieldCheck size={18} className="text-mugla-cyan"/> Super Admin guvenlik sekmeleri</h3>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+              {[
+                ['Canli Oy Akisi', Activity],
+                ['Supheli Oylar', AlertTriangle],
+                ['IP Analizi', Database],
+                ['Bot Kontrolu', ShieldCheck],
+                ['Loglar', FileText],
+                ['AI Analizi', BarChart3],
+              ].map(([label, Icon]) => {
+                const IconComponent = Icon as LucideIcon
+                return <button key={String(label)} type="button" className="flex items-center gap-2 rounded-xl bg-white px-3 py-3 text-left text-xs font-black text-mugla-navy/65 shadow-sm hover:text-mugla-blue"><IconComponent size={16}/>{String(label)}</button>
+              })}
+            </div>
+          </div>}
         </CardContent>
       </Card>}
 
-      {canSeeProjects && <Card id="onay-kutusu">
+      {false && canSeeProjects && <Card id="onay-kutusu">
         <CardHeader><h2 className="text-xl font-bold">Onay bekleyen basvurular</h2><p className="text-sm text-mugla-navy/55">Onaylanan projeler proje listesinde oylamaya acilir.</p></CardHeader>
         <CardContent className="space-y-4">
           {pendingProjects.length > 0 && canReviewProjects && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
@@ -1493,8 +1765,60 @@ export default function Admin() {
       </Card>}
 
       {canSeeProjects && <Card id="proje-havuzu">
-        <CardHeader><h2 className="text-xl font-bold">Proje Havuzu</h2><p className="text-sm text-mugla-navy/55">Onaylanan, reddedilen veya süreçteki tüm proje kayıtları veri havuzu olarak burada kalır.</p></CardHeader>
-        <CardContent className="overflow-x-auto">{scopedProjects.length ? <table className="w-full min-w-[1040px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-4">Kod</th><th>Proje</th><th>Ilce</th><th>Hedef Grup</th><th>Butce</th><th>Durum</th><th>Onay</th><th>Gorsel</th><th className="text-right">Islem</th></tr></thead><tbody>{scopedProjects.map(project => <tr key={project.id} onClick={() => setManagedProjectId(project.id)} className="cursor-pointer border-t border-mugla-navy/10 hover:bg-mugla-sand/45"><td className="py-4"><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span></td><td className="font-semibold">{project.title}</td><td>{project.district}</td><td>{project.targetGroup ?? 'Herkes'}</td><td>{formatBudget(project.budget)}</td><td><span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-mugla-orange">{project.status}</span></td><td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-semibold text-mugla-navy/65">{project.moderationStatus}</span></td><td><span className={`rounded-full px-3 py-1 text-xs font-bold ${project.image ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/45'}`}>{project.image ? 'Var' : 'Yok'}</span></td><td className="text-right"><div className="flex justify-end gap-1">{canEditProjects ? <button type="button" className={tableAction} onClick={(event) => {event.stopPropagation(); setManagedProjectId(project.id)}}><Pencil size={14}/> Düzenle</button> : <button type="button" className={tableAction} onClick={(event) => {event.stopPropagation(); setManagedProjectId(project.id)}}><Eye size={14}/> Gör</button>}{canRemoveProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={(event) => {event.stopPropagation(); deleteManagedProject(project)}}><Trash2 size={14}/> Çıkar</button>}</div></td></tr>)}</tbody></table> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Henüz proje havuzu kaydı yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada arşivlenir.</p></div>}</CardContent>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">KALICI PROJE HAFIZASI</p>
+              <h2 className="mt-1 text-xl font-bold">Proje Havuzu</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Tüm başvurular tek havuzda tutulur; kayıtlar silinmez, yaşam döngüsü durumu değişir. Kalıcı silme yalnızca Super Admin için iki aşamalı doğrulamayla açıktır.</p>
+            </div>
+            {isSuperAdmin && <div className="flex flex-wrap gap-2">
+              <Button variant="outline"><FileSpreadsheet size={16}/> Toplu Dışa Aktar</Button>
+              <Button variant="outline"><ShieldCheck size={16}/> Veri Bütünlüğü</Button>
+            </div>}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {projectPoolStages.map(stage => <button key={stage} type="button" onClick={() => setPoolStatusFilter(stage)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition ${poolStatusFilter === stage ? 'bg-mugla-navy text-white' : 'bg-white text-mugla-navy/60 hover:text-mugla-navy'}`}>{stage}<span className="ml-2 rounded-full bg-white/20 px-2">{stage === 'Tümü' ? scopedProjects.length : scopedProjects.filter(project => projectLifecycleLabel(project) === stage).length}</span></button>)}
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} value={poolDistrictFilter} disabled={isDistrictManager} onChange={event => setPoolDistrictFilter(event.target.value)}><option value="">Tümü</option>{poolDistrictOptions.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Mahalle</span><select className={field} value={poolNeighborhoodFilter} onChange={event => setPoolNeighborhoodFilter(event.target.value)}><option value="">Tümü</option>{poolNeighborhoodOptions.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} value={poolCategoryFilter} onChange={event => setPoolCategoryFilter(event.target.value)}><option value="">Tümü</option>{categories.map(([label]) => <option key={label}>{label}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} value={poolStatusFilter} onChange={event => setPoolStatusFilter(event.target.value)}>{projectPoolStages.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Tarih</span><input className={field} type="date"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Anahtar kelime</span><input className={field} value={poolKeyword} onChange={event => setPoolKeyword(event.target.value)} placeholder="Proje adı veya kod"/></label>
+          </div>
+
+          {filteredPoolProjects.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredPoolProjects.map(project => {
+              const lifecycle = projectLifecycleLabel(project)
+              const history = projectHistory(project)
+              const last = history[history.length - 1]
+              return <article key={project.id} className="overflow-hidden rounded-2xl border border-mugla-navy/10 bg-white shadow-sm">
+                <div className="relative aspect-[16/8] bg-mugla-sand">
+                  {project.image ? <img src={project.image.dataUrl} alt={project.title} className="h-full w-full object-cover"/> : <div className="grid h-full place-items-center text-mugla-navy/35"><ImagePlus size={34}/></div>}
+                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="line-clamp-2 font-black">{project.title}</h3>
+                    <span className="shrink-0 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-mugla-orange">{lifecycle}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-mugla-navy/55">
+                    <span><b className="block text-mugla-navy">İlçe</b>{project.district}</span>
+                    <span><b className="block text-mugla-navy">Mahalle</b>{project.neighborhood || project.applicantDistrict || '-'}</span>
+                    <span><b className="block text-mugla-navy">Kategori</b>{projectCategoryLabel(project)}</span>
+                    <span><b className="block text-mugla-navy">Son işlem</b>{last ? new Date(last.date).toLocaleDateString('tr-TR') : '-'}</span>
+                  </div>
+                  <button type="button" onClick={() => setManagedProjectId(project.id)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-bold text-white hover:bg-mugla-blue"><Eye size={15}/> Detay</button>
+                </div>
+              </article>
+            })}
+          </div> : <div className="py-14 text-center text-mugla-navy/50"><FolderKanban className="mx-auto mb-3"/><p className="font-semibold">Bu filtrelerde proje yok.</p><p className="mt-1 text-sm">Vatandaş başvuruları ve manuel kayıtlar burada kalıcı hafıza olarak tutulur.</p></div>}
+        </CardContent>
       </Card>}
 
       {managedProject && <div className="fixed inset-0 z-50 bg-mugla-navy/35 backdrop-blur-[1px]" onClick={() => setManagedProjectId(null)}>
@@ -1513,17 +1837,43 @@ export default function Admin() {
               canReview={canReviewProjects}
             />
 
-            {isSuperAdmin && <Card>
-              <CardHeader><h2 className="text-xl font-bold">Süper admin kararları</h2><p className="text-sm text-mugla-navy/55">Son karar mercii bu alandan projeyi oylama, kazanan, uygulama ve arşiv aşamalarına taşır.</p></CardHeader>
+            <Card>
+              <CardHeader>
+                <h2 className="text-xl font-bold">Proje detay sekmeleri</h2>
+                <p className="text-sm text-mugla-navy/55">Bu detay ekranı proje havuzundaki tek kaydın farklı görünümleridir; proje başka tabloya taşınmaz.</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {['Genel Bilgiler', 'Başvuru Belgeleri', 'Fotoğraflar', 'Teknik Değerlendirme', 'AI Analizi', 'Süreç Geçmişi', 'Vatandaş Bildirimleri'].map(item => <span key={item} className="shrink-0 rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/60">{item}</span>)}
+                </div>
+                <section className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+                  <h3 className="font-black">Süreç Geçmişi</h3>
+                  <div className="mt-4 space-y-3">
+                    {projectHistory(managedProject).map(entry => <div key={entry.id} className="relative border-l-2 border-mugla-cyan/30 pl-4">
+                      <span className="absolute -left-[7px] top-1 h-3 w-3 rounded-full bg-mugla-cyan"/>
+                      <p className="text-xs font-black text-mugla-cyan">{new Date(entry.date).toLocaleString('tr-TR')}</p>
+                      <p className="mt-1 text-sm font-bold">{entry.action}</p>
+                      <p className="text-xs text-mugla-navy/50">{entry.actor ?? 'Sistem'}{entry.note ? ` · ${entry.note}` : ''}</p>
+                    </div>)}
+                  </div>
+                </section>
+              </CardContent>
+            </Card>
+
+            {(canSendProjectsToVote || canArchiveProjects || canRestoreProjects || isDistrictManager || isEvaluator || isSuperAdmin) && <Card>
+              <CardHeader><h2 className="text-xl font-bold">Proje havuzu işlemleri</h2><p className="text-sm text-mugla-navy/55">Durum değişiklikleri süreç geçmişine işlenir. Arşiv kayıtları havuzda korunur.</p></CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProject(managedProject.id, {workflowStatus: 'Yayında', status: 'Oylamada'}); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Aç</Button>
-                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'})}>Oylama Tarihini Belirle</Button>
-                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Oylamaya Hazır'})}>Planlandı</Button>
-                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'})}>Kazanan İlan Et</Button>
-                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor'})}>İlçeye Geri Gönder</Button>
-                <Button variant="outline" onClick={() => updateProject(managedProject.id, {workflowStatus: 'Tamamlandı', status: 'Tamamlandı'})}>Projeyi Kilitle</Button>
-                <Button variant="outline" onClick={() => {rejectPendingProject(managedProject); setManagedProjectId(null)}}>Projeyi Arşivle</Button>
-                <Button variant="outline" className="border-red-100 bg-red-50 text-red-700 hover:bg-red-100" onClick={() => deleteManagedProject(managedProject)}><Trash2 size={17}/> Projeyi Çıkar</Button>
+                {canSendProjectsToVote && <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProjectWithHistory(managedProject, {workflowStatus: 'Yayında', status: 'Oylamada'}, 'Proje oylamaya gönderildi', managedProject.title); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Gönder</Button>}
+                {canSendProjectsToVote && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'}, 'Oylama tarihi planlandı', managedProject.title)}>Oylama Tarihini Belirle</Button>}
+                {canSendProjectsToVote && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'}, 'Kazanan ilan edildi', managedProject.title)}>Kazanan İlan Et</Button>}
+                {(canReviewProjects || isEvaluator) && <Button variant="outline" onClick={() => requestProjectRevision(managedProject, 'Revizyon İstendi')}>Revizyon İste</Button>}
+                {isEvaluator && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {}, 'Teknik komisyon önerisi: uygun', managedProject.title)}>Teknik Uygun</Button>}
+                {isEvaluator && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {}, 'Teknik komisyon önerisi: uygun değil', managedProject.title)}>Teknik Uygun Değil</Button>}
+                {canReviewProjects && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Muğla BB İncelemesinde', moderationStatus: 'Bekliyor'}, 'İlçeye geri gönderildi', managedProject.title)}>İlçeye Geri Gönder</Button>}
+                {canSendProjectsToVote && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Tamamlandı', status: 'Tamamlandı'}, 'Proje tamamlandı', managedProject.title)}>Tamamlandı</Button>}
+                {canArchiveProjects && projectLifecycleLabel(managedProject) !== 'Arşiv' && <Button variant="outline" onClick={() => archiveProject(managedProject)}>Arşive Taşı</Button>}
+                {canRestoreProjects && projectLifecycleLabel(managedProject) === 'Arşiv' && <Button variant="outline" onClick={() => restoreProject(managedProject)}>Geri Yükle</Button>}
+                {canPermanentDeleteProjects && <Button variant="outline" className="border-red-100 bg-red-50 text-red-700 hover:bg-red-100" onClick={() => deleteManagedProject(managedProject)}><Trash2 size={17}/> Kalıcı Sil</Button>}
               </CardContent>
             </Card>}
           </div>

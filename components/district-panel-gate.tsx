@@ -6,15 +6,26 @@ import {LogIn} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import type {MuglaDistrictDashboard} from '@/lib/district-dashboards'
 import {getDistrictSession} from '@/lib/district-auth'
+import {getCurrentAdmin, normalizeAdminRole} from '@/lib/admin-auth'
 
 export function DistrictPanelGate({district,children}:{district:MuglaDistrictDashboard;children:React.ReactNode}){
   const[allowed,setAllowed]=useState(false)
   const[ready,setReady]=useState(false)
 
   useEffect(()=>{
-    setAllowed(Boolean(getDistrictSession(district.slug)))
-    setReady(true)
-  },[district.slug])
+    let mounted = true
+    async function checkAccess() {
+      const sessionAllowed = Boolean(getDistrictSession(district.slug))
+      const admin = await getCurrentAdmin()
+      const role = normalizeAdminRole(admin?.role)
+      const adminAllowed = role === 'super-admin' || role === 'belediye-admin' || ((role === 'ilce-yoneticisi' || role === 'yetkili') && admin?.district === district.name)
+      if (!mounted) return
+      setAllowed(sessionAllowed || adminAllowed)
+      setReady(true)
+    }
+    checkAccess()
+    return () => {mounted = false}
+  },[district.name, district.slug])
 
   if(!ready)return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6"><div className="rounded-3xl bg-white p-8 shadow-soft">Panel kontrol ediliyor...</div></main>
 

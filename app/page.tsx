@@ -267,9 +267,9 @@ export default function Home() {
       <div className="absolute inset-0 bg-gradient-to-r from-mugla-navy/94 via-mugla-navy/74 to-mugla-navy/36"/>
       <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:py-20">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Evrensel Katılımcı Bütçe uygulaması</p>
-          <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-5xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/78">Vatandaş fikrini gönderir, belediye projeleri yayınlar, herkes süreci ve ilgi gören kategorileri canlı olarak takip eder.</p>
+          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Muğla Senin Bütçen Katılımcı Bütçe Platformu</p>
+          <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-5xl">Senin Fikrin, Muğla'nın Geleceği</h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/78">Muğla'yı daha yaşanabilir, daha sürdürülebilir ve daha güçlü bir kent haline getirecek fikirlerini paylaş. Her öneri değerlidir, her oy geleceğe atılan bir adımdır.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy shadow-soft"><FolderKanban size={18}/> Projeleri gör</Link>
           </div>

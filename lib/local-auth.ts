@@ -172,6 +172,26 @@ export async function loginUser(emailInput: string, password: string) {
   return updated
 }
 
+export function findUserForPasswordReset(input: {method: 'email' | 'phone'; value: string}) {
+  const value = input.method === 'email' ? input.value.trim().toLocaleLowerCase('tr') : input.value.trim()
+  return listLocalUsers().find(user => input.method === 'email' ? user.email === value : user.phone === value) ?? null
+}
+
+export async function resetUserPassword(input: {method: 'email' | 'phone'; value: string; newPassword: string}) {
+  if (input.newPassword.length < 8) throw new Error('Yeni sifre en az 8 karakter olmalidir.')
+  const user = findUserForPasswordReset(input)
+  if (!user) throw new Error(input.method === 'email' ? 'Bu e-posta adresiyle kayitli hesap bulunamadi.' : 'Bu telefon numarasiyla kayitli hesap bulunamadi.')
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const passwordHash = await derive(input.newPassword, salt)
+  const updated = {
+    ...user,
+    salt: bytesToBase64(salt),
+    passwordHash,
+  }
+  saveUsers(listLocalUsers().map(item => item.id === user.id ? updated : item))
+  return updated
+}
+
 export function createCitizenSessionTransfer(user: LocalUser) {
   const payload = {
     version: 1,

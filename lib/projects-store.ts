@@ -8,6 +8,14 @@ export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın K
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
 export type ProjectWorkflowStatus='Taslak'|'İlçe Admin İncelemesinde'|'Muğla BB İncelemesinde'|'Oylamaya Hazır'|'Yayında'|'Kazandı'|'Uygulanıyor'|'Tamamlandı'|'Revizyon İstendi'|'Eksik Belge'|'Reddedildi'
 
+export type ProjectHistoryEntry={
+  id:string
+  date:string
+  actor?:string
+  action:string
+  note?:string
+}
+
 export type ProjectRecord={
   id:string
   projectCode:string
@@ -58,6 +66,7 @@ export type ProjectRecord={
   applicantType?:string
   mergedFrom?:string[]
   mergeNote?:string
+  processHistory?:ProjectHistoryEntry[]
 }
 
 export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}

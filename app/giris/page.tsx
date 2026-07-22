@@ -3,9 +3,9 @@
 import {FormEvent,useEffect,useState} from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import {ArrowLeft,BadgeCheck,LockKeyhole,ShieldCheck,UserPlus} from 'lucide-react'
+import {ArrowLeft,BadgeCheck,KeyRound,LockKeyhole,Mail,Phone,ShieldCheck,UserPlus} from 'lucide-react'
 import {Button} from '@/components/ui/button'
-import {createCitizenSessionTransfer, loginUser, registerUser} from '@/lib/local-auth'
+import {createCitizenSessionTransfer, findUserForPasswordReset, loginUser, registerUser, resetUserPassword} from '@/lib/local-auth'
 import {countries} from '@/lib/locations'
 import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
 import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
@@ -50,11 +50,16 @@ function initialMode(){
 }
 
 export default function Login(){
-  const[mode,setMode]=useState<'login'|'register'>(initialMode)
+  const[mode,setMode]=useState<'login'|'register'|'forgot'>(initialMode)
   const[loading,setLoading]=useState('')
   const[error,setError]=useState('')
   const[message,setMessage]=useState('')
   const[loginEmail,setLoginEmail]=useState('')
+  const[resetStep,setResetStep]=useState<'contact'|'code'|'password'>('contact')
+  const[resetMethod,setResetMethod]=useState<'email'|'phone'>('email')
+  const[resetContact,setResetContact]=useState('')
+  const[resetCode,setResetCode]=useState('')
+  const[resetExpectedCode,setResetExpectedCode]=useState('')
   const[botCheck,setBotCheck]=useState(createBotCheck)
   const[pendingRegistration,setPendingRegistration]=useState<PendingRegistration|null>(null)
   const[activationMethod,setActivationMethod]=useState<'email'|'phone'|''>('')
@@ -74,11 +79,18 @@ export default function Login(){
     setMode(initialMode())
   },[])
 
-  function changeMode(value:'login'|'register'){
+  function changeMode(value:'login'|'register'|'forgot'){
     setMode(value);setError('');setMessage('')
+    if(value==='forgot'){
+      setResetStep('contact')
+      setResetContact('')
+      setResetCode('')
+      setResetExpectedCode('')
+    }
     if(typeof history!=='undefined'){
       const params=new URLSearchParams(location.search)
-      params.set('mode',value)
+      if(value==='forgot') params.set('mode','login')
+      else params.set('mode',value)
       history.replaceState(null,'',`${location.pathname}?${params.toString()}`)
     }
   }
@@ -152,6 +164,51 @@ export default function Login(){
       location.href=target
     }
     catch(cause){setError(cause instanceof Error?cause.message:'Giris yapilamadi.')}
+    finally{setLoading('')}
+  }
+
+  function sendResetCode(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();setError('');setMessage('')
+    const data=new FormData(event.currentTarget)
+    const value=String(data.get('resetContact')??'').trim()
+    if(!value){setError(resetMethod==='email'?'E-posta adresinizi girin.':'Telefon numaranizi girin.');return}
+    const user=findUserForPasswordReset({method:resetMethod,value})
+    if(!user){setError(resetMethod==='email'?'Bu e-posta adresiyle kayitli hesap bulunamadi.':'Bu telefon numarasiyla kayitli hesap bulunamadi.');return}
+    const code=createActivationCode()
+    setResetContact(value)
+    setResetExpectedCode(code)
+    setResetCode('')
+    setResetStep('code')
+    setMessage(`${resetMethod==='email'?user.email:user.phone} icin sifre sifirlama kodu gonderildi. Demo kod: ${code}`)
+  }
+
+  function confirmResetCode(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();setError('');setMessage('')
+    const data=new FormData(event.currentTarget)
+    const code=String(data.get('resetCode')??'').trim()
+    if(code!==resetExpectedCode){setError('Onay kodu hatali. Lutfen gonderilen kodu girin.');return}
+    setResetCode(code)
+    setResetStep('password')
+    setMessage('Kod onaylandi. Yeni sifrenizi belirleyin.')
+  }
+
+  async function changeForgottenPassword(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();setError('');setMessage('');setLoading('reset')
+    const data=new FormData(event.currentTarget)
+    const newPassword=String(data.get('newPassword')??'')
+    const repeat=String(data.get('repeatPassword')??'')
+    if(newPassword.length<8){setError('Yeni sifre en az 8 karakter olmalidir.');setLoading('');return}
+    if(newPassword!==repeat){setError('Yeni sifre tekrari eslesmiyor.');setLoading('');return}
+    try{
+      const user=await resetUserPassword({method:resetMethod,value:resetContact,newPassword})
+      setLoginEmail(user.email)
+      setResetStep('contact')
+      setResetContact('')
+      setResetCode('')
+      setResetExpectedCode('')
+      changeMode('login')
+      setMessage('Sifreniz degisti. Yeni sifrenizle giris yapabilirsiniz.')
+    }catch(cause){setError(cause instanceof Error?cause.message:'Sifre degistirilemedi.')}
     finally{setLoading('')}
   }
 
@@ -232,13 +289,45 @@ export default function Login(){
             <Button type="submit" variant="orange" disabled={!!loading} className="h-14 w-full"><UserPlus size={18}/>{loading==='register'?'Kayit olusturuluyor...':'Kayit Ol ve Dogrula'}</Button>
           </form>
           <button type="button" onClick={()=>changeMode('login')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Hesabınız var mı? Giriş yap</button>
-        </div>):<div>
+        </div>):mode==='forgot'?<div className="rounded-[2rem] bg-white p-6 shadow-soft sm:p-8">
+          <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">SIFRE SIFIRLAMA</p>
+          <h2 className="mt-2 text-3xl font-bold">Sifrenizi yenileyin</h2>
+          <p className="mt-3 text-mugla-navy/55">E-posta veya telefon secin. Sistem her gonderimde degisken bir onay kodu uretir.</p>
+          {resetStep==='contact'&&<form onSubmit={sendResetCode} className="mt-7 space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={()=>{setResetMethod('email');setResetContact('');setError('');setMessage('')}} className={`rounded-2xl border p-4 text-left transition ${resetMethod==='email'?'border-mugla-orange bg-orange-50 text-mugla-navy':'border-mugla-navy/10 bg-mugla-sand text-mugla-navy/60'}`}><Mail size={18} className="mb-2"/><b className="block">E-posta adresi</b></button>
+              <button type="button" onClick={()=>{setResetMethod('phone');setResetContact('');setError('');setMessage('')}} className={`rounded-2xl border p-4 text-left transition ${resetMethod==='phone'?'border-mugla-orange bg-orange-50 text-mugla-navy':'border-mugla-navy/10 bg-mugla-sand text-mugla-navy/60'}`}><Phone size={18} className="mb-2"/><b className="block">Telefon numarasi</b></button>
+            </div>
+            <label className="block"><span className="mb-2 block text-sm font-semibold">{resetMethod==='email'?'E-posta adresi':'Telefon numarasi'}</span><input required name="resetContact" type={resetMethod==='email'?'email':'tel'} inputMode={resetMethod==='email'?'email':'tel'} autoComplete={resetMethod==='email'?'email':'tel'} placeholder={resetMethod==='email'?'ornek@mail.com':'05xx xxx xx xx'} className={field}/></label>
+            {message&&<p className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</p>}
+            {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+            <Button type="submit" variant="orange" className="h-14 w-full"><KeyRound size={18}/>Onay Kodu Gonder</Button>
+          </form>}
+          {resetStep==='code'&&<form onSubmit={confirmResetCode} className="mt-7 space-y-4">
+            <label className="block"><span className="mb-2 block text-sm font-semibold">Onay kodu</span><input required name="resetCode" inputMode="numeric" placeholder="6 haneli kod" className={field}/></label>
+            {message&&<p className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</p>}
+            {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+            <Button type="submit" variant="orange" className="h-14 w-full"><ShieldCheck size={18}/>Kodu Onayla</Button>
+            <button type="button" onClick={()=>{setResetStep('contact');setResetExpectedCode('');setResetCode('');setMessage('');setError('')}} className="w-full text-center text-sm font-semibold text-mugla-blue">Farkli e-posta veya telefon kullan</button>
+          </form>}
+          {resetStep==='password'&&<form onSubmit={changeForgottenPassword} className="mt-7 space-y-4">
+            <div className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">Kod onaylandi. Yeni sifrenizi belirleyebilirsiniz.</div>
+            <label className="block"><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input required name="newPassword" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
+            <label className="block"><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input required name="repeatPassword" type="password" autoComplete="new-password" className={field} minLength={8}/></label>
+            {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+            <Button type="submit" disabled={!!loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading==='reset'?'Sifre degistiriliyor...':'Sifreyi Degistir'}</Button>
+          </form>}
+          <button type="button" onClick={()=>changeMode('login')} className="mt-5 w-full text-center text-sm font-semibold text-mugla-blue">Giris ekranina don</button>
+        </div>:<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">GUVENLI GIRIS</p>
           <h2 className="mt-2 text-3xl font-bold">Hesabina giris yap</h2>
           <p className="mt-3 text-mugla-navy/55">Dogrulanmis hesabinla devam et.</p>
           <form onSubmit={login} className="mt-8 space-y-4">
             <label className="block"><span className="mb-2 block text-sm font-semibold">E-posta</span><input required name="email" type="email" autoComplete="email" className={field} value={loginEmail} onChange={e=>setLoginEmail(e.target.value)}/></label>
             <label className="block"><span className="mb-2 block text-sm font-semibold">Sifre</span><input required name="password" type="password" autoComplete="current-password" className={field}/></label>
+            <div className="flex justify-end">
+              <button type="button" onClick={()=>changeMode('forgot')} className="text-sm font-semibold text-mugla-blue hover:text-mugla-orange">Sifrenizi unuttunuz?</button>
+            </div>
             {message&&<p className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</p>}
             {error&&<p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
             <Button type="submit" disabled={!!loading} className="h-14 w-full"><LockKeyhole size={18}/>{loading==='login'?'Giris yapiliyor...':'Giris Yap'}</Button>
