@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BarChart3, Bell, Building2, FileBarChart, FolderKanban, Home, Lightbulb, LogOut, MessageSquare, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
+import {BarChart3, Bell, BookOpen, Building2, FileBarChart, FolderKanban, Home, Lightbulb, LogOut, Mail, MessageCircleQuestion, MessageSquare, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
@@ -15,6 +15,14 @@ const citizen = [
   ['/fikir-gonder', 'Fikir Gönder', Lightbulb],
   ['/projeler#oy-ver', 'Oy Ver', Vote],
   ['/vatandas/panel#panelim', 'Hesabım', UserRound],
+] as const
+
+const citizenMainTabs = [
+  ['/', 'Muğla Senin Bütçen', Home],
+  ['/projeler', 'Projeler', FolderKanban],
+  ['/sss', 'S.S.S.', MessageCircleQuestion],
+  ['/kitapcik', 'Kitapçık', BookOpen],
+  ['/iletisim', 'İletişim', Mail],
 ] as const
 
 const admin = [
@@ -34,7 +42,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
   const [user, setUser] = useState<LocalUser | null>(null)
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const adminRole = normalizeAdminRole(adminUser?.role)
-  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizen
+  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizenMainTabs
 
   useEffect(() => {
     const sync = () => {
@@ -69,7 +77,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
           <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
         </span>
-        <span className="font-bold leading-tight">Mugla<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
+        <span className="font-bold leading-tight">Muğla<br/><small className="font-normal tracking-wider text-white/65">Senin Bütçen</small></span>
       </Link>
       <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {

@@ -8,7 +8,7 @@ import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {useProjects} from '@/lib/projects-store'
 
 const navItems = [
-  {href: '/', label: 'Ana sayfa', icon: Home},
+  {href: '/', label: 'Muğla Senin Bütçen', icon: Home},
   {href: '/projeler', label: 'Projeler', icon: FolderKanban},
   {href: '/sss', label: 'S.S.S.', icon: MessageCircleQuestion},
   {href: '/kitapcik', label: 'Kitapçık', icon: BookOpen},

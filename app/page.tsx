@@ -194,13 +194,11 @@ export default function Home() {
           <span className="text-sm font-bold leading-tight">Muğla Senin<br/><span className="text-mugla-orange">Bütçen</span></span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
-          <Link href="/">Ana Sayfa</Link>
+          <Link href="/">Muğla Senin Bütçen</Link>
           <Link href="/projeler">Projeler</Link>
-          <Link href="/fikir-gonder">Fikir Gönder</Link>
-          <Link href="/projeler#oy-ver">Oy Ver</Link>
-          <Link href="/projeler#sonuclar">Sonuçlar</Link>
-          <Link href="/nasil-isler">Nasıl İşler?</Link>
-          <Link href="/vatandas/panel">Hesabım</Link>
+          <Link href="/sss">S.S.S.</Link>
+          <Link href="/kitapcik">Kitapçık</Link>
+          <Link href="/iletisim">İletişim</Link>
         </nav>
         <div className="flex items-center gap-2"><SiteUserMenu showLogin/></div>
       </div>
