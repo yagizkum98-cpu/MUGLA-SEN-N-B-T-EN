@@ -4,35 +4,25 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BarChart3, Bell, BookOpen, Building2, FileBarChart, FolderKanban, Home, Lightbulb, LogOut, Mail, MessageCircleQuestion, MessageSquare, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
+import {Bell, Building2, FileBarChart, FolderKanban, Home, LogOut, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
 
 const citizen = [
-  ['/', 'Ana Sayfa', Home],
+  ['/vatandas/panel#panelim', 'Panelim', Home],
   ['/projeler', 'Projeler', FolderKanban],
-  ['/fikir-gonder', 'Fikir Gönder', Lightbulb],
-  ['/projeler#oy-ver', 'Oy Ver', Vote],
-  ['/vatandas/panel#panelim', 'Hesabım', UserRound],
-] as const
-
-const citizenMainTabs = [
-  ['/', 'Muğla Senin Bütçen', Home],
-  ['/projeler', 'Projeler', FolderKanban],
-  ['/sss', 'S.S.S.', MessageCircleQuestion],
-  ['/kitapcik', 'Kitapçık', BookOpen],
-  ['/iletisim', 'İletişim', Mail],
+  ['/vatandas/panel#sepetim', 'Sepetim', ShoppingCart],
+  ['/vatandas/panel#profil', 'Profil', UserRound],
 ] as const
 
 const admin = [
   {href: '/admin#dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
   {href: '/admin#projeler', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
-  {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
-  {href: '/admin#crm', label: 'CRM', icon: MessageSquare, roles: ['super-admin', 'belediye-admin', 'crm', 'ilce-yoneticisi', 'yetkili']},
   {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin']},
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin']},
 ] as const
@@ -42,7 +32,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
   const [user, setUser] = useState<LocalUser | null>(null)
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const adminRole = normalizeAdminRole(adminUser?.role)
-  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizenMainTabs
+  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizen
 
   useEffect(() => {
     const sync = () => {
@@ -77,7 +67,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
           <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
         </span>
-        <span className="font-bold leading-tight">Muğla<br/><small className="font-normal tracking-wider text-white/65">Senin Bütçen</small></span>
+        <span className="font-bold leading-tight">Mugla<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
       </Link>
       <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {
@@ -89,9 +79,9 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         })}
       </nav>
       <div className="mt-auto hidden rounded-lg bg-white/10 p-4 md:block">
-        <p className="text-sm font-semibold">{displayName ?? (role === 'admin' ? 'Yonetim' : 'Vatandas')}</p>
+        <p className="text-sm font-semibold">{displayName ?? (role === 'admin' ? 'Yönetim' : 'Vatandaş')}</p>
         <p className="text-xs text-white/55">{displayNote}</p>
-        {(user || adminUser) && <button type="button" onClick={signOut} className="mt-3 flex items-center gap-2 text-xs text-white/55 hover:text-white"><LogOut size={14}/> Cikis</button>}
+        {(user || adminUser) && <button type="button" onClick={signOut} className="mt-3 flex items-center gap-2 text-xs text-white/55 hover:text-white"><LogOut size={14}/> Çıkış</button>}
       </div>
     </aside>
     <div className={cn('min-w-0 flex-1', role === 'citizen' && 'pb-20 md:pb-0')}>{children}</div>

@@ -173,9 +173,9 @@ export default function IdeaForm(){
     <section className="w-full max-w-xl rounded-[32px] bg-white p-10 text-center shadow-soft">
       <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-green-50 text-mugla-green"><CheckCircle2 size={38}/></span>
       <p className="mt-7 text-xs font-bold tracking-[.2em] text-mugla-orange">BASVURU ALINDI</p>
-      <h1 className="mt-2 text-3xl font-bold">Fikriniz belediye onayina gonderildi.</h1>
+      <h1 className="mt-2 text-3xl font-bold">Fikriniz belediye onay kutusuna gönderildi.</h1>
       <div className="mx-auto mt-5 inline-flex rounded-full bg-mugla-sand px-4 py-2 text-sm font-black text-mugla-navy/70">Proje kodu: {success}</div>
-      <p className="mt-4 leading-7 text-mugla-navy/55">Basvurunuz Bekliyor durumuyla kaydedildi. Belediye onayladiginda proje kesfet alaninda oylamaya acilacak.</p>
+      <p className="mt-4 leading-7 text-mugla-navy/55">Başvurunuz Bekliyor durumuyla proje havuzuna otomatik kaydedildi. Yetkili ekip onay veya red kararını belediye panelindeki onay kutusundan verir.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/projeler"><Button variant="orange">Projeleri goruntule</Button></Link>
         <Button variant="outline" onClick={()=>setSuccess('')}>Yeni fikir gonder</Button>
@@ -256,7 +256,7 @@ export default function IdeaForm(){
           </div>
 
           {error&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
-          <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yuklediginiz belgelerde kisisel veya hassas bilgi bulunmadigindan emin olun. Basvuru gonderildiginde proje havuzuna kaydedilir.</p></div>
+          <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvuru gönderildiğinde proje havuzuna ve belediye onay/red kutusuna otomatik kaydedilir.</p></div>
           <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>

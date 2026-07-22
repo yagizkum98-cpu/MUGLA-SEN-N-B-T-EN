@@ -2,18 +2,10 @@
 
 import Link from 'next/link'
 import {useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, BookOpen, FolderKanban, Home, LogOut, Mail, MessageCircleQuestion, UserRound} from 'lucide-react'
+import {ArrowUpRight, LogOut, UserRound} from 'lucide-react'
 import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {useProjects} from '@/lib/projects-store'
-
-const navItems = [
-  {href: '/', label: 'Muğla Senin Bütçen', icon: Home},
-  {href: '/projeler', label: 'Projeler', icon: FolderKanban},
-  {href: '/sss', label: 'S.S.S.', icon: MessageCircleQuestion},
-  {href: '/kitapcik', label: 'Kitapçık', icon: BookOpen},
-  {href: '/iletisim', label: 'İletişim', icon: Mail},
-] as const
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).map(part => part[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || 'V'
@@ -78,12 +70,6 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
           <ArrowUpRight size={16}/>
         </Link>
       </div>
-
-      <nav className="grid grid-cols-2 gap-2 p-3">
-        {navItems.map(({href, label, icon: Icon}) => <Link key={href} href={href} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl bg-mugla-sand/60 px-3 py-2 text-xs font-bold text-mugla-navy/70 hover:text-mugla-navy">
-          <Icon size={15}/>{label}
-        </Link>)}
-      </nav>
 
       <section className="border-t border-mugla-navy/10 p-4">
         <div className="flex items-center justify-between gap-3">

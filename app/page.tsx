@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import {Bell, CheckCircle2, FileText, FolderKanban, Lightbulb, Mail, MapPin, Plus, Vote} from 'lucide-react'
+import {FileText, FolderKanban, Mail} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
 import {formatBudget, useProjects} from '@/lib/projects-store'
@@ -14,22 +14,6 @@ function Stat({label, value, note}: {label: string; value: string; note: string}
     <strong className="mt-2 block text-3xl">{value}</strong>
     <p className="mt-1 text-xs text-mugla-navy/45">{note}</p>
   </div>
-}
-
-function Step({icon: Icon, title, text}: {icon: typeof Lightbulb; title: string; text: string}) {
-  return <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
-    <span className="grid h-11 w-11 place-items-center rounded-lg bg-mugla-sand text-mugla-orange"><Icon size={21}/></span>
-    <h3 className="mt-5 text-lg font-bold">{title}</h3>
-    <p className="mt-2 text-sm leading-6 text-mugla-navy/60">{text}</p>
-  </div>
-}
-
-function QuickAction({href, icon: Icon, title, text}: {href: string; icon: typeof Lightbulb; title: string; text: string}) {
-  return <Link href={href} className="rounded-lg border border-mugla-navy/10 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-mugla-cyan hover:shadow-soft">
-    <span className="grid h-12 w-12 place-items-center rounded-xl bg-mugla-sand text-mugla-orange"><Icon size={22}/></span>
-    <h3 className="mt-4 text-lg font-black">{title}</h3>
-    <p className="mt-2 text-sm leading-6 text-mugla-navy/55">{text}</p>
-  </Link>
 }
 
 type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
@@ -118,29 +102,59 @@ function DecorativeLogoBackground() {
 }
 
 const projectStages = [
-  ['1', 'Proje', 'Başvurularının', 'Alınması'],
-  ['2', 'Ön ve Teknik', 'Değerlendirmelerin', 'Yapılması'],
-  ['3', 'Projelerin', 'Oylamaya', 'Sunulması'],
-  ['4', 'Oylama', 'Sonuçlarının', 'Açıklanması'],
-  ['5', 'Uygulama', 'İzleme ve', 'Raporlama'],
+  {
+    number: '1',
+    stage: ['Proje', 'Başvurularının', 'Alınması'],
+    title: 'Fikir al',
+    text: 'Vatandaş giriş yapar ve fikrini kısa bir formla iletir.',
+  },
+  {
+    number: '2',
+    stage: ['Ön ve Teknik', 'Değerlendirmelerin', 'Yapılması'],
+    title: 'Onayla',
+    text: 'Başvurular incelenir, uygun projeler yayına alınır.',
+  },
+  {
+    number: '3',
+    stage: ['Projelerin', 'Oylamaya', 'Sunulması'],
+    title: 'Oy ver',
+    text: 'Onaylı projeler listelenir ve destek sayısı takip edilir.',
+  },
+  {
+    number: '4',
+    stage: ['Oylama', 'Sonuçlarının', 'Açıklanması'],
+    title: 'Sonuçları açıkla',
+    text: 'Oylama sonuçları şeffaf biçimde duyurulur.',
+  },
+  {
+    number: '5',
+    stage: ['Uygulama', 'İzleme ve', 'Raporlama'],
+    title: 'Takip et',
+    text: 'Proje durumu, bütçe ve ilerleme bilgileri sade biçimde görünür.',
+  },
 ]
 
 function ProjectRoadmap() {
   return <section className="fade-up-card rounded-lg border border-mugla-navy/10 bg-white p-6 shadow-soft md:p-8">
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">Yol Haritası</p>
+      <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">Proje akışı</p>
       <h2 className="mt-3 text-3xl font-black tracking-tight text-mugla-navy md:text-4xl">Projenin Aşamaları Nelerdir?</h2>
     </div>
     <div className="relative mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
       <div className="pointer-events-none absolute left-8 right-8 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-mugla-orange/0 via-mugla-orange/35 to-mugla-orange/0 lg:block"/>
-      {projectStages.map(([number, ...lines], index) => (
-        <div key={number} className="relative flex justify-center" style={{'--fade-delay': `${index * 70}ms`} as Record<string, string>}>
-          <div className="relative grid aspect-square w-full max-w-[178px] place-items-center px-5 text-center text-white shadow-soft transition-transform hover:-translate-y-1">
+      {projectStages.map((item, index) => (
+        <div key={item.number} className="relative flex justify-center" style={{'--fade-delay': `${index * 70}ms`} as Record<string, string>}>
+          <div className="relative grid min-h-[230px] w-full max-w-[220px] place-items-center px-7 py-8 text-center text-white shadow-soft transition-transform hover:-translate-y-1">
             <span className="absolute inset-0 bg-mugla-navy [clip-path:polygon(25%_5%,75%_5%,100%_50%,75%_95%,25%_95%,0_50%)]"/>
             <span className="absolute inset-[5px] bg-gradient-to-br from-mugla-blue via-mugla-cyan to-mugla-green [clip-path:polygon(25%_5%,75%_5%,100%_50%,75%_95%,25%_95%,0_50%)]"/>
-            <span className="absolute -top-2 grid h-10 w-10 place-items-center rounded-full border-4 border-white bg-mugla-orange text-lg font-black text-white shadow-md">{number}</span>
-            <span className="relative mt-4 block text-sm font-black leading-5 md:text-[15px]">
-              {lines.map(line => <span key={line} className="block">{line}</span>)}
+            <span className="absolute -top-2 grid h-10 w-10 place-items-center rounded-full border-4 border-white bg-mugla-orange text-lg font-black text-white shadow-md">{item.number}</span>
+            <span className="relative mt-3 block">
+              <span className="block text-[13px] font-black leading-5 md:text-sm">
+                {item.stage.map(line => <span key={line} className="block">{line}</span>)}
+              </span>
+              <span className="mx-auto my-4 block h-px w-14 bg-white/40"/>
+              <span className="block text-base font-black">{item.title}</span>
+              <span className="mt-2 block text-xs font-semibold leading-5 text-white/82">{item.text}</span>
             </span>
           </div>
         </div>
@@ -153,8 +167,6 @@ export default function Home() {
   const {projects} = useProjects()
   const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
   const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
-  const winners = approved.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan') || String(project.status).startsWith('Tamamland')).sort((a, b) => b.votes - a.votes)
-  const totalVotes = approved.reduce((sum, project) => sum + project.votes, 0)
   const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
   const [municipalityRedirecting, setMunicipalityRedirecting] = useState(false)
   const [citizenRedirecting, setCitizenRedirecting] = useState(false)
@@ -203,75 +215,6 @@ export default function Home() {
         <div className="flex items-center gap-2"><SiteUserMenu showLogin/></div>
       </div>
     </header>
-
-    <section className="relative z-10 overflow-hidden border-b border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-16">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-cyan">Katılımcı bütçe platformu</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-mugla-navy md:text-6xl">Muğla İçin Fikrin Varsa Paylaş</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-mugla-navy/65">Katılımcı bütçe platformuna hoş geldiniz. Projeni paylaş, projeleri incele, oyunu kullan ve Muğla'nın geleceğine birlikte karar ver.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/fikir-gonder" className="inline-flex items-center gap-2 rounded-full bg-mugla-orange px-5 py-3 font-bold text-white"><Plus size={18}/> Fikir Gönder</Link>
-            <Link href="/projeler#oy-ver" className="inline-flex items-center gap-2 rounded-full border border-mugla-navy/15 bg-white px-5 py-3 font-bold text-mugla-navy"><Vote size={18}/> Oy Ver</Link>
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-sm rounded-[2rem] border-[10px] border-mugla-navy bg-mugla-sand p-4 shadow-soft">
-          <div className="rounded-[1.35rem] bg-white p-4">
-            <div className="flex items-center justify-between"><b>Muğla Senin Bütçen</b><span className="rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-green-700">Canlı</span></div>
-            <div className="mt-5 grid gap-3">
-              {active.slice(0, 3).map(project => <div key={project.id} className="rounded-xl border border-mugla-navy/10 p-3">
-                <p className="truncate text-sm font-bold">{project.title}</p>
-                <p className="mt-1 text-xs text-mugla-navy/50">{project.district} · {project.votes.toLocaleString('tr-TR')} oy</p>
-              </div>)}
-              {!active.length && ['Fikir gönder', 'Projeleri incele', 'Oyunu kullan'].map(item => <div key={item} className="rounded-xl border border-mugla-navy/10 p-3 text-sm font-bold">{item}</div>)}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="mx-auto grid max-w-6xl gap-4 px-5 pb-12 md:grid-cols-4">
-        <QuickAction href="/fikir-gonder" icon={Plus} title="Fikir Gönder" text="Proje önerini kısa sihirbazla paylaş."/>
-        <QuickAction href="/projeler#oy-ver" icon={Vote} title="Oy Ver" text="Aktif oylamalardaki projeleri destekle."/>
-        <QuickAction href="/projeler" icon={FolderKanban} title="Projeleri İncele" text="İlçe, kategori ve duruma göre ara."/>
-        <QuickAction href="/projeler#sonuclar" icon={MapPin} title="Kazanan Projeler" text="Kazanan ve tamamlanan işleri takip et."/>
-      </div>
-    </section>
-
-    <section className="relative z-10 mx-auto max-w-6xl px-5 py-12">
-      <div className="grid gap-4 md:grid-cols-4">
-        <Step icon={Lightbulb} title="Fikrini Paylaş" text="Muğla için ihtiyacı ve çözüm önerini gönder."/>
-        <Step icon={CheckCircle2} title="Uzman İncelemesi" text="Belediye ekipleri teknik ve mali uygunluğu inceler."/>
-        <Step icon={Vote} title="Vatandaş Oylaması" text="Onaylı projeler halk oylamasına açılır."/>
-        <Step icon={FolderKanban} title="Uygulamaya Geçiyor" text="Kazanan projeler süreç durumuyla izlenir."/>
-      </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-4">
-        <Stat label="İlçe" value="13" note="Muğla'nın tüm ilçeleri"/>
-        <Stat label="Proje" value={String(approved.length || 420)} note="Yayınlanan ve süreçteki kayıtlar"/>
-        <Stat label="Oy" value={(totalVotes || 28000).toLocaleString('tr-TR')} note="Toplam vatandaş desteği"/>
-        <Stat label="Tamamlanan Proje" value={String(winners.length || 95)} note="Kazanan ve tamamlanan işler"/>
-      </div>
-    </section>
-
-    <section className="relative z-10 border-y border-mugla-navy/10 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-6 px-5 py-12 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <p className="text-xs font-bold tracking-widest text-mugla-cyan">AKTİF OYLAMALAR</p>
-          <h2 className="mt-2 text-2xl font-black">Oy verebileceğin projeler</h2>
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {(active.length ? active : approved.slice(0, 2)).map(project => <Link key={project.id} href="/projeler#oy-ver" className="rounded-lg border border-mugla-navy/10 p-4 hover:border-mugla-orange">
-              <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-bold text-mugla-orange">{project.status}</span>
-              <h3 className="mt-3 font-black">{project.title}</h3>
-              <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} oy</p>
-            </Link>)}
-          </div>
-        </div>
-        <aside>
-          <p className="text-xs font-bold tracking-widest text-mugla-cyan">GÜNCEL DUYURULAR</p>
-          <div className="mt-5 space-y-3">
-            {['Yeni oylama dönemi başladığında bildirim alabilirsiniz.', 'Projeler ilçe ve kategoriye göre filtrelenebilir.', 'Kazanan projelerin uygulama süreci sonuçlarda izlenir.'].map(item => <div key={item} className="rounded-lg bg-mugla-sand/70 p-4 text-sm font-semibold text-mugla-navy/60"><Bell className="mb-2 text-mugla-orange" size={18}/>{item}</div>)}
-          </div>
-        </aside>
-      </div>
-    </section>
 
     <section id="mugla-senin-butcen" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
@@ -339,19 +282,6 @@ export default function Home() {
           <Stat label="Aktif oylama" value={String(active.length)} note="Vatandasin oy verebildigi projeler"/>
           <Stat label="Görünen bütçe" value={formatBudget(totalBudget)} note="Onaylı proje portföyü"/>
         </div>
-      </div>
-    </section>
-
-    <section id="nasil" className="mx-auto max-w-6xl px-5 py-14">
-      <div className="max-w-2xl">
-        <p className="text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Proje akışı</p>
-        <h2 className="mt-3 text-3xl font-black md:text-4xl">Katılımcı bütçe bölümü dört adımda ilerler.</h2>
-      </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-4">
-        <Step icon={Lightbulb} title="Fikir al" text="Vatandaş giriş yapar ve fikrini kısa bir formla iletir."/>
-        <Step icon={CheckCircle2} title="Onayla" text="Başvurular incelenir, uygun projeler yayına alınır."/>
-        <Step icon={Vote} title="Oy ver" text="Onaylı projeler listelenir ve destek sayısı takip edilir."/>
-        <Step icon={FolderKanban} title="Takip et" text="Proje durumu, bütçe ve ilerleme bilgileri sade biçimde görünür."/>
       </div>
     </section>
 
