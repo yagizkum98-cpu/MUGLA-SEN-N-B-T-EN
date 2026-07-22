@@ -175,6 +175,10 @@ function topicLabel(topic: ContactRecord['topic']) {
   return topic === 'Gorus' ? 'Gorus' : topic === 'Oneri' ? 'Oneri' : 'Soru'
 }
 
+function csvCell(value: unknown) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
+}
+
 function ProjectDetailBlock({project}: {project: ProjectRecord}) {
   const details = [
     ['Proje kodu', project.projectCode],
@@ -412,10 +416,12 @@ export default function Admin() {
   const canRemoveProjects = isSuperAdmin || isMunicipalityAdmin
   const canCreateMunicipalProject = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
   const canSeeCrm = isSuperAdmin || isMunicipalityAdmin || isCrmRole
+  const canSeeLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.liveCitizenData)
+  const canExportLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.citizenDataExport)
   const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin
   const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
-  const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
   const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin
   const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || project.district === adminUser?.district) : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
@@ -645,6 +651,10 @@ export default function Admin() {
         district: String(form.get('district') ?? '').trim() || undefined,
         department: String(form.get('department') ?? '').trim() || undefined,
         assignedProjectIds,
+        permissions: {
+          liveCitizenData: form.get('liveCitizenData') === 'on',
+          citizenDataExport: form.get('citizenDataExport') === 'on',
+        },
         actor: adminUser,
       })
       formElement.reset()
@@ -740,6 +750,62 @@ export default function Admin() {
     setMessage(`${updated.year} yili icin tema kuralı guncellendi.`)
   }
 
+  function exportCitizenDataExcel() {
+    const rows = scopedCitizens.map(citizen => ({
+      ad_soyad: citizen.name,
+      e_posta: citizen.email,
+      telefon: citizen.phone,
+      uyruk: citizen.nationality === 'foreign' ? 'Yabancı' : 'T.C.',
+      ulke: citizen.country ?? 'Türkiye',
+      il: citizen.province,
+      ilce: citizen.district,
+      yas: citizen.age,
+      dogum_tarihi: citizen.birthDate ?? '',
+      dogrulama: citizen.badges.join(', '),
+      oy_sayisi: citizen.voteCount,
+      proje_sayisi: citizen.proposalCount,
+      kayit_tarihi: citizen.createdAt,
+      son_giris: citizen.lastLogin,
+    }))
+    const headers = Object.keys(rows[0] ?? {
+      ad_soyad: '',
+      e_posta: '',
+      telefon: '',
+      uyruk: '',
+      ulke: '',
+      il: '',
+      ilce: '',
+      yas: '',
+      dogum_tarihi: '',
+      dogrulama: '',
+      oy_sayisi: '',
+      proje_sayisi: '',
+      kayit_tarihi: '',
+      son_giris: '',
+    })
+    const csv = [headers.map(csvCell).join(','), ...rows.map(row => headers.map(header => csvCell(row[header as keyof typeof row])).join(','))].join('\n')
+    const blob = new Blob([`\uFEFF${csv}`], {type: 'text/csv;charset=utf-8;'})
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `canli-vatandas-veri-listesi-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    writeAuditLog(adminUser, 'Canli vatandas verisini Excel olarak disari aktardi', {details: `${scopedCitizens.length} kayit`})
+  }
+
+  function exportCitizenDataPdf() {
+    const rows = scopedCitizens.map(citizen => `<tr><td>${citizen.name}</td><td>${citizen.email}</td><td>${citizen.phone}</td><td>${citizen.province} / ${citizen.district}</td><td>${citizen.voteCount}</td><td>${citizen.proposalCount}</td><td>${new Date(citizen.createdAt).toLocaleString('tr-TR')}</td></tr>`).join('')
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      setMessage('PDF çıktısı için açılır pencereye izin verin.')
+      return
+    }
+    popup.document.write(`<!doctype html><html><head><title>Canlı Vatandaş Veri Listesi</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#0e3a66}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px}th,td{border:1px solid #d7dee8;padding:8px;text-align:left}th{background:#eef3f8}</style></head><body><h1>Canlı Vatandaş Veri Listesi</h1><p>Toplam kayıt: ${scopedCitizens.length} · Oluşturma: ${new Date().toLocaleString('tr-TR')}</p><table><thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Telefon</th><th>Konum</th><th>Oy</th><th>Proje</th><th>Kayıt</th></tr></thead><tbody>${rows || '<tr><td colspan="7">Kayıt yok</td></tr>'}</tbody></table><script>window.print()</script></body></html>`)
+    popup.document.close()
+    writeAuditLog(adminUser, 'Canli vatandas verisini PDF olarak disari aktardi', {details: `${scopedCitizens.length} kayit`})
+  }
+
   const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
   const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
@@ -757,9 +823,44 @@ export default function Admin() {
     ['Gorus ve oneriler', scopedContactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
     ['Sorular', scopedContactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
   ] as const
+  const reportFormats = [
+    {label: 'PDF', enabled: isSuperAdmin || isMunicipalityAdmin || isDistrictManager, note: isDistrictManager ? 'Kendi ilçesi' : 'Yetkili kapsam'},
+    {label: 'Excel', enabled: isSuperAdmin || isMunicipalityAdmin || isDistrictManager, note: isDistrictManager ? 'Kendi ilçesi' : 'Yetkili kapsam'},
+    {label: 'CSV', enabled: isSuperAdmin, note: isSuperAdmin ? 'Tam veri' : 'Sadece super admin'},
+  ]
+  const reportTypes = isSuperAdmin ? [
+    ['Oy', 'Tüm ilçeler ve tüm projeler'],
+    ['İlçe', '13 ilçe karşılaştırması'],
+    ['Kategori', 'Tüm kategori dağılımı'],
+    ['Vatandaş', 'Tam erişim ve KVKK kayıtları'],
+    ['Proje', 'Tüm proje portföyü'],
+    ['Dashboard', 'Genel performans özeti'],
+    ['AI', 'AI analiz ve puanları'],
+    ['Audit', 'Sistem işlem kayıtları'],
+    ['Sistem', 'API, yedekleme ve güvenlik raporu'],
+  ] : isMunicipalityAdmin ? [
+    ['Oy', 'Tüm ilçeler'],
+    ['İlçe', '13 ilçe karşılaştırması'],
+    ['Kategori', 'Tüm kategori dağılımı'],
+    ['Vatandaş', 'KVKK filtreli özet'],
+    ['Proje', 'Tüm proje portföyü'],
+  ] : isDistrictManager ? [
+    ['Kendi İlçem', adminUser?.district ? `${adminUser.district} kapsamı` : 'İlçe kapsamı'],
+    ['Projelerim', 'İlçe projeleri'],
+    ['Oy Dağılımı', 'İlçe oyları'],
+    ['Mahalle Analizi', 'Anonim katılım özeti'],
+    ['Kategori', 'İlçe kategori dağılımı'],
+  ] : [
+    ['Atanan Projeler', 'Sadece kendisine atanan projeler'],
+    ['Teknik Puanlar', 'Teknik değerlendirme kayıtları'],
+    ['Maliyet Analizi', 'Atanan proje maliyetleri'],
+    ['Oy', 'Atanan projelerde görünen destek'],
+  ]
+  const reportDistrictOptions = isSuperAdmin || isMunicipalityAdmin ? ['Tüm Muğla', ...districts] : isDistrictManager && adminUser?.district ? [adminUser.district] : ['Atanan projeler']
   const quickTargets: QuickTarget[] = [
     {label: 'Onay kutusu', href: '#onay-kutusu', count: pendingProjects.length, icon: Clock3, note: 'Vatandaş fikirleri otomatik buraya düşer.'},
     {label: 'Proje havuzu', href: '#proje-havuzu', count: scopedProjects.length, icon: FolderKanban, note: 'Tüm canlı kayıtlar tek tabloda.'},
+    ...(canSeeLiveCitizenData ? [{label: 'Canlı veri', href: '#canli-veri-listesi', count: scopedCitizens.length, icon: Database, note: 'Giriş ve kayıt bilgileri.'}] : []),
     {label: 'Yetkililer', href: '#yetkililer', count: accounts.length, icon: UsersRound, note: 'Sadece süper admin kapsam belirler.'},
     {label: 'Oylamalar', href: '#oylamalar', count: activeVotingProjects.length, icon: Vote, note: 'Yayındaki projelere tek tık.'},
     {label: 'Raporlar', href: '#raporlar', count: voteLeaderboard.length, icon: FileBarChart, note: 'Canlı özet ve çıktılar.'},
@@ -961,16 +1062,30 @@ export default function Admin() {
             <label><span className="mb-2 block text-sm font-semibold">İlçe kapsamı</span><select className={field} name="district" defaultValue=""><option value="">Tüm ilçeler / atanmış proje</option>{districts.map(district => <option key={district}>{district}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Birim</span><input className={field} name="department" placeholder="Fen işleri, ulaşım, CRM..."/></label>
             <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Atanan proje kodları / ID</span><input className={field} name="assignedProjectIds" placeholder="MSB-2026-0001, MSB-2026-0002"/></label>
+            <fieldset className="md:col-span-2 xl:col-span-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+              <legend className="px-2 text-sm font-black">Özel veri izinleri</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
+                  <input type="checkbox" name="liveCitizenData" className="mt-1 h-4 w-4 accent-mugla-orange"/>
+                  <span><b className="block">Canlı veri listesini görsün</b><small className="mt-1 block text-mugla-navy/45">Giriş/kayıt yapan vatandaşların tanımlı bilgilerini görür.</small></span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
+                  <input type="checkbox" name="citizenDataExport" className="mt-1 h-4 w-4 accent-mugla-orange"/>
+                  <span><b className="block">Excel/PDF dışa aktarabilsin</b><small className="mt-1 block text-mugla-navy/45">Canlı veri listesini dosya olarak indirebilir.</small></span>
+                </label>
+              </div>
+            </fieldset>
             <div className="md:col-span-2 xl:col-span-4"><Button type="submit" variant="orange"><UserPlus size={17}/> Yetkili tanimla</Button></div>
           </form> : <p className="rounded-2xl bg-mugla-sand/70 p-4 text-sm font-semibold text-mugla-navy/55">Hesap ekleme ve silme yetkisi sadece super admin hesabindadir.</p>}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Kisi</th><th>E-posta</th><th>Rol</th><th>Kapsam</th><th>Tanimlayan</th><th className="text-right">Islem</th></tr></thead>
+              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Kisi</th><th>E-posta</th><th>Rol</th><th>Kapsam</th><th>Veri izni</th><th>Tanimlayan</th><th className="text-right">Islem</th></tr></thead>
               <tbody>{accounts.map(account => <tr key={account.id} className="border-t border-mugla-navy/10">
                 <td className="py-4 font-semibold">{account.name}</td>
                 <td>{account.email}</td>
                 <td><span className="inline-flex items-center gap-2 rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65"><ShieldCheck size={13}/>{account.role}</span></td>
                 <td className="text-xs text-mugla-navy/55">{account.district || account.department || account.assignedProjectIds?.join(', ') || 'Tüm yetkili kapsam'}</td>
+                <td><div className="flex flex-wrap gap-1">{account.role === 'super-admin' || account.permissions?.liveCitizenData ? <span className="rounded-full bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700">Canlı veri</span> : <span className="rounded-full bg-mugla-sand px-2 py-1 text-[11px] font-bold text-mugla-navy/45">Kapalı</span>}{account.role === 'super-admin' || account.permissions?.citizenDataExport ? <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-bold text-mugla-cyan">Dışa aktar</span> : null}</div></td>
                 <td className="text-mugla-navy/45">{account.createdBy ?? 'sistem'}</td>
                 <td className="text-right">{canManagePeople && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}>Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
               </tr>)}</tbody>
@@ -1093,6 +1208,70 @@ export default function Admin() {
         </CardContent>
       </Card>}
 
+      {canSeeLiveCitizenData && <Card id="canli-veri-listesi" className="rounded-xl shadow-sm">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">CANLI VERİ LİSTESİ</p>
+              <h2 className="text-xl font-bold">Giriş ve kayıt yapan vatandaş bilgileri</h2>
+              <p className="mt-1 text-sm text-mugla-navy/55">Kayıt formu tamamlandığında ve kullanıcı giriş yaptığında bilgiler otomatik güncellenir. Bu alanı sadece süper admin ve süper adminin tanımladığı yetkili roller görebilir.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" disabled={!canExportLiveCitizenData} onClick={exportCitizenDataExcel}><FileBarChart size={17}/> Excel</Button>
+              <Button type="button" variant="outline" disabled={!canExportLiveCitizenData} onClick={exportCitizenDataPdf}><FileText size={17}/> PDF</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {!canExportLiveCitizenData && <div className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-semibold text-mugla-orange">Bu hesabın dışa aktarma yetkisi yok. Excel/PDF indirme iznini yalnızca süper admin açabilir.</div>}
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <p className="text-sm text-mugla-navy/50">Canlı kayıt sayacı</p>
+              <b className="mt-1 block text-4xl">{scopedCitizens.length.toLocaleString('tr-TR')}</b>
+              <p className="mt-1 text-xs text-mugla-navy/40">Sıfırdan başlar, kayıt geldikçe artar.</p>
+            </div>
+            <div className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <p className="text-sm text-mugla-navy/50">T.C. vatandaş</p>
+              <b className="mt-1 block text-4xl">{scopedCitizens.filter(citizen => citizen.nationality === 'tc').length.toLocaleString('tr-TR')}</b>
+              <p className="mt-1 text-xs text-mugla-navy/40">Formdaki uyruk alanından.</p>
+            </div>
+            <div className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <p className="text-sm text-mugla-navy/50">Yabancı uyruklu</p>
+              <b className="mt-1 block text-4xl">{scopedCitizens.filter(citizen => citizen.nationality === 'foreign').length.toLocaleString('tr-TR')}</b>
+              <p className="mt-1 text-xs text-mugla-navy/40">Ülke bilgisiyle birlikte.</p>
+            </div>
+            <div className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <p className="text-sm text-mugla-navy/50">Bugün giriş/kayıt</p>
+              <b className="mt-1 block text-4xl">{scopedCitizens.filter(citizen => {
+                const today = new Date().toDateString()
+                return new Date(citizen.createdAt).toDateString() === today || new Date(citizen.lastLogin).toDateString() === today
+              }).length.toLocaleString('tr-TR')}</b>
+              <p className="mt-1 text-xs text-mugla-navy/40">Son giriş zamanı canlıdır.</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-mugla-navy/10 bg-white">
+            <table className="w-full min-w-[1120px] text-left text-sm">
+              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45">
+                <tr><th className="p-3">Ad Soyad</th><th>E-posta</th><th>Telefon</th><th>Uyruk</th><th>Konum</th><th>Yaş</th><th>Doğrulama</th><th>Oy</th><th>Proje</th><th>Kayıt</th><th>Son giriş</th></tr>
+              </thead>
+              <tbody>{scopedCitizens.length ? scopedCitizens.map(citizen => <tr key={citizen.id} className="border-t border-mugla-navy/10 hover:bg-mugla-sand/35">
+                <td className="p-3 font-semibold">{citizen.name}</td>
+                <td>{citizen.email}</td>
+                <td>{citizen.phone}</td>
+                <td>{citizen.nationality === 'foreign' ? `Yabancı${citizen.country ? ` · ${citizen.country}` : ''}` : 'T.C.'}</td>
+                <td>{citizen.province} / {citizen.district}</td>
+                <td>{citizen.age || '-'}</td>
+                <td><span className="rounded-lg bg-green-50 px-2 py-1 text-xs font-bold text-green-700">{citizen.badges.join(', ') || 'Bekliyor'}</span></td>
+                <td>{citizen.voteCount}</td>
+                <td>{citizen.proposalCount}</td>
+                <td>{new Date(citizen.createdAt).toLocaleString('tr-TR')}</td>
+                <td>{citizen.lastLogin ? new Date(citizen.lastLogin).toLocaleString('tr-TR') : '-'}</td>
+              </tr>) : <tr><td colSpan={11} className="p-8 text-center text-mugla-navy/45">Henüz canlı vatandaş verisi yok.</td></tr>}</tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>}
+
       {canSeeCrm && <Card id="crm">
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">KATILIMCI BUTCE ILETISIM</p>
@@ -1147,18 +1326,60 @@ export default function Admin() {
 
       {canSeeReports && <Card id="raporlar">
         <CardHeader>
-          <h2 className="text-xl font-bold">Raporlar</h2>
-          <p className="text-sm text-mugla-navy/55">PDF, Excel ve CSV çıktıları ile oy, ilçe, kategori, vatandaş ve proje raporları.</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {['PDF', 'Excel', 'CSV'].map(item => <Button key={item} variant="outline"><FileBarChart size={17}/> {item}</Button>)}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">RAPOR MERKEZİ</p>
+              <h2 className="text-xl font-bold">Rol bazlı rapor oluştur</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Raporlar yetki kapsamına göre ayrılır. Vatandaş verisi KVKK gereği yalnızca sınırlı ve gerekli rollerde görünür; CSV toplu veri aktarımı sadece super admin içindir.</p>
+            </div>
+            <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/55">{activeRole} kapsamı</span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {['Oy Raporu', 'İlçe Raporu', 'Kategori', 'Vatandaş', 'Proje'].map(item => <div key={item} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
-              <b>{item}</b>
-              <p className="mt-1 text-sm text-mugla-navy/45">Hazır rapor görünümü</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form className="grid gap-5 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5 lg:grid-cols-[1.1fr_.7fr_.8fr_.7fr_auto] lg:items-end">
+            <fieldset>
+              <legend className="mb-3 text-sm font-black">Rapor türü</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {reportTypes.map(([label, note]) => <label key={label} className="flex cursor-pointer items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3 text-sm">
+                  <input type="checkbox" className="mt-1 h-4 w-4 accent-mugla-orange" defaultChecked={label === reportTypes[0]?.[0]}/>
+                  <span><b className="block">{label}</b><small className="mt-1 block leading-5 text-mugla-navy/45">{note}</small></span>
+                </label>)}
+              </div>
+            </fieldset>
+            <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field}>{reportDistrictOptions.map(item => <option key={item}>{item}</option>)}</select></label>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <label><span className="mb-2 block text-sm font-semibold">Başlangıç</span><input className={field} type="date" defaultValue={`${new Date().getFullYear()}-01-01`}/></label>
+              <label><span className="mb-2 block text-sm font-semibold">Bitiş</span><input className={field} type="date" defaultValue={`${new Date().getFullYear()}-12-31`}/></label>
+            </div>
+            <fieldset>
+              <legend className="mb-3 text-sm font-black">Format</legend>
+              <div className="grid gap-2">
+                {reportFormats.map(format => <label key={format.label} className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-sm ${format.enabled ? 'cursor-pointer border-mugla-navy/10 bg-white' : 'cursor-not-allowed border-mugla-navy/5 bg-white/55 text-mugla-navy/35'}`}>
+                  <span className="inline-flex items-center gap-2"><input type="radio" name="reportFormat" disabled={!format.enabled} defaultChecked={format.enabled && format.label === 'PDF'} className="h-4 w-4 accent-mugla-orange"/><b>{format.label}</b></span>
+                  <small>{format.note}</small>
+                </label>)}
+              </div>
+            </fieldset>
+            <Button type="button" variant="orange" className="h-12"><FileBarChart size={17}/> Rapor Oluştur</Button>
+          </form>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Veri kapsamı', isSuperAdmin || isMunicipalityAdmin ? 'Tüm Muğla' : isDistrictManager ? adminUser?.district ?? 'Kendi ilçesi' : 'Atanan projeler'],
+              ['Proje kaydı', scopedProjects.length.toLocaleString('tr-TR')],
+              ['Oy verisi', scopedProjects.reduce((sum, project) => sum + project.votes, 0).toLocaleString('tr-TR')],
+              ['Vatandaş görünümü', isSuperAdmin ? 'Tam' : isMunicipalityAdmin ? 'KVKK filtreli' : isDistrictManager ? 'Anonim özet' : 'Kapalı'],
+            ].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <p className="text-sm text-mugla-navy/50">{label}</p>
+              <b className="mt-1 block text-xl">{value}</b>
             </div>)}
+          </div>
+
+          <div className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+            <h3 className="font-black">Yetki notları</h3>
+            <div className="mt-3 grid gap-2 text-sm text-mugla-navy/60 md:grid-cols-2">
+              {(isSuperAdmin ? ['Tüm ilçeler, oy istatistikleri, vatandaş analizleri, AI, audit, sistem ve CSV erişimi açıktır.', 'CSV toplu veri aktarımı sadece super admin seviyesinde tutulur.'] : isMunicipalityAdmin ? ['Belediye admini PDF ve Excel raporlarını tüm ilçe karşılaştırmaları için alabilir.', 'Vatandaş raporları KVKK filtreli gösterilir; CSV varsayılan olarak kapalıdır.'] : isDistrictManager ? ['İlçe yöneticisi sadece kendi ilçesinin oy, proje, kategori ve anonim vatandaş özetini görür.', 'Başka ilçelerin veya genel Muğla raporlarının verisi bu rolde açılmaz.'] : ['Değerlendirici yalnızca kendisine atanmış projelerin teknik, maliyet ve proje raporlarını görür.', 'Vatandaş, ilçe geneli ve toplu dışa aktarım bu rolde kapalıdır.']).map(note => <p key={note} className="rounded-xl bg-mugla-sand/55 p-3">{note}</p>)}
+            </div>
           </div>
         </CardContent>
       </Card>}

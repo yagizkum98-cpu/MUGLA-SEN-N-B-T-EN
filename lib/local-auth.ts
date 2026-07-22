@@ -20,6 +20,7 @@ export type LocalUser = {
   createdAt: string
   verificationMethod: VerificationMethod
   verifiedAt: string
+  lastLoginAt?: string
   verifiedBadge: string
   panelPath: string
   apiPath: string
@@ -38,6 +39,7 @@ export function normalizeLocalUser(user: LocalUser): LocalUser {
     ...user,
     verificationMethod: user.verificationMethod === 'phone' || user.verificationMethod === 'passport' || user.verificationMethod === 'international-id' ? user.verificationMethod : 'email',
     verifiedAt: user.verifiedAt ?? user.createdAt,
+    lastLoginAt: user.lastLoginAt,
     verifiedBadge: user.verifiedBadge ?? 'Dogrulanmis Kullanici',
     nationality: user.nationality ?? 'tc',
     country: user.country,
@@ -158,12 +160,16 @@ export async function registerUser(input: {
 
 export async function loginUser(emailInput: string, password: string) {
   const email = emailInput.trim().toLocaleLowerCase('tr')
-  const user = listLocalUsers().find(item => item.email === email)
+  const users = listLocalUsers()
+  const user = users.find(item => item.email === email)
   if (!user || !user.passwordHash || !user.salt || await derive(password, base64ToBytes(user.salt)) !== user.passwordHash) throw new Error('E-posta veya sifre hatali.')
+  const updated = {...user, lastLoginAt: new Date().toISOString()}
+  localStorage.setItem(USERS, JSON.stringify(users.map(item => item.id === user.id ? updated : item)))
+  void upsertRemoteUsers([updated])
   localStorage.setItem(SESSION, user.id)
   window.dispatchEvent(new Event(AUTH_USERS_CHANGED_EVENT))
   window.dispatchEvent(new Event('mugla-auth-session-changed'))
-  return user
+  return updated
 }
 
 export function createCitizenSessionTransfer(user: LocalUser) {

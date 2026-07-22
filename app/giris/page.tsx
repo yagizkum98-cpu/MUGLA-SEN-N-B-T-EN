@@ -8,7 +8,7 @@ import {Button} from '@/components/ui/button'
 import {createCitizenSessionTransfer, loginUser, registerUser} from '@/lib/local-auth'
 import {countries} from '@/lib/locations'
 import {districtsForProvince,turkiyeProvinces} from '@/lib/turkiye-locations'
-import {citizenUrl, isCitizenDomain} from '@/lib/domain-routing'
+import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
 import {birthDateInputToIso, formatBirthDateInput, isoToBirthDateInput} from '@/lib/demographics'
 
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
@@ -157,7 +157,7 @@ export default function Login(){
 
   return <main className="grid min-h-screen bg-mugla-sand lg:grid-cols-[.9fr_1.1fr]">
     <section className="hidden bg-mugla-navy p-16 text-white lg:flex lg:flex-col">
-      <Link href="/" className="text-sm text-white/60">Ana sayfa</Link>
+      <Link href={publicUrl('/')} className="text-sm text-white/60">Ana sayfa</Link>
       <div className="my-auto max-w-xl">
         <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-3xl bg-white p-1.5 shadow-soft">
           <Image src="/partners/mugla-buyuksehir.png" alt="T.C. Muğla Büyükşehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
@@ -174,7 +174,7 @@ export default function Login(){
 
     <section className="grid place-items-center p-6 py-10">
       <div className="w-full max-w-xl">
-        <Link href="/" className="mb-8 flex items-center gap-2 text-sm lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
+        <Link href={publicUrl('/')} className="mb-8 flex items-center gap-2 text-sm lg:hidden"><ArrowLeft size={16}/> Ana sayfa</Link>
         {mode==='register'?(pendingRegistration?<div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">AKTIVASYON KODU</p>
           <h2 className="mt-2 text-3xl font-bold">Kaydini dogrula</h2>

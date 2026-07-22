@@ -56,7 +56,7 @@ function userToCitizen(user:LocalUser):Citizen{
     voteCount:0,
     proposalCount:0,
     badges:[user.verifiedBadge],
-    lastLogin:user.verifiedAt,
+    lastLogin:user.lastLoginAt ?? user.verifiedAt,
     createdAt:user.createdAt,
   }
 }

@@ -10,6 +10,10 @@ export type AdminAccount = {
   district?: string
   department?: string
   assignedProjectIds?: string[]
+  permissions?: {
+    liveCitizenData?: boolean
+    citizenDataExport?: boolean
+  }
   passwordHash: string
   salt: string
   passwordPreview?: string
@@ -72,7 +76,7 @@ function saveAccounts(accounts: AdminAccount[]) {
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
-async function createAccount(input: {name: string; email: string; role: AdminRole; password: string; createdBy?: string; district?: string; department?: string; assignedProjectIds?: string[]}) {
+async function createAccount(input: {name: string; email: string; role: AdminRole; password: string; createdBy?: string; district?: string; department?: string; assignedProjectIds?: string[]; permissions?: AdminAccount['permissions']}) {
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const passwordHash = await derive(input.password, salt)
   return {
@@ -83,6 +87,7 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
     district: input.district,
     department: input.department,
     assignedProjectIds: input.assignedProjectIds,
+    permissions: input.permissions,
     passwordHash,
     salt: bytesToBase64(salt),
     passwordPreview: encodePasswordPreview(input.password),
@@ -133,7 +138,7 @@ export async function getCurrentAdmin() {
   return accounts.find(account => account.id === id) ?? null
 }
 
-export async function addAdminAccount(input: {name: string; email: string; role: AdminRole; password: string; actor: AdminAccount; district?: string; department?: string; assignedProjectIds?: string[]}) {
+export async function addAdminAccount(input: {name: string; email: string; role: AdminRole; password: string; actor: AdminAccount; district?: string; department?: string; assignedProjectIds?: string[]; permissions?: AdminAccount['permissions']}) {
   if (normalizeAdminRole(input.actor.role) !== 'super-admin') throw new Error('Sadece super admin admin ve yetkili hesabi tanimlayabilir.')
   if (input.role === 'super-admin') throw new Error('Yeni super admin hesabi tanimlanamaz.')
   const accounts = await ensureSeedAccount()

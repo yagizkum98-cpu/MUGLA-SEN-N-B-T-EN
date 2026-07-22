@@ -4,10 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {Bell, Building2, FileBarChart, FolderKanban, Home, LogOut, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
+import {Bell, Building2, ExternalLink, FileBarChart, FolderKanban, Home, LogOut, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
+import {citizenUrl, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 
 const citizen = [
   ['/vatandas/panel#panelim', 'Panelim', Home],
@@ -22,9 +23,15 @@ const admin = [
   {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
   {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
-  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
   {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin']},
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin']},
+] as const
+
+const superAdminPortalLinks = [
+  {label: 'Landing Page', url: publicUrl('/')},
+  {label: 'Kullanıcı', url: citizenUrl('/')},
+  {label: 'Belediye', url: municipalityUrl('/')},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {
@@ -78,7 +85,23 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
           </Link>
         })}
       </nav>
-      <div className="mt-auto hidden rounded-lg bg-white/10 p-4 md:block">
+      {role === 'admin' && adminRole === 'super-admin' && (
+        <section className="mt-auto hidden rounded-lg border border-white/10 bg-white/5 p-3 md:block">
+          <p className="mb-2 text-[11px] font-black uppercase tracking-wider text-white/45">Portal Linkleri</p>
+          <div className="grid gap-2">
+            {superAdminPortalLinks.map((item) => (
+              <a key={item.label} href={item.url} className="group rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white/75 transition hover:bg-white hover:text-mugla-navy">
+                <span className="flex items-center justify-between gap-2">
+                  <span>{item.label}</span>
+                  <ExternalLink size={13}/>
+                </span>
+                <span className="mt-1 block truncate text-[10px] font-semibold opacity-65">{item.url.replace('https://', '')}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+      <div className={cn('hidden rounded-lg bg-white/10 p-4 md:block', role === 'admin' && adminRole === 'super-admin' ? 'mt-3' : 'mt-auto')}>
         <p className="text-sm font-semibold">{displayName ?? (role === 'admin' ? 'Yönetim' : 'Vatandaş')}</p>
         <p className="text-xs text-white/55">{displayNote}</p>
         {(user || adminUser) && <button type="button" onClick={signOut} className="mt-3 flex items-center gap-2 text-xs text-white/55 hover:text-white"><LogOut size={14}/> Çıkış</button>}
