@@ -5,16 +5,8 @@ import Link from 'next/link'
 import {FileText, FolderKanban, Mail} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
-import {formatBudget, useProjects} from '@/lib/projects-store'
+import {useProjects} from '@/lib/projects-store'
 import {SiteUserMenu} from '@/components/site-user-menu'
-
-function Stat({label, value, note}: {label: string; value: string; note: string}) {
-  return <div className="rounded-lg border border-mugla-navy/10 bg-white p-5">
-    <p className="text-sm text-mugla-navy/55">{label}</p>
-    <strong className="mt-2 block text-3xl">{value}</strong>
-    <p className="mt-1 text-xs text-mugla-navy/45">{note}</p>
-  </div>
-}
 
 type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
 
@@ -165,9 +157,15 @@ function ProjectRoadmap() {
 
 export default function Home() {
   const {projects} = useProjects()
-  const approved = projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)))
-  const active = approved.filter(project => ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
-  const totalBudget = approved.reduce((sum, project) => sum + project.budget, 0)
+  const citizenIdeas = projects.filter(project => project.source === 'citizen' || project.ownerId || project.ownerEmail || project.applicantType)
+  const visibleCitizenIdeas = citizenIdeas.filter(project => project.moderationStatus !== 'Reddedildi')
+  const activeVoteCount = visibleCitizenIdeas.reduce((sum, project) => sum + project.votes, 0)
+  const categoryPreferences = Array.from(visibleCitizenIdeas.reduce((map, project) => {
+    const category = project.category || 'Diğer'
+    map.set(category, (map.get(category) ?? 0) + 1)
+    return map
+  }, new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const maxCategoryCount = Math.max(1, ...categoryPreferences.map(([, count]) => count))
   const [municipalityRedirecting, setMunicipalityRedirecting] = useState(false)
   const [citizenRedirecting, setCitizenRedirecting] = useState(false)
 
@@ -265,22 +263,43 @@ export default function Home() {
     </section>
 
     <section className="relative overflow-hidden bg-mugla-navy text-white">
-      <div className="absolute inset-0 opacity-25">
-        <Image src="/landing/mugla-hero.png" alt="" fill priority className="object-cover"/>
-      </div>
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-20 lg:grid-cols-[1.1fr_.9fr] lg:py-24">
+      <Image src="/landing/mugla-hero.png" alt="" fill priority className="object-cover"/>
+      <div className="absolute inset-0 bg-gradient-to-r from-mugla-navy/94 via-mugla-navy/74 to-mugla-navy/36"/>
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:py-20">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Evrensel Katılımcı Bütçe uygulaması</p>
-          <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-6xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">İlk aşamada hedef basit: vatandaş fikir göndersin, belediye projeleri yayınlasın, herkes durumu kolayca takip etsin.</p>
+          <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-5xl">Muğla için fikirleri toplayan, oylatan ve izleten sade platform.</h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/78">Vatandaş fikrini gönderir, belediye projeleri yayınlar, herkes süreci ve ilgi gören kategorileri canlı olarak takip eder.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy"><FolderKanban size={18}/> Projeleri gör</Link>
+            <Link href="/projeler" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-mugla-navy shadow-soft"><FolderKanban size={18}/> Projeleri gör</Link>
           </div>
         </div>
-        <div className="grid content-end gap-3">
-          <Stat label="Yayındaki proje" value={String(approved.length)} note="Belediye onayından geçen kayıtlar"/>
-          <Stat label="Aktif oylama" value={String(active.length)} note="Vatandasin oy verebildigi projeler"/>
-          <Stat label="Görünen bütçe" value={formatBudget(totalBudget)} note="Onaylı proje portföyü"/>
+        <div className="rounded-lg border border-white/15 bg-white/92 p-5 text-mugla-navy shadow-soft backdrop-blur md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-cyan">Canlı tercih haritası</p>
+              <h3 className="mt-2 text-2xl font-black">Hangi kategoriler öne çıkıyor?</h3>
+              <p className="mt-2 text-sm leading-6 text-mugla-navy/55">Fikir Gönder formundan gelen başvurulara göre otomatik güncellenir.</p>
+            </div>
+            <div className="rounded-lg bg-mugla-sand px-4 py-3 text-right">
+              <p className="text-xs font-bold text-mugla-navy/45">Aktif oy sayısı</p>
+              <strong className="block text-3xl font-black">{activeVoteCount.toLocaleString('tr-TR')}</strong>
+            </div>
+          </div>
+          <div className="mt-6 space-y-3">
+            {categoryPreferences.length ? categoryPreferences.map(([category, count]) => <div key={category} className="rounded-lg border border-mugla-navy/10 bg-white p-3">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <b>{category}</b>
+                <span className="rounded-full bg-mugla-sand px-2 py-1 text-xs font-black text-mugla-navy/55">{count} fikir</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-mugla-sand">
+                <span className="block h-full rounded-full bg-mugla-cyan" style={{width: `${Math.max(10, count / maxCategoryCount * 100)}%`}}/>
+              </div>
+            </div>) : <div className="rounded-lg border border-dashed border-mugla-navy/15 bg-white p-6 text-center">
+              <p className="font-black">Henüz kategori tercihi oluşmadı.</p>
+              <p className="mt-2 text-sm leading-6 text-mugla-navy/55">İlk fikir gönderildiğinde bu alan otomatik olarak dolacak.</p>
+            </div>}
+          </div>
         </div>
       </div>
     </section>

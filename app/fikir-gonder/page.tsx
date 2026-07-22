@@ -144,6 +144,7 @@ export default function IdeaForm(){
       budget:0,
       status:'Başvuru',
       moderationStatus:'Bekliyor',
+      source:'citizen',
       lat:37.08,
       lng:28.45,
       color:projectCategories.find(x=>x[0]===selectedCategory)?.[1]??'#64748b',
