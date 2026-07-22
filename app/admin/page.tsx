@@ -13,7 +13,7 @@ import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
-import {useCrm} from '@/lib/crm-store'
+import {type Channel, useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
 
@@ -410,7 +410,7 @@ function ProjectManagementPanel({
 export default function Admin() {
   const {projects, addProject, mergeProjects, removeProject, reviewProject, updateProject} = useProjects()
   const {records: contactRecords, removeContactRecord} = useContactRecords()
-  const {citizens} = useCrm()
+  const {citizens, campaigns, addCampaign} = useCrm()
   const [open, setOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(true)
   const [message, setMessage] = useState('')
@@ -439,6 +439,7 @@ export default function Admin() {
   const [poolCategoryFilter, setPoolCategoryFilter] = useState('')
   const [poolKeyword, setPoolKeyword] = useState('')
   const [projectCenterTab, setProjectCenterTab] = useState('Tümü')
+  const [notificationTab, setNotificationTab] = useState('Yeni Bildirim')
   const activeRole = normalizeAdminRole(adminUser?.role)
   const isSuperAdmin = activeRole === 'super-admin'
   const isMunicipalityAdmin = activeRole === 'belediye-admin'
@@ -464,9 +465,14 @@ export default function Admin() {
   const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canManageVoting = isSuperAdmin || isMunicipalityAdmin
   const canSeeVoteDetails = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canSeeCategories = isSuperAdmin || isMunicipalityAdmin
+  const canSeeCategories = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canManageAnnualThemes = isSuperAdmin || isMunicipalityAdmin
   const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
-  const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin
+  const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isCrmRole
+  const canSendNotification = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isCrmRole
+  const canSendBulkNotification = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
+  const canScheduleNotification = isSuperAdmin || isMunicipalityAdmin
+  const canDeleteNotification = isSuperAdmin
   const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || project.district === adminUser?.district) : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
@@ -830,8 +836,8 @@ export default function Admin() {
 
   function submitAnnualThemes(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (adminUser?.role !== 'super-admin') {
-      setMessage('Yillik tema ayarlarini sadece super admin guncelleyebilir.')
+    if (!canManageAnnualThemes) {
+      setMessage('Yillik tema ayarlarini sadece Super Admin ve Buyuksehir Admini guncelleyebilir.')
       return
     }
     const updated = upsertAnnualThemeSetting(themeYear, themeDraft)
@@ -897,6 +903,34 @@ export default function Admin() {
     writeAuditLog(adminUser, 'Canli vatandas verisini PDF olarak disari aktardi', {details: `${scopedCitizens.length} kayit`})
   }
 
+  function saveNotificationFromForm(form: HTMLFormElement, status: 'Taslak' | 'Planlandı' | 'Gönderildi') {
+    if (!canSendNotification) return
+    const data = new FormData(form)
+    const title = String(data.get('title') ?? '').trim()
+    const body = String(data.get('body') ?? '').trim()
+    const recipient = String(data.get('recipient') ?? 'Vatandaş')
+    const district = isDistrictManager ? adminUser?.district ?? '' : String(data.get('district') ?? '')
+    const channels = ['Push', 'E-posta', 'SMS', 'WhatsApp'].filter(channel => data.get(channel)) as Channel[]
+    if (!title || !body) {
+      setMessage('Bildirim başlığı ve mesajı zorunludur.')
+      return
+    }
+    addCampaign({
+      title,
+      segment: `${recipient}${district ? ` · ${district}` : ''} · ${body.slice(0, 80)}`,
+      channels: channels.length ? channels : ['Push'],
+      status,
+    })
+    writeAuditLog(adminUser, `Bildirim ${status}`, {target: title, details: `${recipient} ${district}`.trim()})
+    setMessage(status === 'Gönderildi' ? 'Bildirim gönderildi.' : status === 'Planlandı' ? 'Bildirim planlandı.' : 'Bildirim taslak olarak kaydedildi.')
+    form.reset()
+  }
+
+  function submitNotification(event: FormEvent<HTMLFormElement>, status: 'Taslak' | 'Planlandı' | 'Gönderildi') {
+    event.preventDefault()
+    saveNotificationFromForm(event.currentTarget, status)
+  }
+
   const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
@@ -920,6 +954,10 @@ export default function Admin() {
       && (!poolCategoryFilter || project.category === poolCategoryFilter)
       && (!keyword || `${project.title} ${project.projectCode} ${project.summary ?? ''} ${project.shortDescription ?? ''}`.toLocaleLowerCase('tr').includes(keyword))
   })
+  const notificationScope = isDistrictManager && adminUser?.district ? campaigns.filter(item => item.segment.includes(adminUser.district ?? '')) : isCrmRole ? campaigns.filter(item => item.segment.includes('Vatandaş')) : campaigns
+  const notificationRead = Math.round(notificationScope.filter(item => item.status === 'Gönderildi').length * 0.81)
+  const notificationPending = notificationScope.filter(item => item.status !== 'Gönderildi').length
+  const notificationOpenRate = notificationScope.length ? Math.round(notificationRead / Math.max(1, notificationScope.length) * 100) : 0
   const dashboardMetrics = [
     ['Toplam Proje', scopedProjects.length, FolderKanban, 'bg-mugla-navy text-white'],
     ['Onay Bekleyen', pendingProjects.length, Clock3, 'bg-orange-50 text-mugla-orange'],
@@ -1261,7 +1299,7 @@ export default function Admin() {
         <CardHeader>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">YILLIK TEMA KURALLARI</p>
           <h2 className="text-xl font-bold">Vatandas fikir gonderim temalari</h2>
-          <p className="text-sm text-mugla-navy/55">Super admin her yil icin tum temalari acabilir veya Afet, Cevre, Genclik, Sosyal Politikalar gibi birden fazla temayi secerek vatandasin sadece o alanlarda fikir gondermesini saglar.</p>
+          <p className="text-sm text-mugla-navy/55">Tema tanımlama ve değiştirme yetkisi yalnızca Super Admin ve Büyükşehir Admini içindir. İlçe yöneticileri yürürlükteki kuralları salt okunur olarak görüntüler.</p>
         </CardHeader>
         <CardContent className="grid gap-6 xl:grid-cols-[1fr_1.15fr]">
           <section className="overflow-x-auto">
@@ -1282,13 +1320,13 @@ export default function Admin() {
           <form onSubmit={submitAnnualThemes} className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <label><span className="mb-2 block text-sm font-semibold">Yil</span><select className={field} value={themeYear} onChange={event => changeThemeYear(event.target.value)} required>{annualThemeYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {annualThemeOptions.map(theme => <label key={theme.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3">
-                <input type="checkbox" value={theme.id} checked={themeDraft.includes(theme.id)} onChange={event => toggleTheme(theme.id, event.target.checked)} className="mt-1 h-4 w-4 accent-mugla-orange"/>
+              {annualThemeOptions.map(theme => <label key={theme.id} className={`flex items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3 ${canManageAnnualThemes ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
+                <input type="checkbox" value={theme.id} checked={themeDraft.includes(theme.id)} onChange={event => toggleTheme(theme.id, event.target.checked)} disabled={!canManageAnnualThemes} className="mt-1 h-4 w-4 accent-mugla-orange disabled:cursor-not-allowed"/>
                 <span><b className="block text-sm">{theme.label}</b><small className="mt-1 block leading-5 text-mugla-navy/50">{theme.note}</small></span>
               </label>)}
             </div>
-            {adminUser?.role !== 'super-admin' && <p className="mt-4 rounded-xl bg-white p-3 text-sm font-semibold text-mugla-navy/55">Bu ayari yalnizca super admin degistirebilir. Diger roller mevcut kurallari gorur.</p>}
-            <div className="mt-5"><Button type="submit" variant="orange" disabled={adminUser?.role !== 'super-admin'}><ShieldCheck size={17}/> Tema kuralini kaydet</Button></div>
+            {!canManageAnnualThemes && <p className="mt-4 rounded-xl bg-white p-3 text-sm font-semibold text-mugla-navy/55">Bu alan sadece görüntüleme modunda. Tema tanımlama ve değiştirme yetkisi Super Admin ve Büyükşehir Admini ile sınırlıdır.</p>}
+            <div className="mt-5"><Button type="submit" variant="orange" disabled={!canManageAnnualThemes}><ShieldCheck size={17}/> Tema kuralini kaydet</Button></div>
           </form>
         </CardContent>
       </Card>}
@@ -1475,15 +1513,94 @@ export default function Admin() {
 
       {canSeeNotifications && <Card id="bildirimler">
         <CardHeader>
-          <h2 className="text-xl font-bold">Bildirimler</h2>
-          <p className="text-sm text-mugla-navy/55">Yeni bildirim, toplu bildirim ve gönderilmiş bildirimler sade bir akışta yönetilir.</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">BİLDİRİM MERKEZİ</p>
+              <h2 className="mt-1 text-xl font-bold">Manuel, otomatik ve planlı bildirimler</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bildirimler rol bazlıdır. Rutin süreçlerde sistem otomatik bilgilendirir; yöneticiler yalnızca yetkili oldukları kapsamda manuel veya planlı bildirim oluşturur.</p>
+            </div>
+            <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{activeRole} kapsamı</span>
+          </div>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          {['Yeni Bildirim', 'Toplu Bildirim', 'Gönderilmişler'].map((item, index) => <button key={item} type="button" className="rounded-2xl border border-mugla-navy/10 bg-white p-5 text-left hover:border-mugla-cyan">
-            <Bell className={index === 0 ? 'text-mugla-orange' : 'text-mugla-cyan'} />
-            <b className="mt-4 block">{item}</b>
-            <small className="mt-1 block text-mugla-navy/45">Bildirim işlemi</small>
-          </button>)}
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Bugün', notificationScope.length.toLocaleString('tr-TR')],
+              ['Okundu', notificationRead.toLocaleString('tr-TR')],
+              ['Bekliyor', notificationPending.toLocaleString('tr-TR')],
+              ['Açılma', `%${notificationOpenRate}`],
+            ].map(([label, value]) => <div key={label} className="rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm">
+              <p className="text-sm text-mugla-navy/50">{label}</p>
+              <b className="mt-1 block text-2xl">{value}</b>
+            </div>)}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['Yeni Bildirim', ...(canSendBulkNotification ? ['Toplu Bildirim'] : []), 'Otomatik Bildirimler', ...(canScheduleNotification ? ['Planlı Bildirimler'] : []), 'Taslaklar', 'Gönderilmişler', 'Şablonlar', 'İstatistikler'].map(item => <button key={item} type="button" onClick={() => setNotificationTab(item)} className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold ${notificationTab === item ? 'border-mugla-cyan bg-cyan-50 text-mugla-navy' : 'border-mugla-navy/10 bg-white text-mugla-navy/55 hover:text-mugla-navy'}`}>{item}</button>)}
+          </div>
+
+          {(notificationTab === 'Yeni Bildirim' || notificationTab === 'Toplu Bildirim' || notificationTab === 'Planlı Bildirimler') && <form onSubmit={event => submitNotification(event, notificationTab === 'Planlı Bildirimler' ? 'Planlandı' : 'Gönderildi')} className="grid gap-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4 lg:grid-cols-2">
+            <label><span className="mb-2 block text-sm font-semibold">Başlık</span><input className={field} name="title" required placeholder="Başvurular başladı"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Alıcı</span><select className={field} name="recipient" disabled={isCrmRole}><option>Vatandaş</option><option>İlçe</option><option>Admin</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} name="district" disabled={isDistrictManager || isCrmRole}><option value="">{isDistrictManager ? adminUser?.district : 'Tüm yetkili kapsam'}</option>{districts.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori / Segment</span><select className={field} name="category" disabled={notificationTab !== 'Toplu Bildirim'}><option>Tümü</option>{categories.map(([item]) => <option key={item}>{item}</option>)}</select></label>
+            <label className="lg:col-span-2"><span className="mb-2 block text-sm font-semibold">Mesaj</span><textarea className={`${field} min-h-28`} name="body" required placeholder="Başvurunuz başarıyla alınmıştır."/></label>
+            <fieldset className="lg:col-span-2">
+              <legend className="mb-2 text-sm font-black">Bildirim türleri</legend>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {[
+                  ['Push', 'Uygulama'],
+                  ['E-posta', 'E-posta'],
+                  ['SMS', 'SMS'],
+                  ['WhatsApp', 'Web Push'],
+                ].map(([value, label]) => <label key={value} className="flex items-center gap-2 rounded-xl bg-white p-3 text-sm font-bold"><input type="checkbox" name={value} defaultChecked={value === 'Push'} className="h-4 w-4 accent-mugla-orange"/>{label}</label>)}
+              </div>
+            </fieldset>
+            <div className="flex flex-wrap gap-2 lg:col-span-2">
+              <Button type="submit" variant="orange"><Bell size={17}/> Gönder</Button>
+              <Button type="button" variant="outline" onClick={event => {
+                const form = event.currentTarget.closest('form')
+                if (form) saveNotificationFromForm(form, 'Taslak')
+              }}>Taslak Kaydet</Button>
+            </div>
+          </form>}
+
+          {notificationTab === 'Otomatik Bildirimler' && <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Proje gönderildi', 'Başvurunuz alındı'],
+              ['Revizyon istendi', 'Eksik bilgilerinizi tamamlayın'],
+              ['Proje onaylandı', 'Teknik değerlendirme tamamlandı'],
+              ['Oylama başladı', 'Projeniz oylamaya açıldı'],
+              ['Oylama bitiyor', 'Son 24 saat kaldı'],
+              ['Proje kazandı', 'Tebrikler, uygulama aşamasına geçildi'],
+              ['Proje tamamlandı', 'Projeniz başarıyla tamamlandı'],
+            ].map(([eventName, text]) => <div key={eventName} className="rounded-2xl border border-green-100 bg-green-50 p-4">
+              <b className="block text-green-800">{eventName}</b>
+              <p className="mt-2 text-sm text-green-800/70">{text}</p>
+            </div>)}
+          </div>}
+
+          {notificationTab === 'Şablonlar' && <div className="flex flex-wrap gap-2">{['Başvuru', 'Onay', 'Red', 'Revizyon', 'Oylama', 'Kazandı', 'Tamamlandı', 'CRM'].map(item => <span key={item} className="rounded-full bg-white px-4 py-2 text-sm font-black text-mugla-navy/60">{item}</span>)}</div>}
+
+          {(notificationTab === 'Taslaklar' || notificationTab === 'Gönderilmişler' || notificationTab === 'İstatistikler') && <div className="overflow-x-auto rounded-2xl border border-mugla-navy/10 bg-white">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Başlık</th><th>Kime</th><th>Kanal</th><th>Tarih</th><th>Durum</th><th>Açılma</th><th className="text-right">İşlem</th></tr></thead>
+              <tbody>{notificationScope.filter(item => notificationTab === 'Taslaklar' ? item.status === 'Taslak' : notificationTab === 'Gönderilmişler' ? item.status === 'Gönderildi' : true).length ? notificationScope.filter(item => notificationTab === 'Taslaklar' ? item.status === 'Taslak' : notificationTab === 'Gönderilmişler' ? item.status === 'Gönderildi' : true).map(item => <tr key={item.id} className="border-t border-mugla-navy/10">
+                <td className="p-3 font-bold">{item.title}</td>
+                <td>{item.segment}</td>
+                <td>{item.channels.join(', ')}</td>
+                <td>{new Date(item.createdAt).toLocaleString('tr-TR')}</td>
+                <td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/60">{item.status}</span></td>
+                <td>%{item.status === 'Gönderildi' ? 81 : 0}</td>
+                <td className="text-right">{canDeleteNotification ? <button type="button" className={tableAction}><Trash2 size={14}/> Sil</button> : '-'}</td>
+              </tr>) : <tr><td colSpan={7} className="p-8 text-center text-mugla-navy/45">Bu görünümde bildirim yok.</td></tr>}</tbody>
+            </table>
+          </div>}
+
+          {isSuperAdmin && <div className="rounded-2xl border border-mugla-cyan/25 bg-cyan-50/35 p-4">
+            <h3 className="font-black">Super Admin entegrasyonları</h3>
+            <div className="mt-3 flex flex-wrap gap-2">{['SMTP', 'SMS API', 'Firebase', 'OneSignal', 'Mail Şablonları', 'Webhook', 'Bildirim Logları'].map(item => <span key={item} className="rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/60">{item}</span>)}</div>
+          </div>}
         </CardContent>
       </Card>}
 

@@ -24,8 +24,8 @@ const admin = [
   {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
-  {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin']},
-  {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin']},
+  {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'crm']},
+  {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
 ] as const
 
 const superAdminPortalLinks = [
