@@ -10,7 +10,7 @@ import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, Check
 import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
-import {annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
+import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
@@ -28,6 +28,7 @@ type QuickTarget = {label: string; href: string; count: number; icon: LucideIcon
 type VotingRecord = {
   id: string
   name: string
+  year?: string
   description: string
   startDate: string
   endDate: string
@@ -440,6 +441,7 @@ export default function Admin() {
   const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
+  const [votingYear, setVotingYear] = useState<string>(String(new Date().getFullYear()))
   const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
   const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([])
   const [districtSearch, setDistrictSearch] = useState('')
@@ -516,7 +518,9 @@ export default function Admin() {
   const activeVoterEstimate = Math.max(0, Math.round(voteTotal * 2.07))
   const participationRate = Math.min(100, Math.round(voteTotal / Math.max(1, activeVoterEstimate) * 100))
   const voteNeighborhoodOptions = Array.from(new Set(voteBaseProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
-  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
+  const votingAllowedCategories = allowedCategoriesForYear(votingYear)
+  const votingAllowedCategoryNames = new Set(votingAllowedCategories.map(item => item[0]))
+  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && votingAllowedCategoryNames.has(projectCategoryLabel(project)))
   const activeVotingRecords = votingRecords.filter(record => record.status === 'Aktif')
   const votingProjectCount = votingRecords.reduce((sum, record) => sum + record.projectIds.length, 0)
   const votingRecordsVoteTotal = votingRecords.reduce((sum, record) => sum + record.projectIds.reduce((projectSum, id) => projectSum + (projects.find(project => project.id === id)?.votes ?? 0), 0), 0)
@@ -977,14 +981,20 @@ export default function Admin() {
     const form = new FormData(event.currentTarget)
     const districtsValue = form.getAll('districts').map(String)
     const rules = ['e-Devlet doğrulaması', 'Tek cihaz', 'Tek IP kontrolü', 'CAPTCHA', 'AI dolandırıcılık kontrolü'].filter(rule => form.get(rule))
+    const eligibleSelectedProjectIds = selectedVotingProjects.filter(id => approvedVotingCandidates.some(project => project.id === id))
+    if (!eligibleSelectedProjectIds.length) {
+      setMessage(`${votingYear} yilinin acik temalarina uygun en az 1 onayli proje secmelisiniz.`)
+      return
+    }
     const record: VotingRecord = {
       id: crypto.randomUUID(),
       name: String(form.get('name') || '2027 Katılımcı Bütçe Oylaması'),
+      year: String(form.get('votingYear') || votingYear),
       description: String(form.get('description') || ''),
       startDate: String(form.get('startDate') || ''),
       endDate: String(form.get('endDate') || ''),
       districts: districtsValue.length ? districtsValue : districts,
-      projectIds: selectedVotingProjects,
+      projectIds: eligibleSelectedProjectIds,
       votesPerPerson: Number(form.get('votesPerPerson') || 5) as 1 | 3 | 5,
       rules,
       status: 'Taslak',
@@ -2112,15 +2122,17 @@ export default function Admin() {
 
           {votingWizardStep === 1 && <section className="mt-5 grid gap-4 md:grid-cols-2">
             <label><span className="mb-2 block text-sm font-semibold">Oylama Adı</span><input className={field} name="name" required defaultValue="2027 Katılımcı Bütçe Oylaması"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Oylama Yılı</span><select className={field} name="votingYear" value={votingYear} onChange={event => {setVotingYear(event.target.value); setSelectedVotingProjects([])}} required>{annualThemeYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
             <label><span className="mb-2 block text-sm font-semibold">Başlangıç Tarihi</span><input className={field} name="startDate" type="date" required/></label>
             <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Açıklama</span><textarea className={`${field} min-h-24`} name="description" placeholder="Oylama kapsamı ve duyuru metni"/></label>
             <label><span className="mb-2 block text-sm font-semibold">Bitiş Tarihi</span><input className={field} name="endDate" type="date" required/></label>
+            <div className="md:col-span-2 rounded-2xl bg-mugla-sand/60 p-4 text-sm text-mugla-navy/60"><b className="block text-mugla-navy">{votingYear} açık tema kategorileri</b><div className="mt-2 flex flex-wrap gap-2">{votingAllowedCategories.map(item => <span key={item[0]} className="rounded-full bg-white px-3 py-1 text-xs font-black text-mugla-navy/65">{item[0]}</span>)}</div><p className="mt-2">Oylamaya alınabilecek proje listesi yalnızca bu kategorilerdeki onaylı projelerden oluşur.</p></div>
             <fieldset className="md:col-span-2"><legend className="mb-2 text-sm font-black">İlçeler</legend><div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">{districts.map(item => <label key={item} className="rounded-xl bg-mugla-sand/55 p-3 text-sm font-bold"><input type="checkbox" name="districts" value={item} defaultChecked className="mr-2 accent-mugla-orange"/>{item}</label>)}</div></fieldset>
           </section>}
 
           {votingWizardStep === 2 && <section className="mt-5 space-y-4">
-            <div className="grid gap-3 md:grid-cols-4"><select className={field}><option>İlçe</option>{districts.map(item => <option key={item}>{item}</option>)}</select><select className={field}><option>Kategori</option>{categories.map(([item]) => <option key={item}>{item}</option>)}</select><input className={field} placeholder="Mahalle"/><input className={field} placeholder="Bütçe / Tema"/></div>
-            <div className="grid gap-3 md:grid-cols-2">{approvedVotingCandidates.length ? approvedVotingCandidates.map(project => <label key={project.id} className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 bg-white p-4"><input type="checkbox" checked={selectedVotingProjects.includes(project.id)} onChange={() => toggleVotingProject(project.id)} className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">{project.title}</b><small className="mt-1 block text-mugla-navy/50">{project.district} · {projectCategoryLabel(project)} · {formatBudget(project.budget)}</small></span></label>) : <div className="rounded-2xl bg-mugla-sand p-6 text-center text-mugla-navy/50 md:col-span-2">Onaylandı durumunda proje yok.</div>}</div>
+            <div className="grid gap-3 md:grid-cols-4"><select className={field}><option>İlçe</option>{districts.map(item => <option key={item}>{item}</option>)}</select><select className={field}><option>Kategori</option>{votingAllowedCategories.map(item => <option key={item[0]}>{item[0]}</option>)}</select><input className={field} placeholder="Mahalle"/><input className={field} placeholder={`${votingYear} tema kapsamı`}/></div>
+            <div className="grid gap-3 md:grid-cols-2">{approvedVotingCandidates.length ? approvedVotingCandidates.map(project => <label key={project.id} className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 bg-white p-4"><input type="checkbox" checked={selectedVotingProjects.includes(project.id)} onChange={() => toggleVotingProject(project.id)} className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">{project.title}</b><small className="mt-1 block text-mugla-navy/50">{project.district} · {projectCategoryLabel(project)} · {formatBudget(project.budget)}</small></span></label>) : <div className="rounded-2xl bg-mugla-sand p-6 text-center text-mugla-navy/50 md:col-span-2">{votingYear} yılı açık tema kategorilerinde onaylı proje yok.</div>}</div>
           </section>}
 
           {votingWizardStep === 3 && <section className="mt-5 grid gap-4 md:grid-cols-2">

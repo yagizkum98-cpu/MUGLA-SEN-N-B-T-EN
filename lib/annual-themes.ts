@@ -88,6 +88,16 @@ export function allowedCategoriesForYear(year: string) {
   return projectCategories.filter(([category]) => allowed.has(category))
 }
 
+export function allowedCategoryNamesForYear(year: string) {
+  return allowedCategoriesForYear(year).map(item => item[0])
+}
+
+export function annualThemeLabelsForYear(year: string) {
+  const setting = getAnnualThemeSetting(year)
+  if (!setting.themes.length || setting.themes.includes('all')) return ['Tum temalar']
+  return setting.themes.map(theme => annualThemeOptions.find(option => option.id === theme)?.label ?? theme)
+}
+
 export function allowedSubcategoriesForYear(year: string, category: string) {
   return allowedCategoriesForYear(year).some(([name]) => name === category) ? ['Genel'] : []
 }

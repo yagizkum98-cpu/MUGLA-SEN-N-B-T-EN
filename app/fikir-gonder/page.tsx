@@ -11,7 +11,7 @@ import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
-import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeOptions,getAnnualThemeSetting,isAllThemesOpen,isProjectThemeAllowed} from '@/lib/annual-themes'
+import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeLabelsForYear,isProjectThemeAllowed} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
@@ -43,8 +43,7 @@ export default function IdeaForm(){
   const currentYearKey=String(currentYear)
   const[themeVersion,setThemeVersion]=useState(0)
   const categoryOptions=useMemo(()=>allowedCategoriesForYear(currentYearKey),[currentYearKey,themeVersion])
-  const activeThemeSetting=getAnnualThemeSetting(currentYearKey)
-  const activeThemeLabels=isAllThemesOpen(currentYearKey)?['Tum temalar']:activeThemeSetting.themes.map(theme=>annualThemeOptions.find(option=>option.id===theme)?.label??theme)
+  const activeThemeLabels=annualThemeLabelsForYear(currentYearKey)
   const yearlyIdeaCount=useMemo(()=>{
     if(!currentUser)return 0
     return projects.filter(project=>{
