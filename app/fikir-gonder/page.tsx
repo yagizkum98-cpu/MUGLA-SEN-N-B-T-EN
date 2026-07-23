@@ -158,8 +158,12 @@ export default function IdeaForm(){
       let syncedProject
       try{
         syncedProject=await submitProjectToProjectCenter(project)
-      }catch{
-        syncedProject=await syncProjectRecord(project)
+      }catch(projectCenterError){
+        try{
+          syncedProject=await syncProjectRecord(project)
+        }catch{
+          throw projectCenterError
+        }
       }
       updateProject(project.id,syncedProject)
       setSuccess(project.projectCode)
@@ -169,7 +173,7 @@ export default function IdeaForm(){
       setCustomTheme('')
     }catch(cause){
       removeProject(project.id)
-      setError(cause instanceof Error&&cause.message?'Başvuru belediye Proje Merkezi\'ne aktarılamadı. Lütfen tekrar deneyin.':'Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
+      setError(cause instanceof Error&&cause.message?cause.message:'Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
     }finally{
       setSubmitting(false)
     }
