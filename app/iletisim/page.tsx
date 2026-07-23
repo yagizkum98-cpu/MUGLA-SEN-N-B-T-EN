@@ -5,7 +5,7 @@ import {FormEvent, useMemo, useState} from 'react'
 import {ArrowLeft, Building2, CheckCircle2, Mail, MapPin, Phone, Send} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {SiteUserMenu} from '@/components/site-user-menu'
-import {type ContactTopic, useContactRecords} from '@/lib/contact-store'
+import {syncContactRecord, type ContactTopic, useContactRecords} from '@/lib/contact-store'
 
 const field = 'w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 const topics: {value: ContactTopic; label: string}[] = [
@@ -59,27 +59,31 @@ function ContactInfoCard() {
 }
 
 export default function ContactPage() {
-  const {addContactRecord} = useContactRecords()
+  const {addContactRecord, removeContactRecord} = useContactRecords()
   const [question, setQuestion] = useState(() => createSecurityQuestion())
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const submittedAt = useMemo(() => new Date().toLocaleString('tr-TR'), [success])
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setSubmitting(true)
     const form = event.currentTarget
     const data = new FormData(form)
     if (Number(data.get('securityAnswer')) !== question.answer) {
       setError('Guvenlik sorusunun cevabi hatali. Lutfen yeni islemi cevaplayin.')
       setQuestion(createSecurityQuestion())
+      setSubmitting(false)
       return
     }
     if (data.get('kvkkAccepted') !== 'on') {
       setError('Iletisim talebinizi alabilmemiz icin KVKK onayini isaretleyin.')
+      setSubmitting(false)
       return
     }
-    addContactRecord({
+    const record = addContactRecord({
       name: String(data.get('name')).trim(),
       phone: String(data.get('phone')).trim(),
       email: String(data.get('email')).trim(),
@@ -88,9 +92,17 @@ export default function ContactPage() {
       message: String(data.get('message')).trim(),
       kvkkAccepted: true,
     })
-    form.reset()
-    setQuestion(createSecurityQuestion())
-    setSuccess(true)
+    try {
+      await syncContactRecord(record)
+      form.reset()
+      setQuestion(createSecurityQuestion())
+      setSuccess(true)
+    } catch {
+      removeContactRecord(record.id)
+      setError('Iletisim talebi belediye paneline aktarilamadi. Lutfen tekrar deneyin.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (success) return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6">
@@ -143,7 +155,7 @@ export default function ContactPage() {
             <span>KVKK kapsaminda kisisel verilerimin iletisim talebimin degerlendirilmesi amaciyla islenmesini kabul ediyorum.</span>
           </label>
           {error && <div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
-          <Button type="submit" variant="orange" className="h-13 w-full text-base">Formu gonder <Send size={17}/></Button>
+          <Button type="submit" variant="orange" disabled={submitting} className="h-13 w-full text-base">{submitting ? 'Belediye paneline aktariliyor...' : <>Formu gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
