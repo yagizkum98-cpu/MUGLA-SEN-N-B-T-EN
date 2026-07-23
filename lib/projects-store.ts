@@ -76,6 +76,7 @@ const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
 const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'
 const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi','sosyal duraklar','sosyal duraklar projesi']
+const REMOVED_PROJECT_TITLE_ALIASES=['akıllı yaya geçiş sistemi','akıllı yaya geçiş sistemi projesi','akilli yaya gecis sistemi','akilli yaya gecis sistemi projesi']
 
 function normalizeText(value:unknown){
   return String(value??'').trim().toLocaleLowerCase('tr')
@@ -91,8 +92,21 @@ function isBeforeSocialStopsCleanup(project:Partial<ProjectRecord>){
 }
 
 function isRemovedProject(project:Partial<ProjectRecord>&Pick<ProjectRecord,'title'>){
-  const isLegacySocialStops=REMOVED_PROJECT_TITLES.includes(normalizeText(project.title))
-  return isLegacySocialStops&&isBeforeSocialStopsCleanup(project)
+  const normalizedTitle=normalizeText(project.title)
+  const isLegacySocialStops=REMOVED_PROJECT_TITLES.includes(normalizedTitle)
+  const isRemovedByRequest=REMOVED_PROJECT_TITLE_ALIASES.includes(normalizedTitle)
+  return isRemovedByRequest||(isLegacySocialStops&&isBeforeSocialStopsCleanup(project))
+}
+
+function purgeRemovedLocalProjects(){
+  if(typeof window==='undefined')return []
+  try{
+    const value=JSON.parse(localStorage.getItem(STORAGE_KEY)??'[]')
+    if(!Array.isArray(value))return []
+    const removed=value.filter(project=>project?.title&&isRemovedProject(project as ProjectRecord)) as ProjectRecord[]
+    if(removed.length)saveLocalProjects(value.filter(project=>project?.title&&!isRemovedProject(project as ProjectRecord)))
+    return removed
+  }catch{return []}
 }
 
 function readProjects():ProjectRecord[]{
@@ -145,6 +159,27 @@ export async function syncProjectRecord(project:ProjectRecord){
   },{onConflict:'id'})
   if(error)throw error
   return normalized
+}
+
+export async function submitProjectToProjectCenter(project:ProjectRecord){
+  if(typeof window==='undefined')throw new Error('Proje kaydı tarayıcı dışında gönderilemez.')
+  const normalized=normalizeProject({
+    ...project,
+    status:'Başvuru',
+    moderationStatus:'Bekliyor',
+    workflowStatus:'İlçe Admin İncelemesinde',
+    source:'citizen',
+    progress:0,
+    votes:0,
+  })
+  const response=await fetch('/api/projects',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({project:normalized}),
+  })
+  const payload=await response.json().catch(()=>null)
+  if(!response.ok)throw new Error(payload?.error||'Başvuru belediye Proje Merkezi\'ne aktarılamadı.')
+  return normalizeProject(payload?.project??normalized)
 }
 
 async function deleteRemoteProject(id:string){
@@ -213,12 +248,13 @@ export function useProjects(){
   const[ready,setReady]=useState(false)
 
   useEffect(()=>{
-    const sync=()=>{setProjects(readProjects().map(normalizeProject));setReady(true)}
+    const sync=()=>{purgeRemovedLocalProjects();setProjects(readProjects().map(normalizeProject));setReady(true)}
     const syncRemote=async()=>{
+      const removedLocal=purgeRemovedLocalProjects()
       const local=readProjects().map(normalizeProject)
       const remote=await readRemoteProjects()
       if(!remote){setProjects(local);setReady(true);return}
-      const removedIds=[...local,...remote].filter(project=>isRemovedProject(project)).map(project=>project.id)
+      const removedIds=[...removedLocal,...local,...remote].filter(project=>isRemovedProject(project)).map(project=>project.id)
       const merged=mergeProjectsById(local,remote)
       saveLocalProjects(merged)
       setProjects(merged)
@@ -228,9 +264,12 @@ export function useProjects(){
     }
     sync()
     void syncRemote()
+    const remoteInterval=window.setInterval(()=>void syncRemote(),15000)
+    const syncOnFocus=()=>void syncRemote()
     window.addEventListener('storage',sync)
     window.addEventListener(CHANGE_EVENT,sync)
-    return()=>{window.removeEventListener('storage',sync);window.removeEventListener(CHANGE_EVENT,sync)}
+    window.addEventListener('focus',syncOnFocus)
+    return()=>{window.clearInterval(remoteInterval);window.removeEventListener('storage',sync);window.removeEventListener(CHANGE_EVENT,sync);window.removeEventListener('focus',syncOnFocus)}
   },[])
 
   const save=useCallback((next:ProjectRecord[])=>{

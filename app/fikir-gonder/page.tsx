@@ -5,7 +5,7 @@ import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from 'react'
 import {ArrowLeft,CheckCircle2,FileText,Lightbulb,Paperclip,Send,Trash2,UploadCloud} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
-import {syncProjectRecord,useProjects} from '@/lib/projects-store'
+import {submitProjectToProjectCenter,syncProjectRecord,useProjects} from '@/lib/projects-store'
 import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
 import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
@@ -155,7 +155,12 @@ export default function IdeaForm(){
     })
     try{
       await saveProjectFiles(project.id,files)
-      const syncedProject=await syncProjectRecord(project)
+      let syncedProject
+      try{
+        syncedProject=await submitProjectToProjectCenter(project)
+      }catch{
+        syncedProject=await syncProjectRecord(project)
+      }
       updateProject(project.id,syncedProject)
       setSuccess(project.projectCode)
       setFiles([])
