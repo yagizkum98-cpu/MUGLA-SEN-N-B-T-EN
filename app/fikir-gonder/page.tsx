@@ -5,10 +5,10 @@ import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from 'react'
 import {ArrowLeft,CheckCircle2,FileText,Lightbulb,Paperclip,Send,Trash2,UploadCloud} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
-import {useProjects} from '@/lib/projects-store'
+import {syncProjectRecord,useProjects} from '@/lib/projects-store'
 import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
 import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
-import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
+import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
 import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeLabelsForYear,isProjectThemeAllowed} from '@/lib/annual-themes'
@@ -26,7 +26,7 @@ function size(value:number){
 }
 
 export default function IdeaForm(){
-  const{projects,addProject,removeProject}=useProjects()
+  const{projects,addProject,removeProject,updateProject}=useProjects()
   const[files,setFiles]=useState<File[]>([])
   const[error,setError]=useState('')
   const[submitting,setSubmitting]=useState(false)
@@ -155,14 +155,16 @@ export default function IdeaForm(){
     })
     try{
       await saveProjectFiles(project.id,files)
+      const syncedProject=await syncProjectRecord(project)
+      updateProject(project.id,syncedProject)
       setSuccess(project.projectCode)
       setFiles([])
       form.reset()
       setCategory(categoryOptions[0]?.[0]??'Ulaşım')
       setCustomTheme('')
-    }catch{
+    }catch(cause){
       removeProject(project.id)
-      setError('Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
+      setError(cause instanceof Error&&cause.message?'Başvuru belediye Proje Merkezi\'ne aktarılamadı. Lütfen tekrar deneyin.':'Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
     }finally{
       setSubmitting(false)
     }
@@ -179,6 +181,7 @@ export default function IdeaForm(){
       <p className="mt-4 leading-7 text-mugla-navy/55">Başvurunuz Bekliyor durumuyla belediye panelindeki Proje Merkezi'ne otomatik kaydedildi. Yetkili ekip proje bilgilerini düzenleyebilir, onay/red verebilir ve uygun projeyi ayrıca oylamaya sunabilir.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/projeler"><Button variant="orange">Projeleri goruntule</Button></Link>
+        <a href={municipalityUrl('/admin#projeler')} target="_blank" rel="noreferrer"><Button variant="outline">Belediye Proje Merkezi</Button></a>
         <Button variant="outline" onClick={()=>setSuccess('')}>Yeni fikir gonder</Button>
       </div>
     </section>

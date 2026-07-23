@@ -135,6 +135,18 @@ async function upsertRemoteProjects(projects:ProjectRecord[]){
   }catch{}
 }
 
+export async function syncProjectRecord(project:ProjectRecord){
+  if(typeof window==='undefined')throw new Error('Proje kaydı tarayıcı dışında senkronize edilemez.')
+  const normalized=normalizeProject(project)
+  const{error}=await createClient().from(REMOTE_TABLE).upsert({
+    id:normalized.id,
+    data:normalized,
+    updated_at:new Date().toISOString(),
+  },{onConflict:'id'})
+  if(error)throw error
+  return normalized
+}
+
 async function deleteRemoteProject(id:string){
   if(typeof window==='undefined')return
   try{
