@@ -81,6 +81,25 @@ function CategoryBadge({project}:{project:ProjectRecord}) {
   return <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" style={{backgroundColor:`${project.color}18`,borderColor:`${project.color}55`,color:project.color}}>{label}</span>
 }
 
+function votingPeriodStarted(date = new Date()) {
+  return date.getTime() >= new Date(votingSchedule.start).getTime()
+}
+
+function projectVotingSubmissionLabel(project: ProjectRecord) {
+  if (project.moderationStatus === 'Reddedildi' || project.workflowStatus === 'Reddedildi') return 'Reddedildi'
+  if (project.moderationStatus === 'Bekliyor') return 'İncelemede'
+  if (['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)) || project.workflowStatus === 'Yayında') return 'Oylamaya sunuldu'
+  if (project.workflowStatus === 'Oylamaya Sunulmadı' || votingPeriodStarted()) return 'Oylamaya sunulmadı'
+  return 'Oylamaya hazır'
+}
+
+function votingSubmissionClass(label: string) {
+  if (label === 'Oylamaya sunuldu') return 'bg-green-50 text-green-700'
+  if (label === 'Oylamaya sunulmadı') return 'bg-slate-100 text-slate-700'
+  if (label === 'Reddedildi') return 'bg-red-50 text-red-700'
+  return 'bg-orange-50 text-mugla-orange'
+}
+
 function ProjectImage({project, className = 'h-36'}: {project: ProjectRecord; className?: string}) {
   return <div className={`overflow-hidden rounded-lg border border-mugla-navy/10 bg-mugla-sand ${className}`}>
     {project.image?.dataUrl ? <img src={project.image.dataUrl} alt={`${project.title} proje görseli`} className="h-full w-full object-cover"/> : <div className="grid h-full place-items-center text-center text-xs font-bold text-mugla-navy/35"><span>Proje görseli</span></div>}
@@ -137,6 +156,7 @@ function CheckOption({label, checked, onChange}: {label: string; checked: boolea
 function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDetails}: {project: ProjectRecord; inBasket: boolean; confirmed: boolean; votingOpen: boolean; onAdd: (id: string) => void; onShowDetails: (project: ProjectRecord) => void}) {
   const status = String(project.status)
   const canVote = votingOpen && ['Oylamada', 'Yılın Kazanan Adayı'].includes(status)
+  const votingLabel = projectVotingSubmissionLabel(project)
 
   return <article onClick={() => onShowDetails(project)} className="fade-up-card cursor-pointer border-b border-mugla-navy/10 bg-white px-4 py-4 last:border-b-0 hover:bg-mugla-sand/35 md:px-5">
     <div className="grid gap-4 md:grid-cols-[150px_minmax(0,1fr)_180px_130px] md:items-center">
@@ -145,6 +165,7 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(status)}`}>{status}</span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${votingSubmissionClass(votingLabel)}`}>{votingLabel}</span>
           <CategoryBadge project={project}/>
         </div>
         <h2 className="mt-2 truncate text-lg font-black">{project.title}</h2>

@@ -6,7 +6,7 @@ import {createClient} from '@/lib/supabase/client'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
-export type ProjectWorkflowStatus='Taslak'|'İlçe Admin İncelemesinde'|'Muğla BB İncelemesinde'|'Oylamaya Hazır'|'Yayında'|'Kazandı'|'Uygulanıyor'|'Tamamlandı'|'Revizyon İstendi'|'Eksik Belge'|'Reddedildi'
+export type ProjectWorkflowStatus='Taslak'|'İlçe Admin İncelemesinde'|'Muğla BB İncelemesinde'|'Oylamaya Hazır'|'Oylamaya Sunulmadı'|'Yayında'|'Kazandı'|'Uygulanıyor'|'Tamamlandı'|'Revizyon İstendi'|'Eksik Belge'|'Reddedildi'
 
 export type ProjectHistoryEntry={
   id:string
@@ -266,7 +266,7 @@ export function useProjects(){
     save(readProjects().map(project=>{
       if(project.id!==id)return project
       const approved=!['Bekliyor','Reddedildi'].includes(String(moderationStatus))
-      return {...project,moderationStatus,status:approved?'Oylamada':project.status,progress:approved?0:project.progress}
+      return {...project,moderationStatus,status:approved?'Uygun':project.status,workflowStatus:approved?'Oylamaya Hazır':project.workflowStatus,progress:approved?0:project.progress}
     }))
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{

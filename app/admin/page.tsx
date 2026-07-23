@@ -201,6 +201,7 @@ function projectLifecycleLabel(project: ProjectRecord) {
   const status = String(project.status ?? '')
   const moderation = String(project.moderationStatus ?? '')
   if (workflow === 'Reddedildi' || moderation === 'Reddedildi') return 'Arşiv'
+  if (workflow === 'Oylamaya Sunulmadı') return 'Onaylandı'
   if (workflow.includes('Revizyon') || workflow.includes('Eksik')) return 'Revizyon'
   if (workflow.includes('Kazand') || status.includes('Kazanan')) return 'Kazanan'
   if (workflow.includes('Uygulan') || status.includes('Devam')) return 'Uygulanıyor'
@@ -209,6 +210,15 @@ function projectLifecycleLabel(project: ProjectRecord) {
   if (moderation.includes('Onay')) return 'Onaylandı'
   if (status.includes('İnceleme') || workflow.includes('İnceleme')) return 'İncelemede'
   return 'Başvuru Alındı'
+}
+
+function projectMatchesDistrict(project: ProjectRecord, district?: string) {
+  if (!district) return true
+  return project.district === district || project.applicantDistrict === district || project.district === 'Tüm İlçeler'
+}
+
+function isProjectOnVoting(project: ProjectRecord) {
+  return !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status))
 }
 
 function projectHistory(project: ProjectRecord) {
@@ -320,10 +330,12 @@ function ProjectManagementPanel({
   onRemoveImage,
   onSave,
   onApprove,
+  onSendToVote,
   onRevision,
   onReject,
   canEdit,
   canReview,
+  canSendToVote,
 }: {
   project: ProjectRecord
   onClose: () => void
@@ -331,10 +343,12 @@ function ProjectManagementPanel({
   onRemoveImage: () => void
   onSave: (event: FormEvent<HTMLFormElement>) => void
   onApprove: () => void
+  onSendToVote: () => void
   onRevision: () => void
   onReject: () => void
   canEdit: boolean
   canReview: boolean
+  canSendToVote: boolean
 }) {
   const aiItems = [
     ['Tahmini Maliyet', formatBudget(project.budget)],
@@ -410,13 +424,24 @@ function ProjectManagementPanel({
         <label><span className="mb-2 block text-sm font-semibold">Hedef grup</span><select className={field} name="targetGroup" defaultValue={project.targetGroup ?? 'Herkes'} required>{targetGroups.map(item => <option key={item}>{item}</option>)}</select></label>
         <label><span className="mb-2 block text-sm font-semibold">Bütçe</span><input className={field} name="budget" type="number" min="0" step="1" defaultValue={project.budget}/></label>
         <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" defaultValue={project.status} required>{statuses.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label><span className="mb-2 block text-sm font-semibold">Başvuru türü</span><select className={field} name="applicantType" defaultValue={project.applicantType ?? 'Bireysel'}><option>Bireysel</option><option>Tüzel</option><option>Grup</option></select></label>
+        <label><span className="mb-2 block text-sm font-semibold">Başvuru ilçesi / şehir</span><input className={field} name="applicantDistrict" defaultValue={project.applicantDistrict ?? ''}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">Mahalle</span><input className={field} name="neighborhood" defaultValue={project.neighborhood ?? ''}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">Finans kaynağı</span><input className={field} name="financingSource" defaultValue={project.financingSource ?? ''}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">Süre</span><input className={field} name="duration" defaultValue={project.duration ?? ''}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">Öncelik</span><input className={field} name="priority" defaultValue={project.priority ?? ''}/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Konum notu</span><textarea className={`${field} min-h-20`} name="locationNote" defaultValue={project.locationNote ?? ''}/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Amaç</span><textarea className={`${field} min-h-24`} name="purpose" defaultValue={project.purpose ?? ''}/></label>
         <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Özet</span><textarea className={`${field} min-h-28`} name="summary" defaultValue={project.summary ?? project.shortDescription ?? ''}/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Faaliyetler</span><textarea className={`${field} min-h-28`} name="activities" defaultValue={project.activities ?? ''}/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Beklenen sonuçlar</span><textarea className={`${field} min-h-28`} name="expectedResults" defaultValue={project.expectedResults ?? ''}/></label>
         <div className="md:col-span-2"><Button type="submit" variant="orange"><Pencil size={17}/> Kaydet</Button></div>
       </form>}
       {canReview && <div className="flex flex-wrap gap-2 border-t border-mugla-navy/10 pt-5">
-        <Button variant="orange" onClick={onApprove}><CheckCircle2 size={17}/> Onayla</Button>
-        <Button variant="outline" onClick={onRevision}><ArrowUpRight size={17}/> Revizyon İste</Button>
-        <Button variant="outline" onClick={onReject} className="border-red-100 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"><XCircle size={17}/> Reddet</Button>
+        {isPendingReviewProject(project) && <Button variant="orange" onClick={onApprove}><CheckCircle2 size={17}/> Onayla</Button>}
+        {canSendToVote && <Button variant="orange" onClick={onSendToVote}><Vote size={17}/> Oylamaya Sun</Button>}
+        {isPendingReviewProject(project) && <Button variant="outline" onClick={onRevision}><ArrowUpRight size={17}/> Revizyon İste</Button>}
+        {isPendingReviewProject(project) && <Button variant="outline" onClick={onReject} className="border-red-100 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"><XCircle size={17}/> Reddet</Button>}
       </div>}
     </CardContent>
   </Card>
@@ -493,14 +518,14 @@ export default function Admin() {
   const canSendBulkNotification = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
   const canScheduleNotification = isSuperAdmin || isMunicipalityAdmin
   const canDeleteNotification = isSuperAdmin
-  const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || project.district === adminUser?.district) : isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
+  const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || projectMatchesDistrict(project, adminUser?.district)) : isDistrictManager && adminUser?.district ? projects.filter(project => projectMatchesDistrict(project, adminUser.district)) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
   const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
   const pendingProjects = scopedProjects.filter(isPendingReviewProject)
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))
   const managedProject = projects.find(project => project.id === managedProjectId) ?? null
   const allPendingSelected = pendingProjects.length > 0 && pendingProjects.every(project => mergeSelection.includes(project.id))
-  const voteBaseProjects = isDistrictManager && adminUser?.district ? projects.filter(project => project.district === adminUser.district) : projects
+  const voteBaseProjects = isDistrictManager && adminUser?.district ? projects.filter(project => projectMatchesDistrict(project, adminUser.district)) : projects
   const voteDistrictOptions = isDistrictManager && adminUser?.district ? [adminUser.district] : districts
   const effectiveVoteDistrict = isDistrictManager ? adminUser?.district ?? '' : voteDistrictFilter
   const voteFilteredProjects = voteBaseProjects.filter(project => {
@@ -634,7 +659,7 @@ export default function Admin() {
     setMergeFormOpen(false)
     setExpandedProjectDetails(value => value && ids.includes(value) ? null : value)
     setProjectCenterTab(moderationStatus === 'Onaylandı' ? 'Onaylanan' : 'Reddedilenler')
-    setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandi ve oylamaya acildi' : 'reddedildi'}.`)
+    setMessage(`${ids.length} proje ${moderationStatus === 'Onaylandı' ? 'onaylandı ve oylamaya hazırlandı' : 'reddedildi'}.`)
   }
 
   function approvePendingProject(project: ProjectRecord) {
@@ -643,10 +668,16 @@ export default function Admin() {
       setMessage('Proje Muğla Büyükşehir incelemesine gönderildi.')
       return
     }
-    reviewProject(project.id, 'Onaylandı')
-    updateProjectWithHistory(project, {workflowStatus: 'Yayında'}, 'Proje onaylandı', project.title)
+    updateProjectWithHistory(project, {workflowStatus: 'Oylamaya Hazır', moderationStatus: 'Onaylandı', status: 'Uygun'}, 'Proje onaylandı', project.title)
     setProjectCenterTab('Onaylanan')
-    setMessage('Proje oylamaya açıldı ve yayınlandı.')
+    setMessage('Proje onaylandı. Oylamaya sunmak için Proje Merkezi üzerinden Oylamaya Sun butonunu kullanın.')
+  }
+
+  function sendProjectToVote(project: ProjectRecord) {
+    if (!canSendProjectsToVote) return
+    updateProjectWithHistory(project, {workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'}, 'Proje oylamaya sunuldu', project.title)
+    setProjectCenterTab('Yayında')
+    setMessage('Proje oylamaya sunuldu; vatandaş ekranında Oylamaya sunuldu ibaresi görünür.')
   }
 
   function saveManagedProject(event: FormEvent<HTMLFormElement>) {
@@ -662,7 +693,17 @@ export default function Admin() {
       targetGroup: String(form.get('targetGroup')),
       budget: Number(form.get('budget')) || 0,
       status: String(form.get('status')) as ProjectStatus,
+      applicantDistrict: String(form.get('applicantDistrict')).trim(),
+      neighborhood: String(form.get('neighborhood')).trim(),
+      locationNote: String(form.get('locationNote')).trim(),
+      applicantType: String(form.get('applicantType')),
+      purpose: String(form.get('purpose')).trim(),
       summary: String(form.get('summary')).trim(),
+      activities: String(form.get('activities')).trim(),
+      expectedResults: String(form.get('expectedResults')).trim(),
+      financingSource: String(form.get('financingSource')).trim(),
+      duration: String(form.get('duration')).trim(),
+      priority: String(form.get('priority')).trim(),
     })
     writeAuditLog(adminUser, 'Proje duzenledi', {target: managedProject.projectCode, details: managedProject.title})
     setMessage('Proje bilgileri güncellendi.')
@@ -753,7 +794,9 @@ export default function Admin() {
         category,
         targetGroup: String(form.get('targetGroup')),
         budget: Number(form.get('budget')) || 0,
-        status: 'Oylamada',
+        status: 'Uygun',
+        moderationStatus: 'Onaylandı',
+        workflowStatus: 'Oylamaya Hazır',
         lat: Number(form.get('lat')) || 37.08,
         lng: Number(form.get('lng')) || 28.45,
         color: selectedMergeProjects[0]?.color ?? categories.find(item => item[0] === category)?.[1] ?? '#64748b',
@@ -767,7 +810,8 @@ export default function Admin() {
       setMergeSelection([])
       setMergeFormOpen(false)
       writeAuditLog(adminUser, 'Projeleri birlestirdi', {target: project.projectCode, details: mergeSelection.join(',')})
-      setMessage(`${project.title} birleştirilmiş proje olarak onaylandı ve oylamaya açıldı.`)
+      setProjectCenterTab('Onaylanan')
+      setMessage(`${project.title} birleştirilmiş proje olarak onaylandı. Oylamaya Sun butonuyla yayına alınabilir.`)
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : 'Projeler birleştirilemedi.')
     }
@@ -1008,11 +1052,28 @@ export default function Admin() {
   }
 
   function updateVotingStatus(id: string, status: VotingRecord['status']) {
-    saveVotingRecords(votingRecords.map(record => record.id === id ? {...record, status} : record))
+    const record = votingRecords.find(item => item.id === id)
+    if (record && status === 'Aktif') {
+      const recordYear = record.year ?? votingYear
+      const allowedNames = new Set(allowedCategoriesForYear(recordYear).map(item => item[0]))
+      const selectedIds = new Set(record.projectIds)
+      projects.forEach(project => {
+        const createdYear = new Date(project.createdAt).getFullYear().toString()
+        const inVotingYear = createdYear === recordYear || recordYear === '2027'
+        const inVotingDistrict = record.districts.includes(project.district) || project.district === 'Tüm İlçeler'
+        const eligible = project.moderationStatus === 'Onaylandı' && inVotingYear && inVotingDistrict && allowedNames.has(projectCategoryLabel(project))
+        if (selectedIds.has(project.id)) {
+          updateProject(project.id, {workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'})
+        } else if (eligible && !isProjectOnVoting(project)) {
+          updateProject(project.id, {workflowStatus: 'Oylamaya Sunulmadı', status: 'Uygun'})
+        }
+      })
+    }
+    saveVotingRecords(votingRecords.map(item => item.id === id ? {...item, status} : item))
     setMessage(status === 'Aktif' ? 'Oylama yayınlandı; vatandaş panelinde oylama süreci açılır ve bildirim gönderilir.' : `Oylama ${status} durumuna alındı.`)
   }
 
-  const activeVotingProjects = scopedProjects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const activeVotingProjects = scopedProjects.filter(isProjectOnVoting)
   const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
   const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
@@ -1088,7 +1149,7 @@ export default function Admin() {
   ]
   const reportDistrictOptions = isSuperAdmin || isMunicipalityAdmin ? ['Tüm Muğla', ...districts] : isDistrictManager && adminUser?.district ? [adminUser.district] : ['Atanan projeler']
   const quickTargets: QuickTarget[] = [
-    {label: 'Onay kutusu', href: '#projeler', count: pendingProjects.length, icon: Clock3, note: 'Vatandaş fikirleri otomatik buraya düşer.'},
+    {label: 'Proje merkezi', href: '#projeler', count: pendingProjects.length, icon: Clock3, note: 'Vatandaş fikirleri doğrudan burada bekler.'},
     {label: 'Proje havuzu', href: '#proje-havuzu', count: scopedProjects.length, icon: FolderKanban, note: 'Tüm canlı kayıtlar tek tabloda.'},
     ...(canSeeLiveCitizenData ? [{label: 'Canlı veri', href: '#canli-veri-listesi', count: scopedCitizens.length, icon: Database, note: 'Giriş ve kayıt bilgileri.'}] : []),
     {label: 'Yetkililer', href: '#yetkililer', count: accounts.length, icon: UsersRound, note: 'Sadece süper admin kapsam belirler.'},
@@ -1124,7 +1185,7 @@ export default function Admin() {
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {quickTargets.map(({label, href, count, icon: Icon, note}) => <a key={label} href={href} onClick={() => {if (label === 'Onay kutusu') setProjectCenterTab('Onay Bekleyen')}} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-cyan">
+        {quickTargets.map(({label, href, count, icon: Icon, note}) => <a key={label} href={href} onClick={() => {if (label === 'Proje merkezi') setProjectCenterTab('Onay Bekleyen')}} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-cyan">
           <span className="flex items-center justify-between gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-mugla-sand text-mugla-cyan"><Icon size={19}/></span>
             <span className="text-2xl font-black">{Number(count).toLocaleString('tr-TR')}</span>
@@ -1213,12 +1274,12 @@ export default function Admin() {
           {projectCenterTab === 'Onay Bekleyen' && <section className="space-y-4 rounded-2xl border border-mugla-orange/20 bg-orange-50/30 p-4">
             <div>
               <h3 className="text-lg font-black">Onay bekleyen başvurular</h3>
-              <p className="mt-1 text-sm text-mugla-navy/55">Fikir gönder formundan gelen başvurular otomatik bu alana düşer. Onaylanan projeler proje listesinde oylamaya açılır.</p>
+              <p className="mt-1 text-sm text-mugla-navy/55">Fikir gönder formundan gelen başvurular doğrudan Proje Merkezi'ne düşer. Onaylanan projeler ayrıca Oylamaya Sun butonuyla vatandaşa açılır.</p>
             </div>
             {pendingProjects.length > 0 && canReviewProjects && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mugla-navy/10 bg-white p-4">
               <label className="flex items-center gap-3 text-sm font-bold text-mugla-navy">
                 <input type="checkbox" className="h-4 w-4 accent-mugla-orange" checked={allPendingSelected} onChange={toggleAllPendingSelection}/>
-                Tüm onay kutularını seç
+                Tüm bekleyen başvuruları seç
               </label>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" type="button" onClick={() => setMergeSelection([])} disabled={!mergeSelection.length}>Seçimi temizle</Button>
@@ -1273,6 +1334,7 @@ export default function Admin() {
                     <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Eye size={14}/> İncele</button>
                     {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={tableAction} onClick={() => approvePendingProject(project)}><CheckCircle2 size={14}/> Onayla</button>}
                     {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => rejectPendingProject(project)}><XCircle size={14}/> Reddet</button>}
+                    {canSendProjectsToVote && project.moderationStatus === 'Onaylandı' && !isProjectOnVoting(project) && <button type="button" className={tableAction} onClick={() => sendProjectToVote(project)}><Vote size={14}/> Oylamaya Sun</button>}
                     {canEditProjects && <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Pencil size={14}/> Düzenle</button>}
                     {canArchiveProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => archiveProject(project)}><Trash2 size={14}/> Arşiv</button>}
                     {canPermanentDeleteProjects && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => deleteManagedProject(project)}><Trash2 size={14}/> Kalıcı Sil</button>}
@@ -2063,10 +2125,12 @@ export default function Admin() {
               onRemoveImage={() => removeProjectImage(managedProject)}
               onSave={saveManagedProject}
               onApprove={() => approvePendingProject(managedProject)}
+              onSendToVote={() => sendProjectToVote(managedProject)}
               onRevision={() => requestProjectRevision(managedProject, 'Revizyon İstendi')}
               onReject={() => rejectPendingProject(managedProject)}
               canEdit={canEditProjects}
               canReview={canReviewProjects}
+              canSendToVote={canSendProjectsToVote && !isProjectOnVoting(managedProject) && managedProject.moderationStatus === 'Onaylandı'}
             />
 
             <Card>
@@ -2095,7 +2159,7 @@ export default function Admin() {
             {(canSendProjectsToVote || canArchiveProjects || canRestoreProjects || isDistrictManager || isEvaluator || isSuperAdmin) && <Card>
               <CardHeader><h2 className="text-xl font-bold">Proje havuzu işlemleri</h2><p className="text-sm text-mugla-navy/55">Durum değişiklikleri süreç geçmişine işlenir. Arşiv kayıtları havuzda korunur.</p></CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                {canSendProjectsToVote && <Button variant="orange" onClick={() => {reviewProject(managedProject.id, 'Onaylandı'); updateProjectWithHistory(managedProject, {workflowStatus: 'Yayında', status: 'Oylamada'}, 'Proje oylamaya gönderildi', managedProject.title); setMessage('Proje oylamaya açıldı.')}}><CheckCircle2 size={17}/> Oylamaya Gönder</Button>}
+                {canSendProjectsToVote && !isProjectOnVoting(managedProject) && <Button variant="orange" onClick={() => sendProjectToVote(managedProject)}><CheckCircle2 size={17}/> Oylamaya Sun</Button>}
                 {canSendProjectsToVote && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Oylamaya Hazır', status: 'İncelemede'}, 'Oylama tarihi planlandı', managedProject.title)}>Oylama Tarihini Belirle</Button>}
                 {canSendProjectsToVote && <Button variant="outline" onClick={() => updateProjectWithHistory(managedProject, {workflowStatus: 'Kazandı', status: 'Yılın Kazanan Adayı'}, 'Kazanan ilan edildi', managedProject.title)}>Kazanan İlan Et</Button>}
                 {(canReviewProjects || isEvaluator) && <Button variant="outline" onClick={() => requestProjectRevision(managedProject, 'Revizyon İstendi')}>Revizyon İste</Button>}
