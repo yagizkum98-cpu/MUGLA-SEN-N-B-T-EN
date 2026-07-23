@@ -82,7 +82,7 @@ function normalizeText(value:unknown){
 }
 
 function hasApplicantData(project:Partial<ProjectRecord>){
-  return Boolean(project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
+  return Boolean(project.source==='citizen'||project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
 }
 
 function isBeforeSocialStopsCleanup(project:Partial<ProjectRecord>){
@@ -168,8 +168,12 @@ function normalizeProject(project:ProjectRecord):ProjectRecord{
   const category=normalizeProjectCategory(project.category)
   const color=project.category===category&&project.color?project.color:categoryColor(category)
   const normalizedModerationStatus=normalizeModerationStatus(project)
-  const moderationStatus=isPendingReviewProject({...project,moderationStatus:normalizedModerationStatus})?'Bekliyor':normalizedModerationStatus
-  return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus}
+  const isCitizenApplication=hasApplicantData(project)
+  const needsProjectCenterIntake=isCitizenApplication&&!project.workflowStatus&&normalizedModerationStatus!=='Reddedildi'
+  const workflowStatus=needsProjectCenterIntake?'İlçe Admin İncelemesinde':project.workflowStatus
+  const status=needsProjectCenterIntake?'Başvuru':project.status
+  const moderationStatus=needsProjectCenterIntake?'Bekliyor':isPendingReviewProject({...project,moderationStatus:normalizedModerationStatus,workflowStatus,status})?'Bekliyor':normalizedModerationStatus
+  return {...project,category,color,projectCode:project.projectCode??fallbackProjectCode(project),moderationStatus,workflowStatus,status}
 }
 
 export function isPublishedProject(project:Pick<ProjectRecord,'moderationStatus'>){
