@@ -76,7 +76,6 @@ const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
 const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'
 const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi','sosyal duraklar','sosyal duraklar projesi']
-const REMOVED_PROJECT_TITLE_ALIASES=['akıllı yaya geçiş sistemi','akıllı yaya geçiş sistemi projesi','akilli yaya gecis sistemi','akilli yaya gecis sistemi projesi']
 
 function normalizeText(value:unknown){
   return String(value??'').trim().toLocaleLowerCase('tr')
@@ -94,8 +93,7 @@ function isBeforeSocialStopsCleanup(project:Partial<ProjectRecord>){
 function isRemovedProject(project:Partial<ProjectRecord>&Pick<ProjectRecord,'title'>){
   const normalizedTitle=normalizeText(project.title)
   const isLegacySocialStops=REMOVED_PROJECT_TITLES.includes(normalizedTitle)
-  const isRemovedByRequest=REMOVED_PROJECT_TITLE_ALIASES.includes(normalizedTitle)
-  return isRemovedByRequest||(isLegacySocialStops&&isBeforeSocialStopsCleanup(project))
+  return isLegacySocialStops&&isBeforeSocialStopsCleanup(project)
 }
 
 function purgeRemovedLocalProjects(){
