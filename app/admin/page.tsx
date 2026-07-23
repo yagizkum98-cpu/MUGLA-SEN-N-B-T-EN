@@ -254,6 +254,7 @@ function ProjectDetailBlock({project}: {project: ProjectRecord}) {
     ['Özet', project.summary],
     ['Faaliyetler', project.activities],
     ['Beklenen sonuçlar', project.expectedResults],
+    ['Tahmini bütçe gerekçesi', project.budgetJustification],
     ['Video', project.videoUrl],
     ['Etki analizi', `Sosyal ${project.socialImpact ?? 0}/100 · Çevresel ${project.environmentalImpact ?? 0}/100 · Ekonomik ${project.economicImpact ?? 0}/100 · Erişim ${project.accessibilityImpact ?? 0}/100 · Sürdürülebilirlik ${project.sustainabilityImpact ?? 0}/100`],
     ['Ek dosyalar', project.attachments?.length ? project.attachments.map(file => `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`).join(', ') : 'Ek dosya yok'],
@@ -435,6 +436,7 @@ function ProjectManagementPanel({
         <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Özet</span><textarea className={`${field} min-h-28`} name="summary" defaultValue={project.summary ?? project.shortDescription ?? ''}/></label>
         <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Faaliyetler</span><textarea className={`${field} min-h-28`} name="activities" defaultValue={project.activities ?? ''}/></label>
         <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Beklenen sonuçlar</span><textarea className={`${field} min-h-28`} name="expectedResults" defaultValue={project.expectedResults ?? ''}/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Tahmini bütçe gerekçesi</span><textarea className={`${field} min-h-24`} name="budgetJustification" defaultValue={project.budgetJustification ?? ''}/></label>
         <div className="md:col-span-2"><Button type="submit" variant="orange"><Pencil size={17}/> Kaydet</Button></div>
       </form>}
       {canReview && <div className="flex flex-wrap gap-2 border-t border-mugla-navy/10 pt-5">
@@ -629,6 +631,7 @@ export default function Admin() {
       summary: String(form.get('summary')).trim(),
       activities: String(form.get('activities')).trim(),
       expectedResults: String(form.get('expectedResults')).trim(),
+      budgetJustification: String(form.get('budgetJustification')).trim(),
       videoUrl: String(form.get('videoUrl')).trim(),
       socialImpact: Number(form.get('socialImpact')) || 0,
       environmentalImpact: Number(form.get('environmentalImpact')) || 0,
@@ -701,6 +704,7 @@ export default function Admin() {
       summary: String(form.get('summary')).trim(),
       activities: String(form.get('activities')).trim(),
       expectedResults: String(form.get('expectedResults')).trim(),
+      budgetJustification: String(form.get('budgetJustification')).trim(),
       financingSource: String(form.get('financingSource')).trim(),
       duration: String(form.get('duration')).trim(),
       priority: String(form.get('priority')).trim(),
@@ -804,6 +808,7 @@ export default function Admin() {
         summary: String(form.get('summary')).trim(),
         activities: selectedMergeProjects.map(project => project.activities).filter(Boolean).join('\n\n'),
         expectedResults: selectedMergeProjects.map(project => project.expectedResults).filter(Boolean).join('\n\n'),
+        budgetJustification: selectedMergeProjects.map(project => project.budgetJustification).filter(Boolean).join('\n\n'),
         mergeNote: String(form.get('mergeNote')).trim(),
       })
       event.currentTarget.reset()
@@ -1508,6 +1513,7 @@ export default function Admin() {
             <p className="md:col-span-2 xl:col-span-4 text-xs font-black tracking-widest text-mugla-cyan">3. FİNANS VE ETKİ ANALİZİ</p>
             <label><span className="mb-2 block text-sm font-semibold">Tahmini Bütçe</span><input className={field} name="budget" type="number" min="0" step="1" required disabled={isDistrictStaff}/>{isDistrictStaff && <input type="hidden" name="budget" value="0"/>}</label>
             <label><span className="mb-2 block text-sm font-semibold">Finans Kaynağı</span><input className={field} name="financingSource" placeholder="Belediye, hibe, ortak finansman"/></label>
+            <label className="md:col-span-2 xl:col-span-4"><span className="mb-2 block text-sm font-semibold">Tahmini bütçe gerekçesi</span><textarea className={`${field} min-h-24`} name="budgetJustification" maxLength={1000} placeholder="Ana gider kalemleri ve bütçe ihtiyacının gerekçesi"/></label>
             <label><span className="mb-2 block text-sm font-semibold">Süre</span><input className={field} name="duration" placeholder="Örn. 6 ay"/></label>
             <label><span className="mb-2 block text-sm font-semibold">Öncelik</span><select className={field} name="priority"><option>Orta</option><option>Yüksek</option><option>Düşük</option></select></label>
             {['socialImpact','environmentalImpact','economicImpact','accessibilityImpact','sustainabilityImpact'].map((name, index) => <label key={name}><span className="mb-2 block text-sm font-semibold">{['Sosyal Etki','Çevresel Etki','Ekonomik Etki','Engelli Erişimi','Sürdürülebilirlik'][index]}</span><input className={field} name={name} type="number" min="0" max="100" step="1" placeholder="0-100"/></label>)}

@@ -52,6 +52,7 @@ export type ProjectRecord={
   summary?:string
   activities?:string
   expectedResults?:string
+  budgetJustification?:string
   attachments?:{name:string;size:number;type:string}[]
   image?:{name:string;size:number;type:string;dataUrl:string}
   videoUrl?:string

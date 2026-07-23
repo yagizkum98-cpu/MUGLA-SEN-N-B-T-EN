@@ -136,6 +136,7 @@ export default function IdeaForm(){
       summary:String(data.get('summary')).trim(),
       activities:String(data.get('activities')).trim(),
       expectedResults:String(data.get('expectedResults')).trim(),
+      budgetJustification:String(data.get('budgetJustification')).trim(),
       country:applicantCountry,
       countryCode:applicantCountryCode,
       province:applicantProvince,
@@ -233,7 +234,7 @@ export default function IdeaForm(){
         <form onSubmit={submit} className="space-y-6">
           <div>
             <label className="mb-2 block font-semibold" htmlFor="title">Proje adi <span className="text-red-500">*</span></label>
-            <input id="title" name="title" className={field} required maxLength={160} placeholder="Projenize kisa ve anlasilir bir ad verin"/>
+            <input id="title" name="title" className={field} required maxLength={120} placeholder="Projenize kisa ve anlasilir bir ad verin"/>
           </div>
 
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
@@ -257,10 +258,11 @@ export default function IdeaForm(){
             {category==='Diğer'&&<label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Proje teması <span className="text-red-500">*</span></span><input name="customTheme" className={field} required={category==='Diğer'} maxLength={120} value={customTheme} onChange={event=>setCustomTheme(event.target.value)} placeholder="Örn. Yerel kalkınma, kırsal üretim, sağlık, enerji..."/></label>}
           </fieldset>
 
-          <div><label className="mb-2 block font-semibold" htmlFor="purpose">Projenin amaci <span className="text-red-500">*</span></label><textarea id="purpose" name="purpose" className={`${field} min-h-32 resize-y`} required maxLength={2000} placeholder="Projenin cozmek istedigi sorunu ve temel amacini aciklayin"/></div>
-          <div><label className="mb-2 block font-semibold" htmlFor="summary">Projenin ozeti <span className="text-red-500">*</span></label><textarea id="summary" name="summary" className={`${field} min-h-36 resize-y`} required maxLength={3000} placeholder="Projeyi ana hatlariyla ozetleyin"/></div>
-          <div><label className="mb-2 block font-semibold" htmlFor="activities">Projenin adimlari / faaliyetleri <span className="text-red-500">*</span></label><textarea id="activities" name="activities" className={`${field} min-h-44 resize-y`} required maxLength={5000} placeholder={'1. Hazirlik calismalari\n2. Uygulama asamasi\n3. Izleme ve degerlendirme'}/></div>
-          <div><label className="mb-2 block font-semibold" htmlFor="expectedResults">Projeden beklenen sonuclar <span className="text-red-500">*</span></label><textarea id="expectedResults" name="expectedResults" className={`${field} min-h-36 resize-y`} required maxLength={3000} placeholder="Proje tamamlandiginda olusacak somut faydalari aciklayin"/></div>
+          <div><label className="mb-2 block font-semibold" htmlFor="summary">Proje özeti <span className="text-red-500">*</span></label><textarea id="summary" name="summary" className={`${field} min-h-28 resize-y`} required maxLength={300} placeholder="Projeyi en fazla 300 harfle ana hatlarıyla özetleyin"/></div>
+          <div><label className="mb-2 block font-semibold" htmlFor="activities">Projenin adımları / faaliyetleri <span className="text-red-500">*</span></label><textarea id="activities" name="activities" className={`${field} min-h-40 resize-y`} required maxLength={1500} placeholder={'1. Hazırlık çalışmaları\n2. Uygulama aşaması\n3. İzleme ve değerlendirme'}/></div>
+          <div><label className="mb-2 block font-semibold" htmlFor="purpose">Proje açıklaması <span className="text-red-500">*</span></label><textarea id="purpose" name="purpose" className={`${field} min-h-44 resize-y`} required maxLength={3000} placeholder="Projenin çözmek istediği sorunu, kapsamını ve temel amacını açıklayın"/></div>
+          <div><label className="mb-2 block font-semibold" htmlFor="expectedResults">Projeden beklenen sonuçlar <span className="text-red-500">*</span></label><textarea id="expectedResults" name="expectedResults" className={`${field} min-h-32 resize-y`} required maxLength={1500} placeholder="Proje tamamlandığında oluşacak somut faydaları açıklayın"/></div>
+          <div><label className="mb-2 block font-semibold" htmlFor="budgetJustification">Tahmini bütçe gerekçesi <span className="text-red-500">*</span></label><textarea id="budgetJustification" name="budgetJustification" className={`${field} min-h-28 resize-y`} required maxLength={1000} placeholder="Tahmini bütçe ihtiyacını, ana gider kalemlerini ve gerekçesini açıklayın"/></div>
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3"><span className="font-semibold">Proje dosyalari</span><span className={`text-xs font-semibold ${total>MAX_TOTAL*.9?'text-red-600':'text-mugla-navy/45'}`}>{size(total)} / 100 MB</span></div>
