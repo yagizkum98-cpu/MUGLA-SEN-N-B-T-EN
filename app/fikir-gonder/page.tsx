@@ -6,7 +6,7 @@ import {ArrowLeft,CheckCircle2,FileText,Lightbulb,Paperclip,Send,Trash2,UploadCl
 import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
 import {submitProjectToProjectCenter,syncProjectRecord,useProjects} from '@/lib/projects-store'
-import {countries,muglaDistricts,turkiyeProvinces} from '@/lib/locations'
+import {muglaDistricts} from '@/lib/locations'
 import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
@@ -16,7 +16,6 @@ import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeLabelsForYear
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
 const allowed=['pdf','doc','docx','ppt','pptx','xls','xlsx']
-const countryOptions=countries()
 const applicantTypes=['Bireysel','Tüzel','Grup'] as const
 const field='w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 const projectDistrictOptions=['Tüm İlçeler',...muglaDistricts].sort((a,b)=>a==='Tüm İlçeler'?-1:b==='Tüm İlçeler'?1:a.localeCompare(b,'tr'))
@@ -31,8 +30,6 @@ export default function IdeaForm(){
   const[error,setError]=useState('')
   const[submitting,setSubmitting]=useState(false)
   const[success,setSuccess]=useState('')
-  const[countryCode,setCountryCode]=useState('TR')
-  const[province,setProvince]=useState('Muğla')
   const[category,setCategory]=useState<ProjectCategory>('Ulaşım')
   const[customTheme,setCustomTheme]=useState('')
   const[authorized,setAuthorized]=useState(false)
@@ -104,7 +101,6 @@ export default function IdeaForm(){
     setSubmitting(true)
     const form=event.currentTarget
     const data=new FormData(form)
-    const selectedCountry=countryOptions.find(x=>x.code===countryCode)?.name??countryCode
     const selectedCategory=String(data.get('category'))
     if(data.get('rightsAccepted')!=='accepted'){
       setError('Başvuru yapabilmek için sınai haklar ve proje hakları taahhüdünü okuyup onaylamanız gerekir.')
@@ -130,16 +126,20 @@ export default function IdeaForm(){
         return
       }
     }
+    const applicantCountry=user?.nationality==='foreign'?user.country||'Yurtdışı':'Türkiye'
+    const applicantCountryCode=user?.nationality==='foreign'?'FOREIGN':'TR'
+    const applicantProvince=user?.province||'Muğla'
+    const applicantDistrict=user?.district||'Menteşe'
     const project=addProject({
       title:String(data.get('title')).trim(),
       purpose:String(data.get('purpose')).trim(),
       summary:String(data.get('summary')).trim(),
       activities:String(data.get('activities')).trim(),
       expectedResults:String(data.get('expectedResults')).trim(),
-      country:selectedCountry,
-      countryCode,
-      province:String(data.get('province')).trim(),
-      applicantDistrict:String(data.get('applicantDistrict')).trim(),
+      country:applicantCountry,
+      countryCode:applicantCountryCode,
+      province:applicantProvince,
+      applicantDistrict,
       district:String(data.get('district')).trim(),
       category:selectedCategory,
       customTheme:selectedCategory==='Diğer'?customTheme.trim():undefined,
@@ -242,15 +242,9 @@ export default function IdeaForm(){
             <label><span className="mb-2 block text-sm font-semibold">Başvuru türü <span className="text-red-500">*</span></span><select name="applicantType" className={field} required>{applicantTypes.map(type=><option key={type}>{type}</option>)}</select></label>
           </fieldset>
 
-          <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
-            <legend className="px-2 font-bold">Basvuru konumu</legend>
-            <p className="mb-4 text-sm text-mugla-navy/50">Bu bilgiler ulke, il ve ilce katilim sayaclarinda kullanilir.</p>
-            <div className="grid gap-4">
-              <label><span className="mb-2 block text-sm font-semibold">Ulke <span className="text-red-500">*</span></span><select name="country" className={field} value={countryCode} onChange={e=>{setCountryCode(e.target.value);if(e.target.value==='TR')setProvince('Muğla');else setProvince('')}} required>{countryOptions.map(x=><option key={x.code} value={x.code}>{x.name}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Il / eyalet / bolge <span className="text-red-500">*</span></span>{countryCode==='TR'?<select name="province" className={field} value={province} onChange={e=>setProvince(e.target.value)} required>{turkiyeProvinces.map(x=><option key={x}>{x}</option>)}</select>:<input name="province" className={field} required value={province} onChange={e=>setProvince(e.target.value)} placeholder="Il, eyalet veya bolge adi"/>}</label>
-              <label><span className="mb-2 block text-sm font-semibold">Ilce / sehir <span className="text-red-500">*</span></span>{countryCode==='TR'&&province==='Muğla'?<select name="applicantDistrict" className={field} required>{muglaDistricts.map(x=><option key={x}>{x}</option>)}</select>:<input name="applicantDistrict" className={field} required list="district-options" placeholder="Ilce veya sehir adini yazin/secin"/>}<datalist id="district-options"><option value="Merkez"/><option value="Kuzey"/><option value="Guney"/><option value="Dogu"/><option value="Bati"/></datalist></label>
-            </div>
-          </fieldset>
+          <div className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4 text-sm text-mugla-navy/60">
+            Üye olurken verdiğiniz ülke, il ve ilçe bilgisi belediye yönetim panelindeki vatandaş ve katılım analizlerine nicel/nitel veri olarak otomatik aktarılır.
+          </div>
 
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <legend className="px-2 font-bold">Proje siniflandirmasi</legend>

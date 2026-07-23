@@ -1593,6 +1593,21 @@ export default function Admin() {
               <p className="mt-1 text-xs text-mugla-navy/40">Son giriş zamanı canlıdır.</p>
             </div>
           </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {[
+              ['Ülke dağılımı', Array.from(scopedCitizens.reduce((map, citizen) => map.set(citizen.country ?? 'Türkiye', (map.get(citizen.country ?? 'Türkiye') ?? 0) + 1), new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)],
+              ['İl dağılımı', Array.from(scopedCitizens.reduce((map, citizen) => map.set(citizen.province || 'Belirtilmedi', (map.get(citizen.province || 'Belirtilmedi') ?? 0) + 1), new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)],
+              ['İlçe / şehir dağılımı', Array.from(scopedCitizens.reduce((map, citizen) => map.set(citizen.district || 'Belirtilmedi', (map.get(citizen.district || 'Belirtilmedi') ?? 0) + 1), new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)],
+            ].map(([title, rows]) => <section key={String(title)} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <h3 className="font-black">{String(title)}</h3>
+              <div className="mt-3 space-y-2">
+                {(rows as [string, number][]).length ? (rows as [string, number][]).map(([label, count]) => <div key={label} className="flex items-center justify-between gap-3 rounded-xl bg-mugla-sand/55 px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate text-mugla-navy/65">{label}</span>
+                  <b>{count.toLocaleString('tr-TR')}</b>
+                </div>) : <p className="rounded-xl bg-mugla-sand/55 px-3 py-2 text-sm text-mugla-navy/45">Henüz veri yok.</p>}
+              </div>
+            </section>)}
+          </div>
           <div className="overflow-x-auto rounded-xl border border-mugla-navy/10 bg-white">
             <table className="w-full min-w-[1120px] text-left text-sm">
               <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45">
