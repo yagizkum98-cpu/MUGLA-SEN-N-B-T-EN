@@ -36,6 +36,7 @@ export default function IdeaForm(){
   const[category,setCategory]=useState<ProjectCategory>('Ulaşım')
   const[customTheme,setCustomTheme]=useState('')
   const[authorized,setAuthorized]=useState(false)
+  const[rightsAccepted,setRightsAccepted]=useState(false)
   const inputRef=useRef<HTMLInputElement>(null)
   const total=files.reduce((sum,file)=>sum+file.size,0)
   const currentUser=getCurrentUser()
@@ -105,6 +106,11 @@ export default function IdeaForm(){
     const data=new FormData(form)
     const selectedCountry=countryOptions.find(x=>x.code===countryCode)?.name??countryCode
     const selectedCategory=String(data.get('category'))
+    if(data.get('rightsAccepted')!=='accepted'){
+      setError('Başvuru yapabilmek için sınai haklar ve proje hakları taahhüdünü okuyup onaylamanız gerekir.')
+      setSubmitting(false)
+      return
+    }
     if(!isProjectThemeAllowed(currentYearKey,selectedCategory,'Genel')){
       setError(`${currentYear} yili icin bu tema basvuruya acik degil. Lutfen acik temalardan bir kategori secin.`)
       setSubmitting(false)
@@ -169,6 +175,7 @@ export default function IdeaForm(){
       setSuccess(project.projectCode)
       setFiles([])
       form.reset()
+      setRightsAccepted(false)
       setCategory(categoryOptions[0]?.[0]??'Ulaşım')
       setCustomTheme('')
     }catch(cause){
@@ -269,8 +276,20 @@ export default function IdeaForm(){
           </div>
 
           {error&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
+          <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/60 p-5">
+            <p className="text-sm font-black text-mugla-navy">Sınai haklar ve proje hakları taahhüdü <span className="text-red-500">*</span></p>
+            <div className="mt-3 max-h-44 overflow-y-auto rounded-xl bg-white p-4 text-sm leading-6 text-mugla-navy/65">
+              <p>Bu başvuru ile paylaştığım proje fikrinin, açıklamaların, görsellerin, dosyaların, teknik önerilerin ve başvuru kapsamında sunduğum tüm proje içeriklerinin Muğla Büyükşehir Belediyesi tarafından incelenebileceğini, geliştirilebileceğini, benzer projelerle birleştirilebileceğini, uygulanabileceğini, yayımlanabileceğini ve kamu yararı doğrultusunda kullanılabileceğini kabul ederim.</p>
+              <p className="mt-3">Başvuru konusu fikir, tasarım, yöntem, ad, dosya, görsel ve eklerde üçüncü kişilere ait izinsiz fikri veya sınai hak ihlali bulunmadığını; varsa gerekli izinleri aldığımı; aksi durumda doğabilecek hukuki sorumluluğun bana ait olduğunu beyan ve taahhüt ederim.</p>
+              <p className="mt-3">Proje fikrimin değerlendirme, geliştirme, uygulama, tanıtım, raporlama ve arşiv süreçlerinde Muğla Büyükşehir Belediyesi tarafından bedelsiz olarak kullanılmasına; başvuru nedeniyle herhangi bir ücret, telif, hak sahipliği, öncelik veya tazminat talep etmeyeceğime onay veririm.</p>
+            </div>
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-4 text-sm font-semibold text-mugla-navy">
+              <input type="checkbox" name="rightsAccepted" value="accepted" required checked={rightsAccepted} onChange={event=>setRightsAccepted(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-mugla-orange"/>
+              <span>Okudum, anladım ve proje fikrime ilişkin fikri/sınai haklar ile proje kullanım haklarının yukarıdaki kapsamda Muğla Büyükşehir Belediyesi tarafından kullanılabileceğini kabul ve taahhüt ederim.</span>
+            </label>
+          </section>
           <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvuru gönderildiğinde belediye panelindeki Proje Merkezi'ne otomatik kaydedilir.</p></div>
-          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
+          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
