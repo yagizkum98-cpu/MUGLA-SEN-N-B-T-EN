@@ -3,6 +3,7 @@ import {createClient} from '@supabase/supabase-js'
 
 const TABLE='project_records'
 const requiredTextFields=['id','projectCode','title','district','category','status','moderationStatus','createdAt'] as const
+type IncomingProject=Record<string,unknown>&{id:string;projectCode:string;title:string}
 
 function supabaseAdmin(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -11,7 +12,7 @@ function supabaseAdmin(){
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
 }
 
-function normalizeIncomingProject(value:unknown){
+function normalizeIncomingProject(value:unknown):IncomingProject{
   if(!value||typeof value!=='object')throw new Error('Proje verisi gecersiz.')
   const project=value as Record<string,unknown>
   for(const field of requiredTextFields){
