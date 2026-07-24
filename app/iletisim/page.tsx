@@ -9,8 +9,8 @@ import {syncContactRecord, type ContactTopic, useContactRecords} from '@/lib/con
 
 const field = 'w-full rounded-2xl border border-mugla-navy/15 bg-white px-4 py-3.5 outline-none transition focus:border-mugla-cyan focus:ring-4 focus:ring-mugla-cyan/10'
 const topics: {value: ContactTopic; label: string}[] = [
-  {value: 'Gorus', label: 'Gorus'},
-  {value: 'Oneri', label: 'Oneri'},
+  {value: 'Gorus', label: 'Görüş'},
+  {value: 'Oneri', label: 'Öneri'},
   {value: 'Soru', label: 'Soru'},
 ]
 

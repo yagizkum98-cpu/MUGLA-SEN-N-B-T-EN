@@ -1129,9 +1129,9 @@ export default function Admin() {
   ] as const
   const recentProjects = [...scopedProjects].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))).slice(0, 5)
   const contactGroups = [
-    ['Vatandas verileri', scopedContactRecords, 'Formu dolduran kisilerin iletisim bilgileri'],
-    ['Gorus ve oneriler', scopedContactRecords.filter(record => record.topic === 'Gorus' || record.topic === 'Oneri'), 'Gorus ve oneri olarak isaretlenen talepler'],
-    ['Sorular', scopedContactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak isaretlenen talepler'],
+    ['Görüş', scopedContactRecords.filter(record => record.topic === 'Gorus'), 'Görüş olarak işaretlenen canlı talepler'],
+    ['Öneri', scopedContactRecords.filter(record => record.topic === 'Oneri'), 'Öneri olarak işaretlenen canlı talepler'],
+    ['Soru', scopedContactRecords.filter(record => record.topic === 'Soru'), 'Soru olarak işaretlenen canlı talepler'],
   ] as const
   const reportFormats = [
     {label: 'PDF', enabled: isSuperAdmin || isMunicipalityAdmin || isDistrictManager, note: isDistrictManager ? 'Kendi ilçesi' : 'Yetkili kapsam'},
