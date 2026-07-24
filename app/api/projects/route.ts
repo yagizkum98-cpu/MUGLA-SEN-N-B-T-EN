@@ -10,7 +10,7 @@ type IncomingProject=Record<string,unknown>&{id:string;projectCode:string;title:
 function supabaseAdmin(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL
   const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if(!url||!key)throw new Error('Vercel Supabase ortam degiskenleri eksik.')
+  if(!url||!key)return null
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
 }
 
@@ -38,14 +38,18 @@ export async function POST(request:Request){
   try{
     const body=await request.json()
     const project=normalizeIncomingProject(body?.project)
-    const {data,error}=await supabaseAdmin()
+    const supabase=supabaseAdmin()
+    if(!supabase){
+      return NextResponse.json({project,synced:false})
+    }
+    const {data,error}=await supabase
       .from(TABLE)
       .upsert({id:project.id,data:project,updated_at:new Date().toISOString()},{onConflict:'id'})
       .select('data')
       .single()
 
     if(error)throw error
-    return NextResponse.json({project:data?.data??project})
+    return NextResponse.json({project:data?.data??project,synced:true})
   }catch(cause){
     const message=cause instanceof Error?cause.message:'Proje Merkezi kaydi olusturulamadi.'
     return NextResponse.json({error:message},{status:400})

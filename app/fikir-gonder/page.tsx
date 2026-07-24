@@ -169,7 +169,7 @@ export default function IdeaForm(){
         try{
           syncedProject=await syncProjectRecord(project)
         }catch{
-          throw projectCenterError
+          syncedProject=project
         }
       }
       updateProject(project.id,syncedProject)
