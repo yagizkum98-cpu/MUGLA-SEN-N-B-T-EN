@@ -72,6 +72,7 @@ export type ProjectRecord={
 }
 
 export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}
+type RemoteProjectsPayload={projects:ProjectRecord[];deletedIds:string[]}
 
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
@@ -118,7 +119,7 @@ function readProjects():ProjectRecord[]{
   if(typeof window==='undefined')return []
   try{
     const value=JSON.parse(localStorage.getItem(STORAGE_KEY)??'[]')
-    return Array.isArray(value)?value.filter(project=>project?.title&&!isRemovedProject(project as ProjectRecord)):[]
+    return Array.isArray(value)?value.filter(project=>project?.title&&!project?.deleted&&!isRemovedProject(project as ProjectRecord)):[]
   }catch{return []}
 }
 
@@ -134,17 +135,25 @@ function saveLocalProjects(projects:ProjectRecord[]){
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
-async function readRemoteProjects(){
+async function readRemoteProjects():Promise<RemoteProjectsPayload|null>{
   if(typeof window==='undefined')return null
   try{
     const response=await fetch(projectCenterApiUrl(),{cache:'no-store'})
     const payload=await response.json().catch(()=>null)
-    if(response.ok&&Array.isArray(payload?.projects))return payload.projects as ProjectRecord[]
+    if(response.ok&&Array.isArray(payload?.projects))return {
+      projects:payload.projects as ProjectRecord[],
+      deletedIds:Array.isArray(payload?.deletedIds)?payload.deletedIds.map(String):[],
+    }
   }catch{}
   try{
     const{data,error}=await createClient().from(REMOTE_TABLE).select('data')
     if(error||!Array.isArray(data))return null
-    return data.map(row=>row.data).filter(Boolean) as ProjectRecord[]
+    const deletedIds=data.map(row=>row.data).filter(project=>project?.deleted===true&&project?.id).map(project=>String(project.id))
+    const deletedSet=new Set(deletedIds)
+    return {
+      projects:data.map(row=>row.data).filter(project=>project?.title&&!project?.deleted&&!deletedSet.has(String(project.id))) as ProjectRecord[],
+      deletedIds,
+    }
   }catch{return null}
 }
 
@@ -282,8 +291,10 @@ export function useProjects(){
       const local=readProjects().map(normalizeProject)
       const remote=await readRemoteProjects()
       if(!remote){setProjects(local);setReady(true);return}
-      const removedIds=[...removedLocal,...local,...remote].filter(project=>isRemovedProject(project)).map(project=>project.id)
-      const merged=mergeProjectsById(local,remote)
+      const remoteDeletedIds=new Set(remote.deletedIds)
+      const localAfterDeletes=local.filter(project=>!remoteDeletedIds.has(project.id))
+      const removedIds=[...removedLocal,...localAfterDeletes,...remote.projects].filter(project=>isRemovedProject(project)).map(project=>project.id)
+      const merged=mergeProjectsById(localAfterDeletes,remote.projects)
       saveLocalProjects(merged)
       setProjects(merged)
       setReady(true)

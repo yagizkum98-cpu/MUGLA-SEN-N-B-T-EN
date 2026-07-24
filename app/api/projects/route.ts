@@ -6,7 +6,8 @@ const PROJECT_CENTER_STATUS='\u0042\u0061\u015f\u0076\u0075\u0072\u0075'
 const PROJECT_CENTER_WORKFLOW='\u0130\u006c\u00e7\u0065\u0020\u0041\u0064\u006d\u0069\u006e\u0020\u0130\u006e\u0063\u0065\u006c\u0065\u006d\u0065\u0073\u0069\u006e\u0064\u0065'
 const requiredTextFields=['id','projectCode','title','district','category','status','moderationStatus','createdAt'] as const
 type IncomingProject=Record<string,unknown>&{id:string;projectCode:string;title:string}
-type StoredProjectRow={id:string;data:IncomingProject;updated_at:string}
+type DeletedProject={id:string;deleted:true;deletedAt:string}
+type StoredProjectRow={id:string;data:IncomingProject|DeletedProject;updated_at:string}
 const allowedOrigins=[
   'https://muglaseninbutcen.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
@@ -60,6 +61,18 @@ function normalizeIncomingProject(value:unknown):IncomingProject{
   }
 }
 
+function isDeletedProject(value:unknown):value is DeletedProject{
+  return Boolean(value&&typeof value==='object'&&(value as Record<string,unknown>).deleted===true&&String((value as Record<string,unknown>).id??'').trim())
+}
+
+function projectResponse(rows:{data:unknown;updated_at?:string}[]){
+  const sorted=[...rows].sort((a,b)=>String(b.updated_at??'').localeCompare(String(a.updated_at??'')))
+  const deletedIds=sorted.map(row=>row.data).filter(isDeletedProject).map(project=>project.id)
+  const deletedSet=new Set(deletedIds)
+  const projects=sorted.map(row=>row.data).filter((project):project is IncomingProject=>Boolean(project&&typeof project==='object'&&!isDeletedProject(project)&&!deletedSet.has(String((project as Record<string,unknown>).id??''))))
+  return {projects,deletedIds}
+}
+
 export async function OPTIONS(request:Request){
   return new NextResponse(null,{status:204,headers:corsHeaders(request)})
 }
@@ -69,11 +82,11 @@ export async function GET(request:Request){
     const supabase=supabaseAdmin()
     if(!supabase){
       const rows=Array.from(fallbackStore().values()).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at)))
-      return NextResponse.json({projects:rows.map(row=>row.data),synced:false},{headers:corsHeaders(request)})
+      return NextResponse.json({...projectResponse(rows),synced:false},{headers:corsHeaders(request)})
     }
     const {data,error}=await supabase.from(TABLE).select('data,updated_at').order('updated_at',{ascending:false})
     if(error)throw error
-    return NextResponse.json({projects:(data??[]).map(row=>row.data).filter(Boolean),synced:true},{headers:corsHeaders(request)})
+    return NextResponse.json({...projectResponse(data??[]),synced:true},{headers:corsHeaders(request)})
   }catch(cause){
     const message=cause instanceof Error?cause.message:'Proje kayitlari okunamadi.'
     return NextResponse.json({error:message},{status:400,headers:corsHeaders(request)})
@@ -109,11 +122,12 @@ export async function DELETE(request:Request){
     const id=url.searchParams.get('id')
     if(!id)throw new Error('Proje id zorunlu.')
     const supabase=supabaseAdmin()
+    const deletedProject:DeletedProject={id,deleted:true,deletedAt:new Date().toISOString()}
     if(!supabase){
-      fallbackStore().delete(id)
+      fallbackStore().set(id,{id,data:deletedProject,updated_at:deletedProject.deletedAt})
       return NextResponse.json({ok:true,synced:false},{headers:corsHeaders(request)})
     }
-    const {error}=await supabase.from(TABLE).delete().eq('id',id)
+    const {error}=await supabase.from(TABLE).upsert({id,data:deletedProject,updated_at:deletedProject.deletedAt},{onConflict:'id'})
     if(error)throw error
     return NextResponse.json({ok:true,synced:true},{headers:corsHeaders(request)})
   }catch(cause){

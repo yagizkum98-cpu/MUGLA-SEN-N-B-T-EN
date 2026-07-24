@@ -746,7 +746,7 @@ export default function Admin() {
     writeAuditLog(adminUser, 'Proje kalici sildi', {target: project.projectCode, details: project.title})
     removeProject(project.id)
     setManagedProjectId(null)
-    setMessage('Proje kalıcı olarak silindi.')
+    setMessage('Proje kalıcı olarak silindi. Vatandaş panelindeki proje kaydı temizlenir ve yıllık fikir hakkı geri gelir.')
   }
 
   function rejectPendingProject(project: ProjectRecord) {
