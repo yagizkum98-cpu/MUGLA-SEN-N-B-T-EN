@@ -27,7 +27,7 @@ function corsHeaders(request:Request){
   const origin=request.headers.get('origin')??''
   return {
     'Access-Control-Allow-Origin':allowedOrigins.includes(origin)?origin:allowedOrigins[0],
-    'Access-Control-Allow-Methods':'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods':'GET,POST,DELETE,OPTIONS',
     'Access-Control-Allow-Headers':'Content-Type',
     'Vary':'Origin',
   }
@@ -99,6 +99,25 @@ export async function POST(request:Request){
     return NextResponse.json({project:data?.data??project,synced:true},{headers:corsHeaders(request)})
   }catch(cause){
     const message=cause instanceof Error?cause.message:'Proje Merkezi kaydi olusturulamadi.'
+    return NextResponse.json({error:message},{status:400,headers:corsHeaders(request)})
+  }
+}
+
+export async function DELETE(request:Request){
+  try{
+    const url=new URL(request.url)
+    const id=url.searchParams.get('id')
+    if(!id)throw new Error('Proje id zorunlu.')
+    const supabase=supabaseAdmin()
+    if(!supabase){
+      fallbackStore().delete(id)
+      return NextResponse.json({ok:true,synced:false},{headers:corsHeaders(request)})
+    }
+    const {error}=await supabase.from(TABLE).delete().eq('id',id)
+    if(error)throw error
+    return NextResponse.json({ok:true,synced:true},{headers:corsHeaders(request)})
+  }catch(cause){
+    const message=cause instanceof Error?cause.message:'Proje kaydi silinemedi.'
     return NextResponse.json({error:message},{status:400,headers:corsHeaders(request)})
   }
 }

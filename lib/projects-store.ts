@@ -210,6 +210,9 @@ export async function submitProjectToProjectCenter(project:ProjectRecord){
 async function deleteRemoteProject(id:string){
   if(typeof window==='undefined')return
   try{
+    await fetch(`${projectCenterApiUrl()}?id=${encodeURIComponent(id)}`,{method:'DELETE'})
+  }catch{}
+  try{
     await createClient().from(REMOTE_TABLE).delete().eq('id',id)
   }catch{}
 }
