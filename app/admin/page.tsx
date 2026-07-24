@@ -1105,6 +1105,19 @@ export default function Admin() {
   const notificationRead = Math.round(notificationScope.filter(item => item.status === 'Gönderildi').length * 0.81)
   const notificationPending = notificationScope.filter(item => item.status !== 'Gönderildi').length
   const notificationOpenRate = notificationScope.length ? Math.round(notificationRead / Math.max(1, notificationScope.length) * 100) : 0
+  const todayKey = new Date().toISOString().slice(0, 10)
+  const todayNewProjects = scopedProjects.filter(project => String(project.createdAt ?? '').slice(0, 10) === todayKey)
+  const revisionProjects = scopedProjects.filter(project => String(project.workflowStatus ?? '').includes('Revizyon') || String(project.workflowStatus ?? '').includes('Eksik'))
+  const completedProjects = scopedProjects.filter(project => String(project.workflowStatus ?? '').includes('Tamam') || String(project.status ?? '').includes('Tamam'))
+  const liveWorkflowFeed = [
+    {label: 'Bugün Yeni Başvuru', value: todayNewProjects.length, icon: Bell, tone: 'bg-cyan-50 text-mugla-cyan'},
+    {label: 'Bekleyen', value: pendingProjects.length, icon: Clock3, tone: 'bg-orange-50 text-mugla-orange'},
+    {label: 'Onaylanan', value: approvedProjects.length, icon: CheckCircle2, tone: 'bg-green-50 text-green-700'},
+    {label: 'Revizyon', value: revisionProjects.length, icon: AlertTriangle, tone: 'bg-amber-50 text-amber-700'},
+    {label: 'Reddedilen', value: archivedProjects.length, icon: XCircle, tone: 'bg-red-50 text-red-700'},
+    {label: 'Oylamada', value: activeVotingProjects.length, icon: Vote, tone: 'bg-blue-50 text-blue-700'},
+    {label: 'Tamamlanan', value: completedProjects.length, icon: Trophy, tone: 'bg-emerald-50 text-emerald-700'},
+  ] as const
   const dashboardMetrics = [
     ['Toplam Proje', scopedProjects.length, FolderKanban, 'bg-mugla-navy text-white'],
     ['Onay Bekleyen', pendingProjects.length, Clock3, 'bg-orange-50 text-mugla-orange'],
@@ -1216,6 +1229,22 @@ export default function Admin() {
                 <b className="mt-1 block text-3xl">{Number(value).toLocaleString('tr-TR')}</b>
               </div>)}
             </div>
+            <section className="rounded-2xl border border-mugla-cyan/20 bg-cyan-50/30 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black tracking-[.2em] text-mugla-cyan">CANLI İŞ AKIŞI</p>
+                  <h3 className="mt-1 text-lg font-black">Vatandaş formu → API → ortak kayıt → yönetim paneli</h3>
+                </div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-black text-green-700"><Activity size={14}/> Anlık güncellenir</span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {liveWorkflowFeed.map(({label, value, icon: Icon, tone}) => <div key={label} className="rounded-xl bg-white p-3 shadow-sm">
+                  <span className={`mb-3 grid h-9 w-9 place-items-center rounded-lg ${tone}`}><Icon size={18}/></span>
+                  <p className="text-xs font-bold text-mugla-navy/45">{label}</p>
+                  <b className="text-2xl">{Number(value).toLocaleString('tr-TR')}</b>
+                </div>)}
+              </div>
+            </section>
             <section>
               <h3 className="font-bold">Son Eklenen Projeler</h3>
               <div className="mt-3 overflow-x-auto rounded-xl border border-mugla-navy/10 bg-white">
@@ -1240,6 +1269,10 @@ export default function Admin() {
             <Button variant="outline" className="w-full justify-start" disabled={!canManageVoting} onClick={() => {setVotingWizardOpen(true); setVotingWizardStep(1)}}><Vote size={17}/> Oylama Oluştur</Button>
             {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(true)}><UserPlus size={17}/> Yeni Yetkili Ekle</Button>}
             <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileBarChart size={17}/> Rapor Al</Button></a>
+            <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileText size={17}/> CSV Aktar</Button></a>
+            <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileSpreadsheet size={17}/> Excel</Button></a>
+            <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileBarChart size={17}/> PDF</Button></a>
+            <a href="#bildirimler"><Button variant="outline" className="w-full justify-start"><Bell size={17}/> Bildirim Gönder</Button></a>
           </CardContent>
         </Card>
       </section>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {FormEvent, useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, Bell, Camera, CheckCircle2, FileText, KeyRound, Lightbulb, LockKeyhole, LogOut, Minus, Phone, Plus, ShieldCheck, ShoppingCart, UserRound, Vote} from 'lucide-react'
+import {ArrowUpRight, Bell, Camera, CheckCircle2, FileBarChart, FileText, Home, KeyRound, Lightbulb, LockKeyhole, LogOut, Minus, Phone, Plus, ShieldCheck, ShoppingCart, Trophy, UserRound, Vote} from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
@@ -43,6 +43,29 @@ function votingSubmissionClass(label: string) {
   if (label === 'Oylamaya sunulmadı') return 'bg-slate-100 text-slate-700'
   if (label === 'Reddedildi') return 'bg-red-50 text-red-700'
   return 'bg-orange-50 text-mugla-orange'
+}
+
+const citizenWorkflowSteps = ['Ön İnceleme', 'Teknik İnceleme', 'Oylamada', 'Kazandı', 'Uygulanıyor', 'Tamamlandı'] as const
+
+function citizenProjectStage(project: {moderationStatus: string; status: string; workflowStatus?: string}) {
+  const workflow = String(project.workflowStatus ?? '')
+  const status = String(project.status ?? '')
+  if (project.moderationStatus === 'Reddedildi' || workflow === 'Reddedildi') return 'Reddedildi'
+  if (workflow.includes('Revizyon') || workflow.includes('Eksik')) return 'Revizyon'
+  if (workflow.includes('Tamam') || status.includes('Tamam')) return 'Tamamlandı'
+  if (workflow.includes('Uygulan') || status.includes('Devam')) return 'Uygulanıyor'
+  if (workflow.includes('Kazand') || status.includes('Kazanan')) return 'Kazandı'
+  if (status.includes('Oylamada') || workflow.includes('Yay')) return 'Oylamada'
+  if (project.moderationStatus === 'Onaylandı' || workflow.includes('İnceleme')) return 'Teknik İnceleme'
+  return 'Ön İnceleme'
+}
+
+function workflowStepClass(projectStage: string, step: string) {
+  const currentIndex = citizenWorkflowSteps.indexOf(projectStage as typeof citizenWorkflowSteps[number])
+  const stepIndex = citizenWorkflowSteps.indexOf(step as typeof citizenWorkflowSteps[number])
+  if (projectStage === 'Reddedildi') return 'bg-red-50 text-red-700'
+  if (projectStage === 'Revizyon') return stepIndex === 1 ? 'bg-orange-50 text-mugla-orange' : 'bg-mugla-sand text-mugla-navy/35'
+  return stepIndex <= currentIndex ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/35'
 }
 
 function fileToDataUrl(file: File) {
@@ -92,6 +115,19 @@ export function CitizenDashboard() {
     {value: 'security', label: 'Şifre ve güvenlik', icon: LockKeyhole},
     {value: 'preferences', label: 'Diğer ayarlar', icon: Bell},
   ] as const
+
+  const quickActions = [
+    {label: 'Anasayfa', href: '/', icon: Home, note: 'Kamuya açık ana sayfa'},
+    {label: 'Fikir Gönder', href: '/fikir-gonder', icon: Lightbulb, note: 'En fazla 3 tıklamayla başvuru'},
+    {label: 'Oy Ver', href: '/projeler#oy-ver', icon: Vote, note: `${activeVoteProjects.length} proje oylamada`},
+    {label: 'Sonuçlar', href: '/projeler#sonuclar', icon: Trophy, note: 'Kazanan projeler'},
+    {label: 'Projelerim', href: '#oylar', icon: FileText, note: `${myProjects.length} başvuru`},
+  ] as const
+  const citizenNotifications = myProjects.slice(0, 4).map(project => {
+    const stage = citizenProjectStage(project)
+    const title = stage === 'Revizyon' ? 'Revizyon istendi' : stage === 'Reddedildi' ? 'Başvuru reddedildi' : stage === 'Oylamada' ? 'Projeniz oylamaya açıldı' : stage === 'Kazandı' ? 'Projeniz kazandı' : stage === 'Tamamlandı' ? 'Proje tamamlandı' : 'Başvurunuz iş akışında'
+    return {id: project.id, title, text: `${project.projectCode} - ${project.title}`, tone: stage === 'Reddedildi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}
+  })
 
   function signOut() {
     logoutUser()
@@ -191,6 +227,31 @@ export function CitizenDashboard() {
 
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
 
+      <section className="grid gap-3 md:grid-cols-5">
+        {quickActions.map(({label, href, icon: Icon, note}) => <Link key={label} href={href} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-orange">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-mugla-sand text-mugla-orange transition group-hover:bg-mugla-orange group-hover:text-white"><Icon size={20}/></span>
+          <b className="mt-4 block text-sm">{label}</b>
+          <small className="mt-1 block leading-5 text-mugla-navy/45">{note}</small>
+        </Link>)}
+      </section>
+
+      <Card id="bildirimler">
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-mugla-cyan">BİLDİRİMLER</p>
+            <h2 className="mt-1 text-xl font-bold">Başvuru durumları</h2>
+            <p className="mt-1 text-sm text-mugla-navy/55">Belediye panelindeki onay, revizyon, red ve oylama kararları burada görünür.</p>
+          </div>
+          <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{citizenNotifications.length} yeni</span>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          {citizenNotifications.length ? citizenNotifications.map(item => <div key={item.id} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${item.tone}`}>
+            <b className="block">{item.title}</b>
+            <span className="mt-1 block opacity-75">{item.text}</span>
+          </div>) : <div className="rounded-2xl border border-dashed border-mugla-navy/20 p-8 text-center text-mugla-navy/45 md:col-span-2"><Bell className="mx-auto mb-3"/><p className="font-semibold">Henüz bildiriminiz yok.</p></div>}
+        </CardContent>
+      </Card>
+
       <Card id="sepetim">
         <CardHeader className="flex-row items-center justify-between">
           <div>
@@ -265,6 +326,28 @@ export function CitizenDashboard() {
             <label className="flex items-start gap-3 rounded-2xl border border-mugla-navy/10 p-4"><input type="checkbox" defaultChecked className="mt-1 h-4 w-4 accent-mugla-orange"/><span><b className="block">Oylama hatırlatmaları</b><small className="mt-1 block text-mugla-navy/50">Kredim ve sepetimde bekleyen projeler için hatırlatma alabilirim.</small></span></label>
             <div className="rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60 md:col-span-2"><ShieldCheck className="mb-3 text-mugla-green"/><b className="text-mugla-navy">Doğrulama:</b> {user.verifiedBadge} - {user.verificationMethod}<br/><b className="text-mugla-navy">E-posta:</b> {user.email}</div>
           </section>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-xs font-bold tracking-widest text-mugla-cyan">SÜREÇ TAKİBİ</p>
+          <h2 className="text-xl font-bold">Projelerim zaman çizelgesi</h2>
+          <p className="text-sm text-mugla-navy/55">Başvuru, teknik değerlendirme, oylama, uygulama ve tamamlama adımları tek hatta izlenir.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {myProjects.length ? myProjects.slice(0, 3).map(project => {
+            const stage = citizenProjectStage(project)
+            return <section key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><b>{project.title}</b><p className="mt-1 text-xs font-semibold text-mugla-navy/45">{project.projectCode} - {stage}</p></div>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${stage === 'Reddedildi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}`}>{stage}</span>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                {citizenWorkflowSteps.map(step => <span key={step} className={`rounded-full px-3 py-2 text-center text-[11px] font-black ${workflowStepClass(stage, step)}`}>{step}</span>)}
+              </div>
+            </section>
+          }) : <div className="rounded-2xl border border-dashed border-mugla-navy/20 p-8 text-center text-mugla-navy/45"><FileText className="mx-auto mb-3"/><p className="font-semibold">Zaman çizelgesi için önce fikir gönderin.</p></div>}
         </CardContent>
       </Card>
 

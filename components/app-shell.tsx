@@ -4,27 +4,31 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {Bell, Building2, ExternalLink, FileBarChart, FolderKanban, Home, LogOut, Settings, ShoppingCart, UserRound, UsersRound, Vote} from 'lucide-react'
+import {Bell, Building2, Clock3, ExternalLink, FileBarChart, FolderKanban, Home, LogOut, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
 import {citizenUrl, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 
 const citizen = [
-  ['/vatandas/panel#panelim', 'Panelim', Home],
-  ['/projeler', 'Projeler', FolderKanban],
-  ['/vatandas/panel#sepetim', 'Sepetim', ShoppingCart],
-  ['/vatandas/panel#profil', 'Profil', UserRound],
+  ['/', 'Anasayfa', Home],
+  ['/fikir-gonder', 'Fikir Gönder', FolderKanban],
+  ['/projeler#oy-ver', 'Oy Ver', Vote],
+  ['/projeler#sonuclar', 'Sonuçlar', FileBarChart],
+  ['/vatandas/panel#oylar', 'Projelerim', UserRound],
 ] as const
 
 const admin = [
   {href: '/admin#dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
-  {href: '/admin#projeler', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
-  {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#projeler', label: 'Başvurular', icon: Clock3, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
+  {href: '/admin#proje-havuzu', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
   {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
   {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
-  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
+  {href: '/admin#ayarlar', label: 'Kategoriler', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'crm']},
+  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
+  {href: '/admin#crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
 ] as const
 
