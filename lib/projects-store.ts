@@ -75,6 +75,7 @@ export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|
 type RemoteProjectsPayload={projects:ProjectRecord[];deletedIds:string[]}
 
 const STORAGE_KEY='mugla-senin-butcen-projects-v1'
+const DELETED_STORAGE_KEY='mugla-senin-butcen-deleted-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
 const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'
@@ -119,15 +120,36 @@ function readProjects():ProjectRecord[]{
   if(typeof window==='undefined')return []
   try{
     const value=JSON.parse(localStorage.getItem(STORAGE_KEY)??'[]')
-    return Array.isArray(value)?value.filter(project=>project?.title&&!project?.deleted&&!isRemovedProject(project as ProjectRecord)):[]
+    const deletedIds=new Set(readLocalDeletedProjectIds())
+    return Array.isArray(value)?value.filter(project=>project?.title&&!project?.deleted&&!deletedIds.has(String(project.id))&&!isRemovedProject(project as ProjectRecord)):[]
   }catch{return []}
+}
+
+function readLocalDeletedProjectIds(){
+  if(typeof window==='undefined')return []
+  try{
+    const value=JSON.parse(localStorage.getItem(DELETED_STORAGE_KEY)??'[]')
+    return Array.isArray(value)?value.map(String):[]
+  }catch{return []}
+}
+
+function saveLocalDeletedProjectIds(ids:string[]){
+  if(typeof window==='undefined')return
+  localStorage.setItem(DELETED_STORAGE_KEY,JSON.stringify(Array.from(new Set(ids))))
+}
+
+function rememberLocalDeletedProjectIds(ids:string[]){
+  const normalized=ids.map(String).filter(Boolean)
+  if(!normalized.length)return
+  saveLocalDeletedProjectIds([...readLocalDeletedProjectIds(),...normalized])
 }
 
 function mergeProjectsById(local:ProjectRecord[],remote:ProjectRecord[]){
   const map=new Map<string,ProjectRecord>()
+  const deletedIds=new Set(readLocalDeletedProjectIds())
   local.map(normalizeProject).forEach(project=>map.set(project.id,project))
   remote.map(normalizeProject).forEach(project=>map.set(project.id,project))
-  return Array.from(map.values()).filter(project=>!isRemovedProject(project)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
+  return Array.from(map.values()).filter(project=>!deletedIds.has(project.id)&&!isRemovedProject(project)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
 }
 
 function saveLocalProjects(projects:ProjectRecord[]){
@@ -159,7 +181,10 @@ async function readRemoteProjects():Promise<RemoteProjectsPayload|null>{
 
 async function upsertRemoteProjects(projects:ProjectRecord[]){
   if(typeof window==='undefined'||!projects.length)return
-  for(const project of projects){
+  const deletedIds=new Set(readLocalDeletedProjectIds())
+  const activeProjects=projects.filter(project=>!deletedIds.has(project.id))
+  if(!activeProjects.length)return
+  for(const project of activeProjects){
     try{
       await fetch(projectCenterApiUrl(),{
         method:'POST',
@@ -169,7 +194,7 @@ async function upsertRemoteProjects(projects:ProjectRecord[]){
     }catch{}
   }
   try{
-    await createClient().from(REMOTE_TABLE).upsert(projects.map(project=>({
+    await createClient().from(REMOTE_TABLE).upsert(activeProjects.map(project=>({
       id:project.id,
       data:project,
       updated_at:new Date().toISOString(),
@@ -291,6 +316,7 @@ export function useProjects(){
       const local=readProjects().map(normalizeProject)
       const remote=await readRemoteProjects()
       if(!remote){setProjects(local);setReady(true);return}
+      rememberLocalDeletedProjectIds(remote.deletedIds)
       const remoteDeletedIds=new Set(remote.deletedIds)
       const localAfterDeletes=local.filter(project=>!remoteDeletedIds.has(project.id))
       const removedIds=[...removedLocal,...localAfterDeletes,...remote.projects].filter(project=>isRemovedProject(project)).map(project=>project.id)
@@ -326,7 +352,7 @@ export function useProjects(){
     return project
   },[save])
 
-  const removeProject=useCallback((id:string)=>{save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id)},[save])
+  const removeProject=useCallback((id:string)=>{rememberLocalDeletedProjectIds([id]);save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id)},[save])
   const updateProject=useCallback((id:string,patch:Partial<ProjectRecord>)=>{
     let updated:ProjectRecord|null=null
     save(readProjects().map(project=>{
