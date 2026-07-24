@@ -679,7 +679,7 @@ export default function Admin() {
   function sendProjectToVote(project: ProjectRecord) {
     if (!canSendProjectsToVote) return
     updateProjectWithHistory(project, {workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'}, 'Proje oylamaya sunuldu', project.title)
-    setProjectCenterTab('Yayında')
+    setProjectCenterTab('Oylama Zamanı')
     setMessage('Proje oylamaya sunuldu; vatandaş ekranında Oylamaya sunuldu ibaresi görünür.')
   }
 
@@ -1080,12 +1080,13 @@ export default function Admin() {
 
   const activeVotingProjects = scopedProjects.filter(isProjectOnVoting)
   const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
+  const approvedWaitingProjects = approvedProjects.filter(project => !isProjectOnVoting(project) && projectLifecycleLabel(project) !== 'Arşiv')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
   const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
   const projectCenterProjects = scopedProjects.filter(project => {
     if (projectCenterTab === 'Onay Bekleyen') return isPendingReviewProject(project)
-    if (projectCenterTab === 'Onaylanan') return project.moderationStatus === 'Onaylandı'
-    if (projectCenterTab === 'Yayında') return activeVotingProjects.some(item => item.id === project.id)
+    if (projectCenterTab === 'Onaylanan') return approvedWaitingProjects.some(item => item.id === project.id)
+    if (projectCenterTab === 'Oylama Zamanı') return activeVotingProjects.some(item => item.id === project.id)
     if (projectCenterTab === 'Reddedilenler') return project.moderationStatus === 'Reddedildi' || String(project.workflowStatus) === 'Reddedildi'
     if (projectCenterTab === 'Arşiv') return projectLifecycleLabel(project) === 'Arşiv'
     return true
@@ -1294,8 +1295,8 @@ export default function Admin() {
               ['Tümü', scopedProjects.length],
               ['Proje Havuzu', scopedProjects.length],
               ['Onay Bekleyen', pendingProjects.length],
-              ['Onaylanan', approvedProjects.length],
-              ['Yayında', activeVotingProjects.length],
+              ['Onaylanan', approvedWaitingProjects.length],
+              ['Oylama Zamanı', activeVotingProjects.length],
               ['Reddedilenler', archivedProjects.length],
               ['Arşiv', archivedProjects.length],
             ].map(([label, count]) => <button key={label} type="button" onClick={() => setProjectCenterTab(String(label))} className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold ${projectCenterTab === label ? 'border-mugla-cyan bg-cyan-50 text-mugla-navy' : 'border-mugla-navy/10 bg-white text-mugla-navy/55 hover:text-mugla-navy'}`}>{label} <span className="ml-1 text-xs opacity-60">{count}</span></button>)}

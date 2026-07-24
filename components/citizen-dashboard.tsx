@@ -31,17 +31,17 @@ function votingPeriodStarted(date = new Date()) {
 }
 
 function projectVotingSubmissionLabel(project: {moderationStatus: string; status: string; workflowStatus?: string}) {
-  if (project.moderationStatus === 'Reddedildi' || project.workflowStatus === 'Reddedildi') return 'Reddedildi'
+  if (project.moderationStatus === 'Reddedildi' || project.workflowStatus === 'Reddedildi') return 'Kabul edilmedi'
   if (project.moderationStatus === 'Bekliyor') return 'İncelemede'
   if (['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)) || project.workflowStatus === 'Yayında') return 'Oylamaya sunuldu'
-  if (project.workflowStatus === 'Oylamaya Sunulmadı' || votingPeriodStarted()) return 'Oylamaya sunulmadı'
-  return 'Oylamaya hazır'
+  if (project.workflowStatus === 'Oylamaya Sunulmadı' || votingPeriodStarted()) return 'Oylamaya kabul edilmedi'
+  return 'Değerlendirme sürüyor'
 }
 
 function votingSubmissionClass(label: string) {
   if (label === 'Oylamaya sunuldu') return 'bg-green-50 text-green-700'
-  if (label === 'Oylamaya sunulmadı') return 'bg-slate-100 text-slate-700'
-  if (label === 'Reddedildi') return 'bg-red-50 text-red-700'
+  if (label === 'Oylamaya kabul edilmedi') return 'bg-slate-100 text-slate-700'
+  if (label === 'Kabul edilmedi') return 'bg-red-50 text-red-700'
   return 'bg-orange-50 text-mugla-orange'
 }
 
@@ -50,7 +50,7 @@ const citizenWorkflowSteps = ['Ön İnceleme', 'Teknik İnceleme', 'Oylamada', '
 function citizenProjectStage(project: {moderationStatus: string; status: string; workflowStatus?: string}) {
   const workflow = String(project.workflowStatus ?? '')
   const status = String(project.status ?? '')
-  if (project.moderationStatus === 'Reddedildi' || workflow === 'Reddedildi') return 'Reddedildi'
+  if (project.moderationStatus === 'Reddedildi' || workflow === 'Reddedildi') return 'Kabul edilmedi'
   if (workflow.includes('Revizyon') || workflow.includes('Eksik')) return 'Revizyon'
   if (workflow.includes('Tamam') || status.includes('Tamam')) return 'Tamamlandı'
   if (workflow.includes('Uygulan') || status.includes('Devam')) return 'Uygulanıyor'
@@ -63,7 +63,7 @@ function citizenProjectStage(project: {moderationStatus: string; status: string;
 function workflowStepClass(projectStage: string, step: string) {
   const currentIndex = citizenWorkflowSteps.indexOf(projectStage as typeof citizenWorkflowSteps[number])
   const stepIndex = citizenWorkflowSteps.indexOf(step as typeof citizenWorkflowSteps[number])
-  if (projectStage === 'Reddedildi') return 'bg-red-50 text-red-700'
+  if (projectStage === 'Kabul edilmedi') return 'bg-red-50 text-red-700'
   if (projectStage === 'Revizyon') return stepIndex === 1 ? 'bg-orange-50 text-mugla-orange' : 'bg-mugla-sand text-mugla-navy/35'
   return stepIndex <= currentIndex ? 'bg-green-50 text-green-700' : 'bg-mugla-sand text-mugla-navy/35'
 }
@@ -125,8 +125,8 @@ export function CitizenDashboard() {
   ] as const
   const citizenNotifications = myProjects.slice(0, 4).map(project => {
     const stage = citizenProjectStage(project)
-    const title = stage === 'Revizyon' ? 'Revizyon istendi' : stage === 'Reddedildi' ? 'Başvuru reddedildi' : stage === 'Oylamada' ? 'Projeniz oylamaya açıldı' : stage === 'Kazandı' ? 'Projeniz kazandı' : stage === 'Tamamlandı' ? 'Proje tamamlandı' : 'Başvurunuz iş akışında'
-    return {id: project.id, title, text: `${project.projectCode} - ${project.title}`, tone: stage === 'Reddedildi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}
+    const title = stage === 'Revizyon' ? 'Revizyon istendi' : stage === 'Kabul edilmedi' ? 'Başvuru kabul edilmedi' : stage === 'Oylamada' ? 'Projeniz oylamaya açıldı' : stage === 'Kazandı' ? 'Projeniz kazandı' : stage === 'Tamamlandı' ? 'Proje tamamlandı' : 'Başvurunuz iş akışında'
+    return {id: project.id, title, text: `${project.projectCode} - ${project.title}`, tone: stage === 'Kabul edilmedi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}
   })
 
   function signOut() {
@@ -341,7 +341,7 @@ export function CitizenDashboard() {
             return <section key={project.id} className="rounded-2xl border border-mugla-navy/10 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><b>{project.title}</b><p className="mt-1 text-xs font-semibold text-mugla-navy/45">{project.projectCode} - {stage}</p></div>
-                <span className={`rounded-full px-3 py-1 text-xs font-black ${stage === 'Reddedildi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}`}>{stage}</span>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${stage === 'Kabul edilmedi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}`}>{stage}</span>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
                 {citizenWorkflowSteps.map(step => <span key={step} className={`rounded-full px-3 py-2 text-center text-[11px] font-black ${workflowStepClass(stage, step)}`}>{step}</span>)}
@@ -353,7 +353,7 @@ export function CitizenDashboard() {
 
       <Card id="oylar"><CardHeader className="flex-row items-center justify-between"><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">BAŞVURULARIM</p><h2 className="mt-1 text-xl font-bold">Kendi fikirlerim ve durumları</h2></div><Link className="text-sm font-semibold text-mugla-blue" href="/projeler">Projeleri gör <ArrowUpRight className="inline" size={15}/></Link></CardHeader><CardContent className="space-y-3">{myProjects.length ? myProjects.map(project => {
         const votingLabel = projectVotingSubmissionLabel(project)
-        return <div key={project.id} className="fade-up-card flex flex-wrap items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4"><span className="h-14 w-2 rounded-full" style={{background: project.color}}/><div className="min-w-0 flex-1"><p className="font-bold">{project.title}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/50"><span className="rounded-full bg-mugla-sand px-2 py-0.5 font-black text-mugla-navy/65">{project.projectCode}</span><span>{project.district}</span><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/><span>{project.moderationStatus}</span><span className={`rounded-full px-2 py-0.5 font-black ${votingSubmissionClass(votingLabel)}`}>{votingLabel}</span></div></div><div className="grid grid-cols-2 gap-3 text-right text-sm"><span><b className="block">{project.votes}</b>destek</span><span><b className="block">{formatBudget(project.budget)}</b>bütçe</span></div></div>
+        return <div key={project.id} className="fade-up-card flex flex-wrap items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4"><span className="h-14 w-2 rounded-full" style={{background: project.color}}/><div className="min-w-0 flex-1"><p className="font-bold">{project.title}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/50"><span className="rounded-full bg-mugla-sand px-2 py-0.5 font-black text-mugla-navy/65">{project.projectCode}</span><span>{project.district}</span><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/><span className={`rounded-full px-2 py-0.5 font-black ${votingSubmissionClass(votingLabel)}`}>{votingLabel}</span></div></div><div className="grid grid-cols-2 gap-3 text-right text-sm"><span><b className="block">{project.votes}</b>destek</span><span><b className="block">{formatBudget(project.budget)}</b>bütçe</span></div></div>
       }) : <div className="py-14 text-center text-mugla-navy/45"><Lightbulb className="mx-auto mb-3"/><p className="font-semibold">Henüz fikir başvurunuz yok.</p><Link href="/fikir-gonder" className="mt-4 inline-flex"><Button variant="orange">İlk fikrimi gönder</Button></Link></div>}</CardContent></Card>
     </div>
   </AppShell>
