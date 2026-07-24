@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useState} from 'react'
 import {categoryColor, normalizeProjectCategory} from '@/lib/project-taxonomy'
 import {createClient} from '@/lib/supabase/client'
+import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
@@ -82,6 +83,11 @@ function normalizeText(value:unknown){
   return String(value??'').trim().toLocaleLowerCase('tr')
 }
 
+function projectCenterApiUrl(){
+  if(typeof window==='undefined'||isMunicipalityDomain())return '/api/projects'
+  return municipalityUrl('/api/projects')
+}
+
 function hasApplicantData(project:Partial<ProjectRecord>){
   return Boolean(project.source==='citizen'||project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
 }
@@ -131,6 +137,11 @@ function saveLocalProjects(projects:ProjectRecord[]){
 async function readRemoteProjects(){
   if(typeof window==='undefined')return null
   try{
+    const response=await fetch(projectCenterApiUrl(),{cache:'no-store'})
+    const payload=await response.json().catch(()=>null)
+    if(response.ok&&Array.isArray(payload?.projects))return payload.projects as ProjectRecord[]
+  }catch{}
+  try{
     const{data,error}=await createClient().from(REMOTE_TABLE).select('data')
     if(error||!Array.isArray(data))return null
     return data.map(row=>row.data).filter(Boolean) as ProjectRecord[]
@@ -139,6 +150,15 @@ async function readRemoteProjects(){
 
 async function upsertRemoteProjects(projects:ProjectRecord[]){
   if(typeof window==='undefined'||!projects.length)return
+  for(const project of projects){
+    try{
+      await fetch(projectCenterApiUrl(),{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({project}),
+      })
+    }catch{}
+  }
   try{
     await createClient().from(REMOTE_TABLE).upsert(projects.map(project=>({
       id:project.id,
@@ -151,6 +171,12 @@ async function upsertRemoteProjects(projects:ProjectRecord[]){
 export async function syncProjectRecord(project:ProjectRecord){
   if(typeof window==='undefined')throw new Error('Proje kaydı tarayıcı dışında senkronize edilemez.')
   const normalized=normalizeProject(project)
+  const response=await fetch(projectCenterApiUrl(),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({project:normalized}),
+  })
+  if(response.ok)return normalized
   const{error}=await createClient().from(REMOTE_TABLE).upsert({
     id:normalized.id,
     data:normalized,
@@ -171,7 +197,7 @@ export async function submitProjectToProjectCenter(project:ProjectRecord){
     progress:0,
     votes:0,
   })
-  const response=await fetch('/api/projects',{
+  const response=await fetch(projectCenterApiUrl(),{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({project:normalized}),
