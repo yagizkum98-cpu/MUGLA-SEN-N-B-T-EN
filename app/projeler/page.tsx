@@ -209,7 +209,7 @@ export default function Projects() {
   const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null)
   const [message, setMessage] = useState('')
-  const votingOpen = isWithinVotingPeriod()
+  const scheduleVotingOpen = isWithinVotingPeriod()
 
   const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
   const districts = useMemo(() => {
@@ -228,6 +228,7 @@ export default function Projects() {
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
   const matchesYear = (project: ProjectRecord) => !appliedFilters.years.length || appliedFilters.years.includes(applicationYear(project))
   const votingProjects = approved.filter(project => matchesYear(project) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const votingOpen = scheduleVotingOpen || votingProjects.length > 0
   const winnerProjects = approved.filter(project => matchesYear(project) && ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
   const filtered = approved.filter(project => {
     const status = String(project.status)

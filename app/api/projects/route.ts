@@ -52,12 +52,12 @@ function normalizeIncomingProject(value:unknown):IncomingProject{
     id:String(project.id),
     projectCode:String(project.projectCode),
     title:String(project.title).trim(),
-    status:PROJECT_CENTER_STATUS,
-    moderationStatus:'Bekliyor',
-    workflowStatus:PROJECT_CENTER_WORKFLOW,
-    source:'citizen',
-    progress:0,
-    votes:0,
+    status:String(project.status??PROJECT_CENTER_STATUS),
+    moderationStatus:String(project.moderationStatus??'Bekliyor'),
+    workflowStatus:String(project.workflowStatus??PROJECT_CENTER_WORKFLOW),
+    source:String(project.source??'citizen'),
+    progress:Number(project.progress??0),
+    votes:Number(project.votes??0),
   }
 }
 

@@ -538,7 +538,7 @@ export default function Admin() {
       && (!votePeriodFilter || projectYear === votePeriodFilter || votePeriodFilter === '2027')
   })
   const voteLeaderboard = voteFilteredProjects
-    .filter(project => project.moderationStatus === 'Onaylandı' && ['Oylamada', 'Yılın Kazanan Adayı', 'Devam Ediyor', 'Tamamlandı'].includes(String(project.status)))
+    .filter(isProjectOnVoting)
     .sort((a, b) => b.votes - a.votes)
     .slice(0, isMunicipalityAdmin ? 100 : 50)
   const voteTotal = voteLeaderboard.reduce((sum, project) => sum + project.votes, 0)
