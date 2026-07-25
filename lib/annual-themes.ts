@@ -1,6 +1,7 @@
 'use client'
 
 import {projectCategories} from '@/lib/project-taxonomy'
+import {createClient} from '@/lib/supabase/client'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
@@ -39,6 +40,7 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
 ]
 
 const STORAGE_KEY = 'mugla-annual-theme-settings-v1'
+const REMOTE_TABLE = 'annual_theme_settings'
 export const annualThemeChangeEvent = 'mugla-annual-themes-changed'
 
 function normalizeThemeId(value: string): AnnualThemeId | null {
@@ -66,12 +68,54 @@ function saveAnnualThemeSettings(settings: AnnualThemeSetting[]) {
   window.dispatchEvent(new Event(annualThemeChangeEvent))
 }
 
+function normalizeAnnualThemeSetting(value: Partial<AnnualThemeSetting> & {updated_at?: string}): AnnualThemeSetting | null {
+  const year = String(value.year ?? '')
+  if (!annualThemeYears.includes(year as typeof annualThemeYears[number])) return null
+  const themes = Array.isArray(value.themes) ? value.themes.map(theme => normalizeThemeId(String(theme))).filter(Boolean) as AnnualThemeId[] : []
+  return {year, themes: themes.length ? themes : ['all'], updatedAt: value.updatedAt ?? value.updated_at ?? new Date().toISOString()}
+}
+
+function mergeAnnualThemeSettings(local: AnnualThemeSetting[], remote: AnnualThemeSetting[]) {
+  const map = new Map<string, AnnualThemeSetting>()
+  ;[...local, ...remote].forEach(setting => {
+    const current = map.get(setting.year)
+    if (!current || String(setting.updatedAt).localeCompare(String(current.updatedAt)) >= 0) map.set(setting.year, setting)
+  })
+  return Array.from(map.values()).sort((a, b) => a.year.localeCompare(b.year))
+}
+
+export async function syncAnnualThemeSettings() {
+  if (typeof window === 'undefined') return []
+  try {
+    const {data, error} = await createClient().from(REMOTE_TABLE).select('year,themes,updated_at')
+    if (error || !Array.isArray(data)) return listAnnualThemeSettings()
+    const remote = data.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
+    const merged = mergeAnnualThemeSettings(listAnnualThemeSettings(), remote)
+    saveAnnualThemeSettings(merged)
+    return merged
+  } catch {
+    return listAnnualThemeSettings()
+  }
+}
+
+async function upsertRemoteAnnualThemeSetting(setting: AnnualThemeSetting) {
+  if (typeof window === 'undefined') return
+  try {
+    await createClient().from(REMOTE_TABLE).upsert({
+      year: setting.year,
+      themes: setting.themes,
+      updated_at: setting.updatedAt,
+    }, {onConflict: 'year'})
+  } catch {}
+}
+
 export function upsertAnnualThemeSetting(year: string, themes: AnnualThemeId[]) {
   const cleanThemes = Array.from(new Set(themes)).filter(theme => annualThemeOptions.some(option => option.id === theme))
   const nextThemes = cleanThemes.length ? cleanThemes : ['all' as AnnualThemeId]
   const settings = listAnnualThemeSettings()
   const next = {year, themes: nextThemes.includes('all') ? ['all' as AnnualThemeId] : nextThemes, updatedAt: new Date().toISOString()}
   saveAnnualThemeSettings([...settings.filter(item => item.year !== year), next].sort((a, b) => a.year.localeCompare(b.year)))
+  void upsertRemoteAnnualThemeSetting(next)
   return next
 }
 

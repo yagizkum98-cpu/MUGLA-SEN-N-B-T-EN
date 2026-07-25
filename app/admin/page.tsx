@@ -10,7 +10,7 @@ import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, Check
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
-import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
+import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, syncAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
@@ -583,9 +583,12 @@ export default function Admin() {
     const syncThemes = () => {
       const settings = listAnnualThemeSettings()
       setThemeSettings(settings)
-      setThemeDraft(settings.find(setting => setting.year === annualThemeYears[0])?.themes ?? ['all'])
     }
     syncThemes()
+    void syncAnnualThemeSettings().then(settings => {
+      setThemeSettings(settings)
+      setThemeDraft(settings.find(setting => setting.year === annualThemeYears[0])?.themes ?? ['all'])
+    })
     window.addEventListener('mugla-admin-audit-log-changed', syncAudit)
     window.addEventListener(annualThemeChangeEvent, syncThemes)
     return () => {
