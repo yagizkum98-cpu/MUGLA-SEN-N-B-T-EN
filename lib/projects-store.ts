@@ -243,11 +243,19 @@ export async function submitProjectToProjectCenter(project:ProjectRecord){
 
 async function deleteRemoteProject(id:string){
   if(typeof window==='undefined')return
+  const deletedProject={id,deleted:true,deletedAt:new Date().toISOString()}
+  let synced=false
   try{
-    await fetch(`${projectCenterApiUrl()}?id=${encodeURIComponent(id)}`,{method:'DELETE'})
+    const response=await fetch(`${projectCenterApiUrl()}?id=${encodeURIComponent(id)}`,{method:'DELETE'})
+    synced=response.ok
   }catch{}
+  if(synced)return
   try{
-    await createClient().from(REMOTE_TABLE).delete().eq('id',id)
+    await createClient().from(REMOTE_TABLE).upsert({
+      id,
+      data:deletedProject,
+      updated_at:deletedProject.deletedAt,
+    },{onConflict:'id'})
   }catch{}
 }
 
@@ -287,6 +295,10 @@ function normalizeProject(project:ProjectRecord):ProjectRecord{
 
 export function isPublishedProject(project:Pick<ProjectRecord,'moderationStatus'>){
   return !['Bekliyor','Reddedildi'].includes(String(project.moderationStatus))
+}
+
+export function isActiveVotingProject(project:Pick<ProjectRecord,'moderationStatus'|'status'>){
+  return isPublishedProject(project)&&['Oylamada','Yılın Kazanan Adayı'].includes(String(project.status))
 }
 
 export function isPendingReviewProject(project:Partial<ProjectRecord>){
@@ -391,7 +403,7 @@ export function useProjects(){
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{
     save(readProjects().map(project=>{
-      if(project.id!==id||!isPublishedProject(project)||!['Oylamada','Yılın Kazanan Adayı'].includes(String(project.status)))return project
+      if(project.id!==id||!isActiveVotingProject(project))return project
       return {...project,votes:Math.max(0,project.votes+delta)}
     }))
   },[save])

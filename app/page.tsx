@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {FileText, FolderKanban, Mail} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
-import {useProjects} from '@/lib/projects-store'
+import {isActiveVotingProject, useProjects} from '@/lib/projects-store'
 import {SiteUserMenu} from '@/components/site-user-menu'
 
 type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
@@ -157,12 +157,12 @@ function ProjectRoadmap() {
 
 export default function Home() {
   const {projects} = useProjects()
-  const citizenIdeas = projects.filter(project => project.source === 'citizen' || project.ownerId || project.ownerEmail || project.applicantType)
-  const visibleCitizenIdeas = citizenIdeas.filter(project => project.moderationStatus !== 'Reddedildi')
-  const activeVoteCount = visibleCitizenIdeas.reduce((sum, project) => sum + project.votes, 0)
-  const categoryPreferences = Array.from(visibleCitizenIdeas.reduce((map, project) => {
+  const activeVotingProjects = projects.filter(isActiveVotingProject)
+  const activeVoteCount = activeVotingProjects.reduce((sum, project) => sum + project.votes, 0)
+  const categoryPreferences = Array.from(activeVotingProjects.reduce((map, project) => {
+    if (project.votes <= 0) return map
     const category = project.category || 'Diğer'
-    map.set(category, (map.get(category) ?? 0) + 1)
+    map.set(category, (map.get(category) ?? 0) + project.votes)
     return map
   }, new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
   const maxCategoryCount = Math.max(1, ...categoryPreferences.map(([, count]) => count))
@@ -279,7 +279,7 @@ export default function Home() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-cyan">Canlı tercih haritası</p>
               <h3 className="mt-2 text-2xl font-black">Hangi kategoriler öne çıkıyor?</h3>
-              <p className="mt-2 text-sm leading-6 text-mugla-navy/55">Fikir Gönder formundan gelen başvurulara göre otomatik güncellenir.</p>
+              <p className="mt-2 text-sm leading-6 text-mugla-navy/55">Aktif oylamadaki canlı oy verisine göre otomatik güncellenir.</p>
             </div>
             <div className="rounded-lg bg-mugla-sand px-4 py-3 text-right">
               <p className="text-xs font-bold text-mugla-navy/45">Aktif oy sayısı</p>
@@ -290,7 +290,7 @@ export default function Home() {
             {categoryPreferences.length ? categoryPreferences.map(([category, count]) => <div key={category} className="rounded-lg border border-mugla-navy/10 bg-white p-3">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <b>{category}</b>
-                <span className="rounded-full bg-mugla-sand px-2 py-1 text-xs font-black text-mugla-navy/55">{count} fikir</span>
+                <span className="rounded-full bg-mugla-sand px-2 py-1 text-xs font-black text-mugla-navy/55">{count.toLocaleString('tr-TR')} oy</span>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-mugla-sand">
                 <span className="block h-full rounded-full bg-mugla-cyan" style={{width: `${Math.max(10, count / maxCategoryCount * 100)}%`}}/>
