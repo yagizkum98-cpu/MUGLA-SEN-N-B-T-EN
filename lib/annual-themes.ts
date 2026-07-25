@@ -86,6 +86,12 @@ function mergeAnnualThemeSettings(local: AnnualThemeSetting[], remote: AnnualThe
   return Array.from(map.values()).sort((a, b) => a.year.localeCompare(b.year))
 }
 
+function applyRemoteAnnualThemeSettings(local: AnnualThemeSetting[], remote: AnnualThemeSetting[]) {
+  if (!remote.length) return local.sort((a, b) => a.year.localeCompare(b.year))
+  const remoteYears = new Set(remote.map(setting => setting.year))
+  return [...local.filter(setting => !remoteYears.has(setting.year)), ...remote].sort((a, b) => a.year.localeCompare(b.year))
+}
+
 function normalizeAnnualThemeSettingsPayload(value: unknown) {
   if (!value || typeof value !== 'object') return []
   const payload = value as {settings?: unknown}
@@ -114,7 +120,7 @@ async function readRemoteAnnualThemeSettings() {
 export async function syncAnnualThemeSettings() {
   if (typeof window === 'undefined') return []
   const remote = await readRemoteAnnualThemeSettings()
-  const merged = mergeAnnualThemeSettings(listAnnualThemeSettings(), remote)
+  const merged = applyRemoteAnnualThemeSettings(listAnnualThemeSettings(), remote)
   saveAnnualThemeSettings(merged)
   return merged
 }

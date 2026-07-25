@@ -84,6 +84,10 @@ export default function IdeaForm(){
   },[])
 
   useEffect(()=>{
+    void syncAnnualThemeSettings().then(()=>setThemeVersion(value=>value+1))
+  },[applicationYear])
+
+  useEffect(()=>{
     if(categoryOptions.length&&!categoryOptions.some(([name])=>name===category))setCategory(categoryOptions[0][0])
   },[categoryOptions,category])
 
