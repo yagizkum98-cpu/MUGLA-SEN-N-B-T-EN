@@ -11,7 +11,7 @@ import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
-import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowed,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
+import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowed,listAnnualThemeSettings,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
@@ -80,10 +80,10 @@ export default function IdeaForm(){
   },[])
 
   useEffect(()=>{
-    const sync=()=>void syncAnnualThemeSettings().then(settings=>{setThemeSettings(settings);setThemesLoaded(true);setThemeVersion(value=>value+1)})
-    sync()
-    window.addEventListener(annualThemeChangeEvent,sync)
-    return()=>window.removeEventListener(annualThemeChangeEvent,sync)
+    const refreshLocal=()=>{setThemeSettings(listAnnualThemeSettings());setThemesLoaded(true);setThemeVersion(value=>value+1)}
+    void syncAnnualThemeSettings().then(settings=>{setThemeSettings(settings);setThemesLoaded(true);setThemeVersion(value=>value+1)})
+    window.addEventListener(annualThemeChangeEvent,refreshLocal)
+    return()=>window.removeEventListener(annualThemeChangeEvent,refreshLocal)
   },[])
 
   useEffect(()=>{
