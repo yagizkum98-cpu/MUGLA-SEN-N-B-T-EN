@@ -256,6 +256,7 @@ export default function IdeaForm(){
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <legend className="px-2 font-bold">Proje siniflandirmasi</legend>
             <p className="mb-4 text-sm text-mugla-navy/50">Seçilen yıl için yıllık temalandırmada açılan kategoriler başvuruya açılır.</p>
+            <div className="mb-4 flex flex-wrap gap-2">{activeThemeLabels.map(label=><span key={label} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/65">{label}</span>)}</div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Başvuru yılı <span className="text-red-500">*</span></span><select name="applicationYear" className={field} value={applicationYear} onChange={event=>setApplicationYear(event.target.value)} required>{annualThemeYears.map(year=><option key={year} value={year}>{year}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>{setCategory(e.target.value as ProjectCategory); if(e.target.value!=='Diğer')setCustomTheme('')}} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>

@@ -41,6 +41,8 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
 
 const STORAGE_KEY = 'mugla-annual-theme-settings-v1'
 const REMOTE_TABLE = 'annual_theme_settings'
+const FALLBACK_REMOTE_TABLE = 'project_records'
+const FALLBACK_REMOTE_ID = 'annual-theme-settings'
 export const annualThemeChangeEvent = 'mugla-annual-themes-changed'
 
 function normalizeThemeId(value: string): AnnualThemeId | null {
@@ -84,28 +86,56 @@ function mergeAnnualThemeSettings(local: AnnualThemeSetting[], remote: AnnualThe
   return Array.from(map.values()).sort((a, b) => a.year.localeCompare(b.year))
 }
 
+function normalizeAnnualThemeSettingsPayload(value: unknown) {
+  if (!value || typeof value !== 'object') return []
+  const payload = value as {settings?: unknown}
+  if (!Array.isArray(payload.settings)) return []
+  return payload.settings.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
+}
+
+async function readRemoteAnnualThemeSettings() {
+  const client = createClient()
+  try {
+    const {data, error} = await client.from(REMOTE_TABLE).select('year,themes,updated_at')
+    if (!error && Array.isArray(data)) {
+      return data.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
+    }
+  } catch {}
+  try {
+    const {data, error} = await client.from(FALLBACK_REMOTE_TABLE).select('data,updated_at').eq('id', FALLBACK_REMOTE_ID).limit(1)
+    if (error || !Array.isArray(data) || !data[0]) return []
+    return normalizeAnnualThemeSettingsPayload(data[0].data)
+  } catch {
+    return []
+  }
+}
+
 export async function syncAnnualThemeSettings() {
   if (typeof window === 'undefined') return []
-  try {
-    const {data, error} = await createClient().from(REMOTE_TABLE).select('year,themes,updated_at')
-    if (error || !Array.isArray(data)) return listAnnualThemeSettings()
-    const remote = data.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
-    const merged = mergeAnnualThemeSettings(listAnnualThemeSettings(), remote)
-    saveAnnualThemeSettings(merged)
-    return merged
-  } catch {
-    return listAnnualThemeSettings()
-  }
+  const remote = await readRemoteAnnualThemeSettings()
+  const merged = mergeAnnualThemeSettings(listAnnualThemeSettings(), remote)
+  saveAnnualThemeSettings(merged)
+  return merged
 }
 
 async function upsertRemoteAnnualThemeSetting(setting: AnnualThemeSetting) {
   if (typeof window === 'undefined') return
+  const nextSettings = [...listAnnualThemeSettings().filter(item => item.year !== setting.year), setting].sort((a, b) => a.year.localeCompare(b.year))
+  const client = createClient()
   try {
-    await createClient().from(REMOTE_TABLE).upsert({
+    const {error} = await client.from(REMOTE_TABLE).upsert({
       year: setting.year,
       themes: setting.themes,
       updated_at: setting.updatedAt,
     }, {onConflict: 'year'})
+    if (!error) return
+  } catch {}
+  try {
+    await client.from(FALLBACK_REMOTE_TABLE).upsert({
+      id: FALLBACK_REMOTE_ID,
+      data: {kind: 'annual-theme-settings', settings: nextSettings},
+      updated_at: setting.updatedAt,
+    }, {onConflict: 'id'})
   } catch {}
 }
 
