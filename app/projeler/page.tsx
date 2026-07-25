@@ -6,7 +6,7 @@ import {ArrowLeft, CheckCircle2, ChevronDown, FileText, MapPin, Search, Shopping
 import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser} from '@/lib/local-auth'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
-import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
+import {formatBudget, projectApplicationYear, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 import {SiteUserMenu} from '@/components/site-user-menu'
 
@@ -107,8 +107,7 @@ function ProjectImage({project, className = 'h-36'}: {project: ProjectRecord; cl
 }
 
 function applicationYear(project: ProjectRecord) {
-  const year = new Date(project.createdAt).getFullYear()
-  return Number.isFinite(year) ? String(year) : ''
+  return projectApplicationYear(project)
 }
 
 type ProjectFilters = {
@@ -189,7 +188,7 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
       <div className="grid gap-2">
         <button type="button" onClick={(event) => {event.stopPropagation(); onShowDetails(project)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy">
           <FileText size={16}/>
-          Detay
+          Projeyi incele
         </button>
         <button disabled={!canVote || confirmed} onClick={(event) => {event.stopPropagation(); onAdd(project.id)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
           <ShoppingCart size={16}/>
@@ -445,8 +444,17 @@ export default function Projects() {
             ['Özet', selectedProject.summary],
             ['Faaliyetler', selectedProject.activities],
             ['Beklenen sonuçlar', selectedProject.expectedResults],
+            ['Bütçe gerekçesi', selectedProject.budgetJustification],
             ['Birleştirme notu', selectedProject.mergeNote],
           ].map(([label, value]) => value ? <section key={label} className="rounded-lg bg-mugla-sand/70 p-4"><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">{label}</span><p className="mt-2 whitespace-pre-line text-sm leading-6 text-mugla-navy/65">{value}</p></section> : null)}
+        </div>
+        <div className="mt-4 grid gap-3 rounded-lg border border-mugla-navy/10 p-4 text-sm md:grid-cols-3">
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Başvuru yılı</span><p className="mt-1 font-bold">{applicationYear(selectedProject)}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Hedef grup</span><p className="mt-1 font-bold">{selectedProject.targetGroup || 'Belirtilmedi'}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Oy desteği</span><p className="mt-1 font-bold">{selectedProject.votes.toLocaleString('tr-TR')}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Mahalle</span><p className="mt-1 font-bold">{selectedProject.neighborhood || 'Belirtilmedi'}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Başvuru ilçesi</span><p className="mt-1 font-bold">{selectedProject.applicantDistrict || 'Belirtilmedi'}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Durum</span><p className="mt-1 font-bold">{selectedProject.status}</p></div>
         </div>
         <div className="mt-4 rounded-lg border border-mugla-navy/10 p-4">
           <p className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Ek dosyalar</p>

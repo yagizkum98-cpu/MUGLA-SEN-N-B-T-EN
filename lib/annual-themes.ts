@@ -95,18 +95,19 @@ function normalizeAnnualThemeSettingsPayload(value: unknown) {
 
 async function readRemoteAnnualThemeSettings() {
   const client = createClient()
+  let primarySettings: AnnualThemeSetting[] = []
   try {
     const {data, error} = await client.from(REMOTE_TABLE).select('year,themes,updated_at')
     if (!error && Array.isArray(data)) {
-      return data.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
+      primarySettings = data.map(item => normalizeAnnualThemeSetting(item as Partial<AnnualThemeSetting> & {updated_at?: string})).filter(Boolean) as AnnualThemeSetting[]
     }
   } catch {}
   try {
     const {data, error} = await client.from(FALLBACK_REMOTE_TABLE).select('data,updated_at').eq('id', FALLBACK_REMOTE_ID).limit(1)
-    if (error || !Array.isArray(data) || !data[0]) return []
-    return normalizeAnnualThemeSettingsPayload(data[0].data)
+    if (error || !Array.isArray(data) || !data[0]) return primarySettings
+    return mergeAnnualThemeSettings(primarySettings, normalizeAnnualThemeSettingsPayload(data[0].data))
   } catch {
-    return []
+    return primarySettings
   }
 }
 

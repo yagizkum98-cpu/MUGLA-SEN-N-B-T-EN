@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import {FormEvent, useEffect, useState} from 'react'
+import {FormEvent, useEffect, useRef, useState} from 'react'
 import Link from 'next/link'
 import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
@@ -335,6 +335,7 @@ function ProjectManagementPanel({
   onRevision,
   onReject,
   canEdit,
+  canManageImage,
   canReview,
   canSendToVote,
 }: {
@@ -348,6 +349,7 @@ function ProjectManagementPanel({
   onRevision: () => void
   onReject: () => void
   canEdit: boolean
+  canManageImage: boolean
   canReview: boolean
   canSendToVote: boolean
 }) {
@@ -390,12 +392,14 @@ function ProjectManagementPanel({
           <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-mugla-navy/70">{project.summary || project.shortDescription || 'Belirtilmedi'}</p>
         </div>
         {project.image && <p className="truncate text-xs font-semibold text-mugla-navy/55">{project.image.name} - {(project.image.size / 1024 / 1024).toFixed(1)} MB</p>}
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-mugla-cyan px-4 py-3 text-sm font-bold text-white">
-          <UploadCloud size={17}/>
-          Görsel yükle / güncelle
-          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => {const file = event.target.files?.[0]; if (file) onImage(file); event.currentTarget.value = ''}}/>
-        </label>
-        {project.image && <button type="button" onClick={onRemoveImage} className="w-full rounded-lg border border-mugla-navy/10 bg-white px-4 py-3 text-sm font-bold text-mugla-navy/60 hover:text-red-600"><Trash2 className="mr-2 inline" size={16}/> Görseli kaldır</button>}
+        {canManageImage ? <>
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-mugla-cyan px-4 py-3 text-sm font-bold text-white">
+            <UploadCloud size={17}/>
+            Görsel yükle / güncelle
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => {const file = event.target.files?.[0]; if (file) onImage(file); event.currentTarget.value = ''}}/>
+          </label>
+          {project.image && <button type="button" onClick={onRemoveImage} className="w-full rounded-lg border border-mugla-navy/10 bg-white px-4 py-3 text-sm font-bold text-mugla-navy/60 hover:text-red-600"><Trash2 className="mr-2 inline" size={16}/> Görseli kaldır</button>}
+        </> : <p className="rounded-lg bg-mugla-sand/60 px-4 py-3 text-sm font-semibold text-mugla-navy/55">Proje görselini yalnızca Super Admin ve Büyükşehir Admini yönetebilir.</p>}
         </div>
       </section>
       <section className={adminPanel}>
@@ -467,6 +471,7 @@ export default function Admin() {
   const [passwordChanging, setPasswordChanging] = useState(false)
   const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
+  const themeYearRef = useRef<string>(annualThemeYears[0])
   const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
   const [votingYear, setVotingYear] = useState<string>(String(new Date().getFullYear()))
   const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
@@ -587,7 +592,10 @@ export default function Admin() {
     syncThemes()
     void syncAnnualThemeSettings().then(settings => {
       setThemeSettings(settings)
-      setThemeDraft(settings.find(setting => setting.year === annualThemeYears[0])?.themes ?? ['all'])
+      setThemeDraft(current => {
+        const synced = settings.find(setting => setting.year === themeYearRef.current)?.themes
+        return synced ?? current
+      })
     })
     window.addEventListener('mugla-admin-audit-log-changed', syncAudit)
     window.addEventListener(annualThemeChangeEvent, syncThemes)
@@ -921,6 +929,7 @@ export default function Admin() {
   }
 
   function changeThemeYear(year: string) {
+    themeYearRef.current = year
     setThemeYear(year)
     setThemeDraft(themesForYear(year))
   }
@@ -2194,6 +2203,7 @@ export default function Admin() {
               onRevision={() => requestProjectRevision(managedProject, 'Revizyon İstendi')}
               onReject={() => rejectPendingProject(managedProject)}
               canEdit={canEditProjects}
+              canManageImage={canSendProjectsToVote}
               canReview={canReviewProjects}
               canSendToVote={canSendProjectsToVote && !isProjectOnVoting(managedProject) && managedProject.moderationStatus === 'Onaylandı'}
             />
