@@ -521,7 +521,15 @@ export default function Admin() {
   const canScheduleNotification = isSuperAdmin || isMunicipalityAdmin
   const canDeleteNotification = isSuperAdmin
   const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || projectMatchesDistrict(project, adminUser?.district)) : isDistrictManager && adminUser?.district ? projects.filter(project => projectMatchesDistrict(project, adminUser.district)) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
-  const scopedCitizens = isDistrictManager && adminUser?.district ? citizens.filter(citizen => citizen.district === adminUser.district) : citizens
+  const liveCitizens = citizens.map(citizen => {
+    const citizenProjects = projects.filter(project => project.ownerId === citizen.id.replace(/^auth-/, '') || project.ownerEmail?.toLocaleLowerCase('tr') === citizen.email.toLocaleLowerCase('tr'))
+    return {
+      ...citizen,
+      proposalCount: Math.max(citizen.proposalCount, citizenProjects.length),
+      participationCount: Math.max(citizen.participationCount, citizenProjects.length),
+    }
+  })
+  const scopedCitizens = isDistrictManager && adminUser?.district ? liveCitizens.filter(citizen => citizen.district === adminUser.district) : liveCitizens
   const scopedContactRecords = isDistrictManager && adminUser?.district ? contactRecords.filter(record => record.message.includes(adminUser.district ?? '') || record.subject.includes(adminUser.district ?? '')) : contactRecords
   const pendingProjects = scopedProjects.filter(isPendingReviewProject)
   const selectedMergeProjects = pendingProjects.filter(project => mergeSelection.includes(project.id))

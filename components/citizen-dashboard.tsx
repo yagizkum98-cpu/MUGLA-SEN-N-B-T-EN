@@ -6,7 +6,7 @@ import {ArrowUpRight, Bell, Camera, CheckCircle2, FileBarChart, FileText, Home, 
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
-import {changeCurrentUserPassword, consumeCitizenSessionTransfer, getCurrentUser, logoutUser, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
+import {changeCurrentUserPassword, consumeCitizenSessionTransfer, getCurrentUser, logoutUser, updateCurrentUserActivity, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 import {useVoteBasket, VOTE_CREDIT_LIMIT} from '@/lib/vote-basket'
 
@@ -142,6 +142,7 @@ export function CitizenDashboard() {
   function confirmVotes() {
     const selected = confirm(activeVoteProjects.map(project => project.id))
     selected.forEach(id => voteProject(id, 1))
+    if (selected.length) updateCurrentUserActivity({voteDelta: selected.length, participationDelta: selected.length})
     setMessage(selected.length ? `${selected.length} proje için oyunuz alındı.` : 'Onaylanacak uygun proje bulunmuyor.')
   }
 

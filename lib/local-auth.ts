@@ -1,6 +1,7 @@
 'use client'
 
 import {createClient} from '@/lib/supabase/client'
+import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
 
 export type VerificationMethod = 'phone' | 'email' | 'passport' | 'international-id'
 
@@ -26,6 +27,9 @@ export type LocalUser = {
   apiPath: string
   avatarUrl?: string
   identityReference?: string
+  voteCount?: number
+  proposalCount?: number
+  participationCount?: number
 }
 
 const USERS = 'mugla-auth-users-v1'
@@ -33,6 +37,11 @@ const SESSION = 'mugla-auth-session-v1'
 const REMOTE_TABLE = 'citizen_records'
 export const AUTH_USERS_CHANGED_EVENT = 'mugla-auth-users-changed'
 const TRANSFER_TTL_MS = 2 * 60 * 1000
+
+function citizenRecordsApiUrl() {
+  if (typeof window === 'undefined' || isMunicipalityDomain()) return '/api/citizen-records'
+  return municipalityUrl('/api/citizen-records')
+}
 
 export function normalizeLocalUser(user: LocalUser): LocalUser {
   return {
@@ -49,11 +58,19 @@ export function normalizeLocalUser(user: LocalUser): LocalUser {
     panelPath: user.panelPath ?? '/vatandas/panel',
     apiPath: user.apiPath ?? `/api/vatandas/${user.id}`,
     avatarUrl: user.avatarUrl,
+    voteCount: Number(user.voteCount ?? 0),
+    proposalCount: Number(user.proposalCount ?? 0),
+    participationCount: Number(user.participationCount ?? 0),
   }
 }
 
 export async function readRemoteUsers() {
   if (typeof window === 'undefined') return []
+  try {
+    const response = await fetch(citizenRecordsApiUrl(), {cache: 'no-store'})
+    const payload = await response.json().catch(() => null)
+    if (response.ok && Array.isArray(payload?.users)) return payload.users.map((user: LocalUser) => normalizeLocalUser(user))
+  } catch {}
   try {
     const {data, error} = await createClient().from(REMOTE_TABLE).select('data')
     if (error || !Array.isArray(data)) return []
@@ -65,13 +82,24 @@ export async function readRemoteUsers() {
 
 async function upsertRemoteUsers(users: LocalUser[]) {
   if (typeof window === 'undefined' || !users.length) return
-  try {
-    await createClient().from(REMOTE_TABLE).upsert(users.map(user => ({
-      id: user.id,
-      data: normalizeLocalUser(user),
-      updated_at: new Date().toISOString(),
-    })), {onConflict: 'id'})
-  } catch {}
+  const normalizedUsers = users.map(normalizeLocalUser)
+  for (const user of normalizedUsers) {
+    try {
+      const response = await fetch(citizenRecordsApiUrl(), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user}),
+      })
+      if (response.ok) continue
+    } catch {}
+    try {
+      await createClient().from(REMOTE_TABLE).upsert({
+        id: user.id,
+        data: user,
+        updated_at: new Date().toISOString(),
+      }, {onConflict: 'id'})
+    } catch {}
+  }
 }
 
 export function listLocalUsers(): LocalUser[] {
@@ -151,6 +179,9 @@ export async function registerUser(input: {
     panelPath: '/vatandas/panel',
     apiPath: `/api/vatandas/${id}`,
     identityReference: input.identityReference?.trim(),
+    voteCount: 0,
+    proposalCount: 0,
+    participationCount: 0,
   }
   localStorage.setItem(USERS, JSON.stringify([...users, user]))
   void upsertRemoteUsers([user])
@@ -245,6 +276,21 @@ export function updateCurrentUserProfile(input: {name?: string; phone?: string; 
     province: input.province?.trim() || current.province,
     district: input.district?.trim() || current.district,
     avatarUrl: input.avatarUrl !== undefined ? input.avatarUrl : current.avatarUrl,
+  }
+  saveUsers(users.map(user => user.id === current.id ? updated : user))
+  return updated
+}
+
+export function updateCurrentUserActivity(input: {voteDelta?: number; proposalDelta?: number; participationDelta?: number}) {
+  const current = getCurrentUser()
+  if (!current) return null
+  const users = listLocalUsers()
+  const updated = {
+    ...current,
+    voteCount: Math.max(0, Number(current.voteCount ?? 0) + Number(input.voteDelta ?? 0)),
+    proposalCount: Math.max(0, Number(current.proposalCount ?? 0) + Number(input.proposalDelta ?? 0)),
+    participationCount: Math.max(0, Number(current.participationCount ?? 0) + Number(input.participationDelta ?? 0)),
+    lastLoginAt: current.lastLoginAt ?? new Date().toISOString(),
   }
   saveUsers(users.map(user => user.id === current.id ? updated : user))
   return updated

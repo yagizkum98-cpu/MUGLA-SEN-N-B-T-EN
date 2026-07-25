@@ -7,7 +7,7 @@ import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
 import {submitProjectToProjectCenter,syncProjectRecord,useProjects} from '@/lib/projects-store'
 import {muglaDistricts} from '@/lib/locations'
-import {consumeCitizenSessionTransfer, getCurrentUser} from '@/lib/local-auth'
+import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
@@ -173,6 +173,7 @@ export default function IdeaForm(){
         }
       }
       updateProject(project.id,syncedProject)
+      updateCurrentUserActivity({proposalDelta:1,participationDelta:1})
       setSuccess(project.projectCode)
       setFiles([])
       form.reset()
