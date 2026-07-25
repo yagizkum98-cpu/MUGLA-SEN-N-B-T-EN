@@ -130,12 +130,11 @@ async function upsertRemoteAnnualThemeSetting(setting: AnnualThemeSetting) {
   const nextSettings = [...listAnnualThemeSettings().filter(item => item.year !== setting.year), setting].sort((a, b) => a.year.localeCompare(b.year))
   const client = createClient()
   try {
-    const {error} = await client.from(REMOTE_TABLE).upsert({
+    await client.from(REMOTE_TABLE).upsert({
       year: setting.year,
       themes: setting.themes,
       updated_at: setting.updatedAt,
     }, {onConflict: 'year'})
-    if (!error) return
   } catch {}
   try {
     await client.from(FALLBACK_REMOTE_TABLE).upsert({
@@ -168,6 +167,11 @@ export function isAllThemesOpen(year: string) {
 export function allowedCategoriesForYear(year: string) {
   if (isAllThemesOpen(year)) return projectCategories
   const setting = getAnnualThemeSetting(year)
+  return allowedCategoriesForSetting(setting)
+}
+
+export function allowedCategoriesForSetting(setting: AnnualThemeSetting) {
+  if (!setting.themes.length || setting.themes.includes('all')) return projectCategories
   const allowed = new Set<string>()
   setting.themes.forEach(themeId => {
     const theme = annualThemeOptions.find(option => option.id === themeId)
@@ -182,6 +186,10 @@ export function allowedCategoryNamesForYear(year: string) {
 
 export function annualThemeLabelsForYear(year: string) {
   const setting = getAnnualThemeSetting(year)
+  return annualThemeLabelsForSetting(setting)
+}
+
+export function annualThemeLabelsForSetting(setting: AnnualThemeSetting) {
   if (!setting.themes.length || setting.themes.includes('all')) return ['Tum temalar']
   return setting.themes.map(theme => annualThemeOptions.find(option => option.id === theme)?.label ?? theme)
 }
