@@ -46,6 +46,7 @@ export type ProjectRecord={
   moderationStatus:ProjectModerationStatus
   workflowStatus?:ProjectWorkflowStatus
   createdAt:string
+  applicationYear?:string
   createdByAdminId?:string
   createdByAdminName?:string
   source?:'citizen'|'municipality'
@@ -259,17 +260,18 @@ async function deleteRemoteProject(id:string){
   }catch{}
 }
 
-function projectYear(project:{createdAt?:string}){
+export function projectApplicationYear(project:{createdAt?:string;applicationYear?:string}){
+  if(project.applicationYear&&/^\d{4}$/.test(project.applicationYear))return project.applicationYear
   const year=new Date(project.createdAt??'').getFullYear()
-  return Number.isFinite(year)?year:new Date().getFullYear()
+  return String(Number.isFinite(year)?year:new Date().getFullYear())
 }
 
-function fallbackProjectCode(project:{id:string;createdAt?:string}){
-  return `MSB-${projectYear(project)}-${project.id.replace(/[^a-z0-9]/gi,'').slice(0,6).toLocaleUpperCase('tr').padEnd(6,'0')}`
+function fallbackProjectCode(project:{id:string;createdAt?:string;applicationYear?:string}){
+  return `MSB-${projectApplicationYear(project)}-${project.id.replace(/[^a-z0-9]/gi,'').slice(0,6).toLocaleUpperCase('tr').padEnd(6,'0')}`
 }
 
-function nextProjectCode(projects:ProjectRecord[],createdAt:string){
-  const year=projectYear({createdAt})
+function nextProjectCode(projects:ProjectRecord[],createdAt:string,applicationYear?:string){
+  const year=projectApplicationYear({createdAt,applicationYear})
   const prefix=`MSB-${year}-`
   const used=new Set(projects.map(project=>project.projectCode??fallbackProjectCode(project)))
   let index=projects.filter(project=>(project.projectCode??fallbackProjectCode(project)).startsWith(prefix)).length+1
@@ -359,7 +361,7 @@ export function useProjects(){
   const addProject=useCallback((input:NewProject)=>{
     const current=readProjects().map(normalizeProject)
     const createdAt=new Date().toISOString()
-    const project:ProjectRecord={...input,projectCode:nextProjectCode(current,createdAt),moderationStatus:input.moderationStatus??'Bekliyor',id:crypto.randomUUID(),votes:0,progress:input.status==='Tamamlandı'?100:0,createdAt}
+    const project:ProjectRecord={...input,projectCode:nextProjectCode(current,createdAt,input.applicationYear),moderationStatus:input.moderationStatus??'Bekliyor',id:crypto.randomUUID(),votes:0,progress:input.status==='Tamamlandı'?100:0,createdAt}
     save([project,...current])
     return project
   },[save])

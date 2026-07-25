@@ -11,7 +11,7 @@ import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
-import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeLabelsForYear,isProjectThemeAllowed} from '@/lib/annual-themes'
+import {allowedCategoriesForYear,annualThemeChangeEvent,annualThemeLabelsForYear,annualThemeYears,isProjectThemeAllowed} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
@@ -39,18 +39,20 @@ export default function IdeaForm(){
   const currentUser=getCurrentUser()
   const currentYear=new Date().getFullYear()
   const currentYearKey=String(currentYear)
+  const[applicationYear,setApplicationYear]=useState(currentYearKey)
   const[themeVersion,setThemeVersion]=useState(0)
-  const categoryOptions=useMemo(()=>allowedCategoriesForYear(currentYearKey),[currentYearKey,themeVersion])
-  const activeThemeLabels=annualThemeLabelsForYear(currentYearKey)
+  const categoryOptions=useMemo(()=>allowedCategoriesForYear(applicationYear),[applicationYear,themeVersion])
+  const activeThemeLabels=annualThemeLabelsForYear(applicationYear)
   const yearlyIdeaCount=useMemo(()=>{
     if(!currentUser)return 0
     return projects.filter(project=>{
       const created=new Date(project.createdAt)
-      const sameYear=!Number.isNaN(created.getTime())&&created.getFullYear()===currentYear
+      const projectYear=project.applicationYear??(!Number.isNaN(created.getTime())?String(created.getFullYear()):currentYearKey)
+      const sameYear=projectYear===applicationYear
       const sameOwner=project.ownerId===currentUser.id||project.ownerEmail===currentUser.email
       return sameYear&&sameOwner
     }).length
-  },[projects,currentUser,currentYear])
+  },[projects,currentUser,applicationYear,currentYearKey])
   const remainingIdeas=Math.max(0,YEARLY_IDEA_LIMIT-yearlyIdeaCount)
 
   useEffect(()=>{
@@ -107,8 +109,8 @@ export default function IdeaForm(){
       setSubmitting(false)
       return
     }
-    if(!isProjectThemeAllowed(currentYearKey,selectedCategory,'Genel')){
-      setError(`${currentYear} yili icin bu tema basvuruya acik degil. Lutfen acik temalardan bir kategori secin.`)
+    if(!isProjectThemeAllowed(applicationYear,selectedCategory,'Genel')){
+      setError(`${applicationYear} yili icin bu tema basvuruya acik degil. Lutfen acik temalardan bir kategori secin.`)
       setSubmitting(false)
       return
     }
@@ -116,12 +118,13 @@ export default function IdeaForm(){
     if(user){
       const sentThisYear=projects.filter(project=>{
         const created=new Date(project.createdAt)
-        const sameYear=!Number.isNaN(created.getTime())&&created.getFullYear()===currentYear
+        const projectYear=project.applicationYear??(!Number.isNaN(created.getTime())?String(created.getFullYear()):currentYearKey)
+        const sameYear=projectYear===applicationYear
         const sameOwner=project.ownerId===user.id||project.ownerEmail===user.email
         return sameYear&&sameOwner
       }).length
       if(sentThisYear>=YEARLY_IDEA_LIMIT){
-        setError(`${currentYear} yılı için en fazla ${YEARLY_IDEA_LIMIT} proje fikri gönderebilirsiniz. Bu yılki hakkınız doldu.`)
+        setError(`${applicationYear} yılı için en fazla ${YEARLY_IDEA_LIMIT} proje fikri gönderebilirsiniz. Bu yılki hakkınız doldu.`)
         setSubmitting(false)
         return
       }
@@ -143,6 +146,7 @@ export default function IdeaForm(){
       applicantDistrict,
       district:String(data.get('district')).trim(),
       category:selectedCategory,
+      applicationYear,
       customTheme:selectedCategory==='Diğer'?customTheme.trim():undefined,
       subcategory:'Genel',
       targetGroup:String(data.get('targetGroup')),
@@ -221,10 +225,10 @@ export default function IdeaForm(){
         <p className="mt-5 max-w-md leading-7 text-mugla-navy/55">Formu acik ve anlasilir bilgilerle doldurun. Basvurunuz teknik ekip tarafindan incelenerek degerlendirme surecine alinacaktir.</p>
         <div className="mt-6 rounded-2xl bg-white p-4 text-sm shadow-soft">
           <p className="font-bold text-mugla-navy">Yıllık fikir hakkı</p>
-          <p className="mt-1 text-mugla-navy/60">{currentYear} döneminde {yearlyIdeaCount}/{YEARLY_IDEA_LIMIT} fikir gönderdiniz. Kalan hakkınız: {remainingIdeas}</p>
+          <p className="mt-1 text-mugla-navy/60">{applicationYear} döneminde {yearlyIdeaCount}/{YEARLY_IDEA_LIMIT} fikir gönderdiniz. Kalan hakkınız: {remainingIdeas}</p>
         </div>
         <div className="mt-4 rounded-2xl bg-white p-4 text-sm shadow-soft">
-          <p className="font-bold text-mugla-navy">{currentYear} açık temaları</p>
+          <p className="font-bold text-mugla-navy">{applicationYear} açık temaları</p>
           <div className="mt-3 flex flex-wrap gap-2">{activeThemeLabels.map(label=><span key={label} className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65">{label}</span>)}</div>
           <p className="mt-3 text-mugla-navy/55">Bu yil fikirler yalnizca super admin tarafindan acilan tema alanlarindan gonderilebilir.</p>
         </div>
@@ -250,8 +254,9 @@ export default function IdeaForm(){
 
           <fieldset className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
             <legend className="px-2 font-bold">Proje siniflandirmasi</legend>
-            <p className="mb-4 text-sm text-mugla-navy/50">Yalnizca {currentYear} yili icin acik kategoriler basvuruya acilir.</p>
+            <p className="mb-4 text-sm text-mugla-navy/50">Seçilen yıl için yıllık temalandırmada açılan kategoriler başvuruya açılır.</p>
             <div className="grid gap-4 sm:grid-cols-2">
+              <label><span className="mb-2 block text-sm font-semibold">Başvuru yılı <span className="text-red-500">*</span></span><select name="applicationYear" className={field} value={applicationYear} onChange={event=>setApplicationYear(event.target.value)} required>{annualThemeYears.map(year=><option key={year} value={year}>{year}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={category} onChange={e=>{setCategory(e.target.value as ProjectCategory); if(e.target.value!=='Diğer')setCustomTheme('')}} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Hedef Grup <span className="text-red-500">*</span></span><select name="targetGroup" className={field} required>{targetGroups.map(group=><option key={group}>{group}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Projenin uygulanacağı ilçe <span className="text-red-500">*</span></span><select name="district" className={field} required>{projectDistrictOptions.map(district=><option key={district}>{district}</option>)}</select></label>

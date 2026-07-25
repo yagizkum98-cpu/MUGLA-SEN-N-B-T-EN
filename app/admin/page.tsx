@@ -7,7 +7,7 @@ import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
-import {formatBudget, isPendingReviewProject, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
+import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
@@ -555,7 +555,7 @@ export default function Admin() {
   const voteNeighborhoodOptions = Array.from(new Set(voteBaseProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
   const votingAllowedCategories = allowedCategoriesForYear(votingYear)
   const votingAllowedCategoryNames = new Set(votingAllowedCategories.map(item => item[0]))
-  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && votingAllowedCategoryNames.has(projectCategoryLabel(project)))
+  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && projectApplicationYear(project) === votingYear && votingAllowedCategoryNames.has(projectCategoryLabel(project)))
   const activeVotingRecords = votingRecords.filter(record => record.status === 'Aktif')
   const votingProjectCount = votingRecords.reduce((sum, record) => sum + record.projectIds.length, 0)
   const votingRecordsVoteTotal = votingRecords.reduce((sum, record) => sum + record.projectIds.reduce((projectSum, id) => projectSum + (projects.find(project => project.id === id)?.votes ?? 0), 0), 0)
@@ -1071,8 +1071,7 @@ export default function Admin() {
       const allowedNames = new Set(allowedCategoriesForYear(recordYear).map(item => item[0]))
       const selectedIds = new Set(record.projectIds)
       projects.forEach(project => {
-        const createdYear = new Date(project.createdAt).getFullYear().toString()
-        const inVotingYear = createdYear === recordYear || recordYear === '2027'
+        const inVotingYear = projectApplicationYear(project) === recordYear
         const inVotingDistrict = record.districts.includes(project.district) || project.district === 'Tüm İlçeler'
         const eligible = project.moderationStatus === 'Onaylandı' && inVotingYear && inVotingDistrict && allowedNames.has(projectCategoryLabel(project))
         if (selectedIds.has(project.id)) {

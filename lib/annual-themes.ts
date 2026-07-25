@@ -4,7 +4,7 @@ import {projectCategories} from '@/lib/project-taxonomy'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
-export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'su-yonetimi' | 'tarim' | 'hayvan-haklari' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'engelsiz-yasam' | 'ulasim' | 'kultur-sanat' | 'spor' | 'egitim' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
+export type AnnualThemeId = 'all' | 'afet' | 'cevre' | 'su-yonetimi' | 'altyapi' | 'saglik' | 'sifir-emisyon' | 'bisiklet' | 'mikro-mobilite' | 'tarim' | 'hayvancilik' | 'hayvan-haklari' | 'yesil-alan-yonetimi' | 'imar-sehircilik' | 'genclik' | 'sosyal-politikalar' | 'engelsiz-yasam' | 'ulasim' | 'kultur-sanat' | 'spor' | 'egitim' | 'kulturel-miras-turizm' | 'yapay-zeka-dijitallesme' | 'katilimci-yenilikci-yonetim'
 
 export type AnnualThemeSetting = {
   year: string
@@ -17,8 +17,14 @@ export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string
   {id: 'afet', label: 'Afet ve Risk Yönetimi', note: 'Afet hazırlığı, risk azaltma ve kriz koordinasyonu fikirleri.', categories: ['Afet ve Risk Yönetimi']},
   {id: 'cevre', label: 'Çevre ve İklim Değişikliği', note: 'İklim, çevre, atık, enerji, su ve yeşil alan fikirleri.', categories: ['Çevre ve İklim Değişikliği']},
   {id: 'su-yonetimi', label: 'Su Yönetimi', note: 'İçme suyu, yağmur suyu, atık su, tasarruf ve taşkın yönetimi fikirleri.', categories: ['Su Yönetimi']},
+  {id: 'altyapi', label: 'Altyapı', note: 'Yol, kanalizasyon, yağmur suyu, hat yenileme ve dayanıklı kent altyapısı fikirleri.', categories: ['Altyapı']},
+  {id: 'saglik', label: 'Sağlık', note: 'Halk sağlığı, koruyucu hizmetler, sağlıklı yaşam ve bakım destekleri fikirleri.', categories: ['Sağlık']},
+  {id: 'sifir-emisyon', label: 'Sıfır Emisyon', note: 'Temiz enerji, elektrikli ulaşım, karbon azaltımı ve iklim dostu hizmet fikirleri.', categories: ['Sıfır Emisyon']},
+  {id: 'bisiklet', label: 'Bisiklet', note: 'Bisiklet yolları, park alanları, güvenli sürüş ve bisikletli ulaşım fikirleri.', categories: ['Bisiklet']},
+  {id: 'mikro-mobilite', label: 'Mikro Mobilite', note: 'Scooter, paylaşımlı araçlar, kısa mesafe ulaşım ve mikro mobilite altyapısı fikirleri.', categories: ['Mikro Mobilite']},
   {id: 'tarim', label: 'Tarım', note: 'Tarımsal üretim, kooperatif, kırsal kalkınma ve yerel üretici desteği fikirleri.', categories: ['Tarım']},
-  {id: 'hayvan-haklari', label: 'Hayvan Hakları', note: 'Sokak hayvanları, barınak, veteriner hizmetleri ve hayvan refahı fikirleri.', categories: ['Hayvan Hakları']},
+  {id: 'hayvancilik', label: 'Hayvancılık', note: 'Büyükbaş ve küçükbaş hayvancılık, veterinerlik, üretim, yem, barınak ve yetiştirici desteği fikirleri.', categories: ['Hayvancılık']},
+  {id: 'hayvan-haklari', label: 'Hayvan Hakları', note: 'Kedi, köpek ve sokak hayvanları için veterinerlik hizmetleri, barınak, beslenme, sahiplendirme ve hayvan refahı fikirleri.', categories: ['Hayvan Hakları']},
   {id: 'yesil-alan-yonetimi', label: 'Yeşil Alan Yönetimi', note: 'Park, bahçe, kent ormanı, peyzaj ve yeşil koridor fikirleri.', categories: ['Yeşil Alan Yönetimi']},
   {id: 'imar-sehircilik', label: 'İmar ve Şehircilik', note: 'İmar, şehircilik, kentsel tasarım ve mekansal planlama fikirleri.', categories: ['İmar ve Şehircilik']},
   {id: 'genclik', label: 'Gençlik', note: 'Gençlik, spor ve gençlik odaklı sosyal fikirler.', categories: ['Sosyal Yaşam', 'Spor']},
