@@ -43,6 +43,7 @@ const STORAGE_KEY = 'mugla-annual-theme-settings-v1'
 const REMOTE_TABLE = 'annual_theme_settings'
 const FALLBACK_REMOTE_TABLE = 'project_records'
 const FALLBACK_REMOTE_ID = 'annual-theme-settings'
+const API_PATH = '/api/annual-themes'
 export const annualThemeChangeEvent = 'mugla-annual-themes-changed'
 
 function normalizeThemeId(value: string): AnnualThemeId | null {
@@ -100,6 +101,11 @@ function normalizeAnnualThemeSettingsPayload(value: unknown) {
 }
 
 async function readRemoteAnnualThemeSettings() {
+  try {
+    const response = await fetch(API_PATH, {cache: 'no-store'})
+    const payload = await response.json().catch(() => null)
+    if (response.ok && Array.isArray(payload?.settings)) return normalizeAnnualThemeSettingsPayload({settings: payload.settings})
+  } catch {}
   const client = createClient()
   let primarySettings: AnnualThemeSetting[] = []
   try {
@@ -128,6 +134,14 @@ export async function syncAnnualThemeSettings() {
 async function upsertRemoteAnnualThemeSetting(setting: AnnualThemeSetting) {
   if (typeof window === 'undefined') return
   const nextSettings = [...listAnnualThemeSettings().filter(item => item.year !== setting.year), setting].sort((a, b) => a.year.localeCompare(b.year))
+  try {
+    const response = await fetch(API_PATH, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({setting}),
+    })
+    if (response.ok) return
+  } catch {}
   const client = createClient()
   try {
     await client.from(REMOTE_TABLE).upsert({
