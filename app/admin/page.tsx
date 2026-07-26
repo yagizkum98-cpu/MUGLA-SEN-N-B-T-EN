@@ -183,14 +183,6 @@ function SuperAdminSystemSecurity({auditRecords}: {auditRecords: AuditRecord[]})
   </Card>
 }
 
-const platformMunicipalities = [
-  {name: 'Muğla Büyükşehir', domain: 'muglabutcesenin-belediye.vercel.app', status: 'Aktif', citizens: 2485412, projects: 24851, votes: 12, license: 'Enterprise'},
-  {name: 'İstanbul Büyükşehir', domain: 'istanbul-katilimci-butce.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
-  {name: 'Eskişehir', domain: 'eskisehir-katilim.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
-  {name: 'Ankara', domain: 'ankara-katilim.vercel.app', status: 'Pasif', citizens: 0, projects: 0, votes: 0, license: 'Askıda'},
-  {name: 'İzmir', domain: 'izmir-katilim.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
-] as const
-
 const platformMenu = [
   ['Genel Dashboard', 'Platform Özeti, canlı istatistikler, sistem durumu, son işlemler, hata logları', LayoutDashboard],
   ['Belediye Yönetimi', 'Belediye oluştur, askıya al, sil, kopyala ve lisans yönetimi', Building2],
@@ -226,6 +218,25 @@ const platformRoles = [
   ['Sunucu Ayarları', false],
 ] as const
 
+const PLATFORM_MUNICIPALITIES_KEY = 'mugla-platform-municipalities-v1'
+
+type ManualMunicipality = {
+  id: string
+  logo: string
+  name: string
+  domain: string
+  colors: string
+  theme: string
+  language: string
+  startDate: string
+  endDate: string
+  status: 'Aktif' | 'Pasif'
+  license: string
+  citizens: number
+  projects: number
+  votes: number
+}
+
 function SuperAdminPlatformPanel({
   accounts,
   projects,
@@ -241,25 +252,88 @@ function SuperAdminPlatformPanel({
   auditRecords: AuditRecord[]
   votingRecords: VotingRecord[]
 }) {
+  const [manualMunicipalities, setManualMunicipalities] = useState<ManualMunicipality[]>([])
+  const [municipalityFormOpen, setMunicipalityFormOpen] = useState(false)
   const pending = projects.filter(isPendingReviewProject).length
-  const activeVoting = Math.max(12, votingRecords.filter(record => record.status === 'Aktif').length)
+  const activeVoting = votingRecords.filter(record => record.status === 'Aktif').length
+  const totalVotes = projects.reduce((sum, project) => sum + Number(project.votes ?? 0), 0)
+  const platformMunicipalities: ManualMunicipality[] = [
+    {
+      id: 'mugla-buyuksehir',
+      logo: '/partners/mugla-buyuksehir.png',
+      name: 'Muğla Büyükşehir',
+      domain: 'muglabutcesenin-belediye.vercel.app',
+      colors: 'Muğla lacivert / turuncu / camgöbeği',
+      theme: 'Kurumsal',
+      language: 'Türkçe',
+      startDate: '2026-01-01',
+      endDate: '',
+      status: 'Aktif',
+      citizens: citizens.length,
+      projects: projects.length,
+      votes: totalVotes,
+      license: 'Enterprise',
+    },
+    ...manualMunicipalities,
+  ]
   const stats = [
-    ['Toplam Belediye', 127, Building2, 'text-mugla-cyan'],
-    ['Aktif Belediye', 118, CheckCircle2, 'text-green-600'],
-    ['Pasif Belediye', 9, AlertTriangle, 'text-mugla-orange'],
-    ['Toplam Vatandaş', Math.max(2485412, citizens.length), UsersRound, 'text-mugla-blue'],
-    ['Toplam Proje', Math.max(24851, projects.length), FolderKanban, 'text-mugla-navy'],
-    ['Onay Bekleyen', Math.max(381, pending), Clock3, 'text-mugla-orange'],
+    ['Toplam Belediye', platformMunicipalities.length, Building2, 'text-mugla-cyan'],
+    ['Aktif Belediye', platformMunicipalities.filter(item => item.status === 'Aktif').length, CheckCircle2, 'text-green-600'],
+    ['Pasif Belediye', platformMunicipalities.filter(item => item.status !== 'Aktif').length, AlertTriangle, 'text-mugla-orange'],
+    ['Toplam Vatandaş', citizens.length, UsersRound, 'text-mugla-blue'],
+    ['Toplam Proje', projects.length, FolderKanban, 'text-mugla-navy'],
+    ['Onay Bekleyen', pending, Clock3, 'text-mugla-orange'],
     ['Aktif Oylama', activeVoting, Vote, 'text-mugla-cyan'],
     ['Sistem Sağlığı', '99.98%', Activity, 'text-green-600'],
   ] as const
   const systemHealth = [['Sunucu', 'Normal'], ['API', 'Çalışıyor'], ['Mail', 'Çalışıyor'], ['SMS', 'Çalışıyor'], ['Bildirim', 'Çalışıyor']] as const
-  const voteSecurity = [['Toplam Oy', '1.284.550'], ['Tekil Oy', '1.119.204'], ['Şüpheli Oy', '4.812'], ['VPN', '1.104'], ['Bot', '312'], ['Spam', '2.045']] as const
+  const voteSecurity = [['Toplam Oy', totalVotes], ['Tekil Oy', totalVotes], ['Şüpheli Oy', 0], ['VPN', 0], ['Bot', 0], ['Spam', 0]] as const
   const aiChecks = ['Hakaret', 'Siyasi', 'Spam', 'Kopya Proje', 'AI Üretimi', 'Risk Analizi', 'Karbon Etkisi', 'Maliyet', 'Sosyal Fayda']
   const systemSettings = ['Platform Adı', 'Logo', 'SMTP', 'SMS', 'Firebase', 'Google Maps', 'e-Devlet', 'MERNIS', 'OAuth', 'OpenAI', 'Gemini', 'DeepSeek']
   const integrations = ['e-Devlet', 'MERNIS', 'KPS', 'TAKBİS', 'CBS', 'Google Maps', 'Firebase', 'OneSignal', 'Stripe', 'iyzico']
   const citizenRows = citizens.slice(0, 8)
   const projectRows = projects.slice(0, 8)
+
+  useEffect(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem(PLATFORM_MUNICIPALITIES_KEY) ?? '[]')
+      setManualMunicipalities(Array.isArray(value) ? value : [])
+    } catch {
+      setManualMunicipalities([])
+    }
+  }, [])
+
+  function saveManualMunicipalities(next: ManualMunicipality[]) {
+    setManualMunicipalities(next)
+    localStorage.setItem(PLATFORM_MUNICIPALITIES_KEY, JSON.stringify(next))
+  }
+
+  function createMunicipality(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    const name = String(data.get('name') ?? '').trim()
+    const domain = String(data.get('domain') ?? '').trim()
+    if (!name || !domain) return
+    const municipality: ManualMunicipality = {
+      id: crypto.randomUUID(),
+      logo: String(data.get('logo') ?? '').trim(),
+      name,
+      domain,
+      colors: String(data.get('colors') ?? '').trim(),
+      theme: String(data.get('theme') ?? 'Kurumsal').trim(),
+      language: String(data.get('language') ?? 'Türkçe').trim(),
+      startDate: String(data.get('startDate') ?? '').trim(),
+      endDate: String(data.get('endDate') ?? '').trim(),
+      status: 'Aktif',
+      license: 'Hazır',
+      citizens: 0,
+      projects: 0,
+      votes: 0,
+    }
+    saveManualMunicipalities([...manualMunicipalities, municipality])
+    setMunicipalityFormOpen(false)
+    event.currentTarget.reset()
+  }
 
   return <AdminAuthGate><AppShell role="admin">
     <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/95 px-6 py-4 backdrop-blur lg:px-10">
@@ -267,7 +341,7 @@ function SuperAdminPlatformPanel({
         <div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-cyan">SUPER ADMIN PANELİ</p>
           <h1 className="text-2xl font-black">Platform Yönetim Merkezi</h1>
-          <p className="mt-1 text-sm text-mugla-navy/55">Süper Admin sistemi yönetir; belediye adminleri yalnızca kendi belediyesini yönetir.</p>
+          <p className="mt-1 text-sm text-mugla-navy/55">Canlı veriler vatandaş panelinden belediye paneline, belediye panelinden de bu süper admin ekranına akar. Şu an sistemde yalnızca Muğla Büyükşehir Belediyesi aktiftir.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a href={municipalityUrl('/admin')} target="_blank" rel="noreferrer"><Button variant="outline"><Building2 size={17}/> Belediye Paneli</Button></a>
@@ -311,16 +385,36 @@ function SuperAdminPlatformPanel({
       </section>
 
       <Card id="module-1" className="rounded-xl shadow-sm">
-        <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">BELEDİYE YÖNETİMİ</p><h2 className="text-xl font-bold">Tüm Belediyeler</h2></CardHeader>
+        <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">BELEDİYE YÖNETİMİ</p><h2 className="text-xl font-bold">Canlı Belediyeler</h2><p className="text-sm text-mugla-navy/55">Demo belediyeler sıfırlandı. Şu an yalnızca Muğla Büyükşehir Belediyesi canlı veri kaynağına bağlıdır.</p></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-4">
-            {['Belediye Oluştur', 'Belediye Askıya Al', 'Belediye Sil', 'Belediye Kopyala'].map(action => <Button key={action} variant={action.includes('Sil') ? 'outline' : 'orange'} className="justify-center">{action}</Button>)}
+            <Button variant="orange" className="justify-center" onClick={() => setMunicipalityFormOpen(value => !value)}>Belediye Oluştur</Button>
+            {['Belediye Askıya Al', 'Belediye Sil', 'Belediye Kopyala'].map(action => <Button key={action} variant="outline" className="justify-center">{action}</Button>)}
           </div>
+          {municipalityFormOpen && <form onSubmit={createMunicipality} className="grid gap-4 rounded-2xl border border-mugla-cyan/20 bg-cyan-50/30 p-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="md:col-span-2 xl:col-span-4">
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">MANUEL BELEDİYE TANIMI</p>
+              <h3 className="mt-1 text-lg font-black">Yeni belediyeyi sıfır canlı veriyle ekle</h3>
+            </div>
+            <label><span className="mb-2 block text-sm font-semibold">Logo</span><input className={field} name="logo" placeholder="Logo URL veya dosya yolu"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Belediye Adı</span><input className={field} name="name" required placeholder="Örn. Aydın Büyükşehir"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Alan Adı</span><input className={field} name="domain" required placeholder="belediye-domain.vercel.app"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Renkler</span><input className={field} name="colors" placeholder="#06283f, #f58220"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Tema</span><select className={field} name="theme" defaultValue="Kurumsal"><option>Kurumsal</option><option>Modern</option><option>Sade</option><option>Yüksek Kontrast</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Dil</span><select className={field} name="language" defaultValue="Türkçe"><option>Türkçe</option><option>İngilizce</option><option>Çok dilli</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Başlangıç Tarihi</span><input className={field} name="startDate" type="date"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Bitiş Tarihi</span><input className={field} name="endDate" type="date"/></label>
+            <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
+              <Button type="submit" variant="orange">Tanımla</Button>
+              <Button type="button" variant="outline" onClick={() => setMunicipalityFormOpen(false)}>Vazgeç</Button>
+            </div>
+          </form>}
           <div className="overflow-x-auto rounded-xl border border-mugla-navy/10">
             <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Belediye</th><th>Alan Adı</th><th>Vatandaş</th><th>Projeler</th><th>Oylamalar</th><th>Lisans</th><th>Durum</th></tr></thead>
+              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Belediye</th><th>Alan Adı</th><th>Vatandaş</th><th>Projeler</th><th>Toplam Oy</th><th>Lisans</th><th>Tema</th><th>Durum</th></tr></thead>
               <tbody>{platformMunicipalities.map(item => <tr key={item.name} className="border-t border-mugla-navy/10">
                 <td className="p-3 font-black">{item.name}</td><td>{item.domain}</td><td>{item.citizens.toLocaleString('tr-TR')}</td><td>{item.projects.toLocaleString('tr-TR')}</td><td>{item.votes}</td><td>{item.license}</td>
+                <td className="text-xs text-mugla-navy/55">{item.theme}</td>
                 <td><span className={`rounded-full px-3 py-1 text-xs font-bold ${item.status === 'Aktif' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-mugla-orange'}`}>{item.status}</span></td>
               </tr>)}</tbody>
             </table>
@@ -371,7 +465,7 @@ function SuperAdminPlatformPanel({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <Card id="module-6" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">OYLAMA DENETİMİ</p><h2 className="text-xl font-bold">Oy Güvenliği</h2></CardHeader><CardContent className="grid gap-2">{voteSecurity.map(([label, value]) => <div key={label} className="flex justify-between rounded-xl bg-mugla-sand p-3"><span>{label}</span><b>{value}</b></div>)}</CardContent></Card>
+        <Card id="module-6" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">OYLAMA DENETİMİ</p><h2 className="text-xl font-bold">Oy Güvenliği</h2></CardHeader><CardContent className="grid gap-2">{voteSecurity.map(([label, value]) => <div key={label} className="flex justify-between rounded-xl bg-mugla-sand p-3"><span>{label}</span><b>{Number(value).toLocaleString('tr-TR')}</b></div>)}</CardContent></Card>
         <Card id="module-7" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">AI MODERASYONU</p><h2 className="text-xl font-bold">Kontrol Başlıkları</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{aiChecks.map(item => <span key={item} className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-mugla-cyan">{item}</span>)}</CardContent></Card>
         <Card id="module-8" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">CRM VE BİLDİRİM</p><h2 className="text-xl font-bold">Platform Geneli</h2></CardHeader><CardContent className="grid gap-3">{['Push', 'SMS', 'Mail', 'Mobil Bildirim', `${contactRecords.length} destek/iletişim kaydı`].map(item => <div key={item} className="rounded-xl bg-mugla-sand p-3 font-bold">{item}</div>)}</CardContent></Card>
       </section>
