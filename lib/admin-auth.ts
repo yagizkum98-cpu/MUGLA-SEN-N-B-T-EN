@@ -26,8 +26,8 @@ export type AdminAccount = {
 const ACCOUNTS_KEY = 'mugla-admin-accounts-v1'
 const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
-const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
-const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
+const FALLBACK_SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
+const FALLBACK_SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
 
 function adminAccountsApiUrl() {
   if (typeof window === 'undefined' || isAdminAuthorityDomain()) return '/api/admin-accounts'
@@ -143,24 +143,26 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
 
 async function ensureSeedAccount() {
   const accounts = mergeAccounts([...readRawAccounts(), ...await readRemoteAccounts()])
-  const seed = await createAccount({
-    name: 'Super Admin',
-    email: SUPER_ADMIN_EMAIL,
-    role: 'super-admin',
-    password: SUPER_ADMIN_PASSWORD,
-  })
   if (accounts.length) {
     const superAdmin = accounts.find(account => account.role === 'super-admin')
-    const updated = superAdmin
-      ? accounts.map(account => account.id === superAdmin.id ? {...seed, id: account.id, createdAt: account.createdAt} : account)
-      : [seed, ...accounts]
+    const updated = superAdmin ? accounts : [await createFallbackSeedAccount(), ...accounts]
     saveAccounts(updated)
     void upsertRemoteAccounts(updated)
     return updated
   }
+  const seed = await createFallbackSeedAccount()
   saveAccounts([seed])
   void upsertRemoteAccounts([seed])
   return [seed]
+}
+
+function createFallbackSeedAccount() {
+  return createAccount({
+    name: 'Super Admin',
+    email: FALLBACK_SUPER_ADMIN_EMAIL,
+    role: 'super-admin',
+    password: FALLBACK_SUPER_ADMIN_PASSWORD,
+  })
 }
 
 export async function listAdminAccounts() {

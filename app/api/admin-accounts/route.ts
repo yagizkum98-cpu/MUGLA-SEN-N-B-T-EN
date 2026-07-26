@@ -1,5 +1,6 @@
 import {NextResponse} from 'next/server'
 import {createClient} from '@supabase/supabase-js'
+import {pbkdf2Sync, randomBytes} from 'crypto'
 
 const TABLE = 'project_records'
 const ADMIN_ACCOUNTS_ID = 'admin-accounts'
@@ -19,6 +20,9 @@ type StoredAdminAccount = Record<string, unknown> & {
   salt: string
   createdAt: string
 }
+
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD
 
 declare global {
   // eslint-disable-next-line no-var
@@ -83,13 +87,34 @@ function mergeAccounts(accounts: StoredAdminAccount[]) {
   return Array.from(map.values()).sort((a, b) => String(a.role === 'super-admin' ? '0' : a.name).localeCompare(String(b.role === 'super-admin' ? '0' : b.name), 'tr'))
 }
 
+function bytesToBase64(bytes: Uint8Array | Buffer) {
+  return Buffer.from(bytes).toString('base64')
+}
+
+function createEnvSuperAdmin(): StoredAdminAccount | null {
+  if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) return null
+  const salt = randomBytes(16)
+  const passwordHash = pbkdf2Sync(SUPER_ADMIN_PASSWORD, salt, 120000, 32, 'sha256')
+  return {
+    id: 'env-super-admin',
+    name: 'Super Admin',
+    email: SUPER_ADMIN_EMAIL.trim().toLocaleLowerCase('tr'),
+    role: 'super-admin',
+    passwordHash: bytesToBase64(passwordHash),
+    salt: bytesToBase64(salt),
+    createdAt: '2026-01-01T00:00:00.000Z',
+    createdBy: 'environment',
+  }
+}
+
 async function readAccounts() {
+  const envSuperAdmin = createEnvSuperAdmin()
   const supabase = supabaseAdmin()
-  if (!supabase) return {accounts: fallbackStore(), synced: false}
+  if (!supabase) return {accounts: mergeAccounts([...(envSuperAdmin ? [envSuperAdmin] : []), ...fallbackStore()]), synced: false}
   const {data, error} = await supabase.from(TABLE).select('data').eq('id', ADMIN_ACCOUNTS_ID).limit(1)
-  if (error || !Array.isArray(data) || !data[0]) return {accounts: [], synced: true}
+  if (error || !Array.isArray(data) || !data[0]) return {accounts: envSuperAdmin ? [envSuperAdmin] : [], synced: true}
   const payload = data[0].data as {accounts?: unknown}
-  return {accounts: normalizeAccounts(payload?.accounts), synced: true}
+  return {accounts: mergeAccounts([...(envSuperAdmin ? [envSuperAdmin] : []), ...normalizeAccounts(payload?.accounts)]), synced: true}
 }
 
 async function writeAccounts(accounts: StoredAdminAccount[]) {
