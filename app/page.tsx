@@ -177,7 +177,7 @@ export default function Home() {
     }
     if (location.hostname === SUPER_ADMIN_DOMAIN) {
       setMunicipalityRedirecting(true)
-      location.replace('/admin/giris')
+      location.replace('/admin')
       return
     }
     if (isMunicipalityDomain()) {
