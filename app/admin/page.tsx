@@ -16,6 +16,7 @@ import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
+import {citizenUrl, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -52,29 +53,29 @@ const assignableRoles = roles.filter(role => role.value !== 'super-admin')
 const portalLinks = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
-    url: 'https://muglabutcesenin-dashboard.vercel.app/',
-    note: 'Tum portal linklerini, veri akislarini ve panel erisimlerini kontrol etmek icin ana izleme hesabi.',
-    badge: 'Kontrol merkezi',
+    label: 'Super Admin',
+    url: superAdminUrl('/admin'),
+    note: 'Belediye yonetim panelini, vatandas panelini, veri akislarini, yetkileri ve kritik baglantilari kontrol eden ana otorite.',
+    badge: 'Ana otorite',
   },
   {
     id: 'landing',
     label: 'Landing',
-    url: 'https://muglaseninbutcen.vercel.app/',
+    url: publicUrl('/'),
     note: 'Kamuya acik ana sayfa ve bilgilendirme vitrini.',
     badge: 'Ana sayfa',
   },
   {
     id: 'belediye',
     label: 'Belediye',
-    url: 'https://muglabutcesenin-belediye.vercel.app/',
+    url: municipalityUrl('/admin'),
     note: 'Belediye yonetim paneli, proje havuzu ve onay surecleri.',
     badge: 'Yonetim',
   },
   {
     id: 'kullanici',
     label: 'Kullanıcı',
-    url: 'https://muglabutcesenin-vatandas.vercel.app/',
+    url: citizenUrl('/'),
     note: 'Vatandas girisi, fikir basvurusu ve kisisel panel alani.',
     badge: 'Vatandas',
   },

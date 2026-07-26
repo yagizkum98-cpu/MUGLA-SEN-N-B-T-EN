@@ -9,6 +9,7 @@ const allowedOrigins=[
   'https://muglaseninbutcen.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
   'https://muglabutcesenin-belediye.vercel.app',
+  'https://muglabutcesenin-superadmin.vercel.app',
 ]
 
 declare global{

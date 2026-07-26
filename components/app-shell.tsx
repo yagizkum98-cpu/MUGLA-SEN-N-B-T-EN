@@ -4,11 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {Bell, Building2, Clock3, ExternalLink, FileBarChart, FolderKanban, Home, LogOut, Settings, UserRound, UsersRound, Vote} from 'lucide-react'
+import {Bell, Building2, Clock3, ExternalLink, FileBarChart, FolderKanban, Home, LogOut, Settings, ShieldCheck, UserRound, UsersRound, Vote} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
-import {citizenUrl, municipalityUrl, publicUrl} from '@/lib/domain-routing'
+import {citizenUrl, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const citizen = [
   ['/', 'Anasayfa', Home],
@@ -33,9 +33,10 @@ const admin = [
 ] as const
 
 const superAdminPortalLinks = [
+  {label: 'Super Admin', url: superAdminUrl('/admin')},
   {label: 'Landing Page', url: publicUrl('/')},
   {label: 'Kullanıcı', url: citizenUrl('/')},
-  {label: 'Belediye', url: municipalityUrl('/')},
+  {label: 'Belediye', url: municipalityUrl('/admin')},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {
@@ -74,11 +75,11 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
 
   return <div className="min-h-screen bg-mugla-sand md:flex">
     <aside className={cn('bg-mugla-navy text-white md:sticky md:top-0 md:h-screen md:w-64 md:p-6', role === 'citizen' ? 'fixed inset-x-0 bottom-0 z-40 order-last p-2 md:relative md:inset-auto md:flex md:flex-col' : 'flex p-4 md:flex-col')}>
-      <Link href="/" className={cn('mb-8 flex items-center gap-3', role === 'citizen' && 'hidden md:flex')}>
+      <Link href={role === 'admin' && adminRole === 'super-admin' ? superAdminUrl('/admin') : '/'} className={cn('mb-8 flex items-center gap-3', role === 'citizen' && 'hidden md:flex')}>
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
-          <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
+          {role === 'admin' && adminRole === 'super-admin' ? <ShieldCheck size={24} className="text-mugla-navy"/> : <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>}
         </span>
-        <span className="font-bold leading-tight">Mugla<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
+        <span className="font-bold leading-tight">{role === 'admin' && adminRole === 'super-admin' ? 'Super Admin' : 'Mugla'}<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
       </Link>
       <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {

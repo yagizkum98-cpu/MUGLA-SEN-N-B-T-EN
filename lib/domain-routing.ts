@@ -3,6 +3,7 @@
 export const PUBLIC_DOMAIN = 'muglaseninbutcen.vercel.app'
 export const CITIZEN_DOMAIN = 'muglabutcesenin-vatandas.vercel.app'
 export const MUNICIPALITY_DOMAIN = 'muglabutcesenin-belediye.vercel.app'
+export const SUPER_ADMIN_DOMAIN = 'muglabutcesenin-superadmin.vercel.app'
 
 function host() {
   return typeof location === 'undefined' ? '' : location.hostname
@@ -21,6 +22,14 @@ export function isMunicipalityDomain() {
   return isLocalDomain() || host() === MUNICIPALITY_DOMAIN
 }
 
+export function isSuperAdminDomain() {
+  return host() === SUPER_ADMIN_DOMAIN
+}
+
+export function isAdminAuthorityDomain() {
+  return isLocalDomain() || host() === MUNICIPALITY_DOMAIN || host() === SUPER_ADMIN_DOMAIN
+}
+
 export function publicUrl(path = '/') {
   return `https://${PUBLIC_DOMAIN}${path}`
 }
@@ -33,3 +42,6 @@ export function municipalityUrl(path = '/') {
   return `https://${MUNICIPALITY_DOMAIN}${path}`
 }
 
+export function superAdminUrl(path = '/') {
+  return `https://${SUPER_ADMIN_DOMAIN}${path}`
+}

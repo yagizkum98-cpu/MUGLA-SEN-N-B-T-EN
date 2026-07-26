@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {FileText, FolderKanban, Mail} from 'lucide-react'
 import {useEffect, useState} from 'react'
-import {CITIZEN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
+import {CITIZEN_DOMAIN, SUPER_ADMIN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
 import {isActiveVotingProject, useProjects} from '@/lib/projects-store'
 import {SiteUserMenu} from '@/components/site-user-menu'
 
@@ -175,6 +175,11 @@ export default function Home() {
       location.replace('/giris?mode=login&next=/vatandas/panel')
       return
     }
+    if (location.hostname === SUPER_ADMIN_DOMAIN) {
+      setMunicipalityRedirecting(true)
+      location.replace('/admin/giris')
+      return
+    }
     if (isMunicipalityDomain()) {
       setMunicipalityRedirecting(true)
       location.replace('/admin/giris')
@@ -183,7 +188,7 @@ export default function Home() {
 
   if (municipalityRedirecting) return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6 text-mugla-navy">
     <section className="rounded-3xl bg-white p-8 text-center shadow-soft">
-      <p className="text-sm font-bold text-mugla-orange">Belediye paneline yönlendiriliyorsunuz...</p>
+      <p className="text-sm font-bold text-mugla-orange">Yönetim paneline yönlendiriliyorsunuz...</p>
     </section>
   </main>
 

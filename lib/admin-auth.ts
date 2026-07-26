@@ -1,5 +1,7 @@
 'use client'
 
+import {isAdminAuthorityDomain, municipalityUrl} from '@/lib/domain-routing'
+
 export type AdminRole = 'super-admin' | 'belediye-admin' | 'ilce-yoneticisi' | 'degerlendirici' | 'crm' | 'admin' | 'yetkili'
 
 export type AdminAccount = {
@@ -26,6 +28,11 @@ const SESSION_KEY = 'mugla-admin-session-v1'
 const CHANGE_EVENT = 'mugla-admin-auth-changed'
 const SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
+
+function adminAccountsApiUrl() {
+  if (typeof window === 'undefined' || isAdminAuthorityDomain()) return '/api/admin-accounts'
+  return municipalityUrl('/api/admin-accounts')
+}
 
 export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin'> {
   if (role === 'super-admin' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'crm' || role === 'yetkili') return role
@@ -76,6 +83,44 @@ function saveAccounts(accounts: AdminAccount[]) {
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
+function mergeAccounts(accounts: AdminAccount[]) {
+  const map = new Map<string, AdminAccount>()
+  accounts.forEach(account => {
+    const key = account.email || account.id
+    const current = map.get(key)
+    if (!current || account.role === 'super-admin' || String(account.createdAt).localeCompare(String(current.createdAt)) >= 0) map.set(key, account)
+  })
+  return Array.from(map.values()).sort((a, b) => Number(b.role === 'super-admin') - Number(a.role === 'super-admin') || a.name.localeCompare(b.name, 'tr'))
+}
+
+async function readRemoteAccounts(): Promise<AdminAccount[]> {
+  if (typeof window === 'undefined') return []
+  try {
+    const response = await fetch(adminAccountsApiUrl(), {cache: 'no-store'})
+    const payload = await response.json().catch(() => null)
+    if (response.ok && Array.isArray(payload?.accounts)) return payload.accounts as AdminAccount[]
+  } catch {}
+  return []
+}
+
+async function upsertRemoteAccounts(accounts: AdminAccount[]) {
+  if (typeof window === 'undefined' || !accounts.length) return
+  try {
+    await fetch(adminAccountsApiUrl(), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({accounts}),
+    })
+  } catch {}
+}
+
+async function deleteRemoteAccount(id: string) {
+  if (typeof window === 'undefined') return
+  try {
+    await fetch(`${adminAccountsApiUrl()}?id=${encodeURIComponent(id)}`, {method: 'DELETE'})
+  } catch {}
+}
+
 async function createAccount(input: {name: string; email: string; role: AdminRole; password: string; createdBy?: string; district?: string; department?: string; assignedProjectIds?: string[]; permissions?: AdminAccount['permissions']}) {
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const passwordHash = await derive(input.password, salt)
@@ -97,7 +142,7 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
 }
 
 async function ensureSeedAccount() {
-  const accounts = readRawAccounts()
+  const accounts = mergeAccounts([...readRawAccounts(), ...await readRemoteAccounts()])
   const seed = await createAccount({
     name: 'Super Admin',
     email: SUPER_ADMIN_EMAIL,
@@ -110,9 +155,11 @@ async function ensureSeedAccount() {
       ? accounts.map(account => account.id === superAdmin.id ? {...seed, id: account.id, createdAt: account.createdAt} : account)
       : [seed, ...accounts]
     saveAccounts(updated)
+    void upsertRemoteAccounts(updated)
     return updated
   }
   saveAccounts([seed])
+  void upsertRemoteAccounts([seed])
   return [seed]
 }
 
@@ -146,7 +193,9 @@ export async function addAdminAccount(input: {name: string; email: string; role:
   if (accounts.some(account => account.email === email)) throw new Error('Bu e-posta zaten tanimli.')
   if (input.password.length < 8) throw new Error('Sifre en az 8 karakter olmalidir.')
   const account = await createAccount({...input, email, createdBy: input.actor.email})
-  saveAccounts([account, ...accounts])
+  const updated = mergeAccounts([account, ...accounts])
+  saveAccounts(updated)
+  void upsertRemoteAccounts([account])
   return account
 }
 
@@ -165,6 +214,7 @@ export async function changeOwnAdminPassword(input: {actor: AdminAccount; curren
     passwordPreview: encodePasswordPreview(input.newPassword),
   } : item)
   saveAccounts(updated)
+  void upsertRemoteAccounts(updated)
   return updated.find(item => item.id === account.id) ?? null
 }
 
@@ -181,6 +231,7 @@ export async function removeAdminAccount(id: string, actor: AdminAccount) {
   const target = accounts.find(account => account.id === id)
   if (target?.role === 'super-admin') throw new Error('Super admin hesabi silinemez.')
   saveAccounts(accounts.filter(account => account.id !== id))
+  void deleteRemoteAccount(id)
 }
 
 export function logoutAdmin() {
