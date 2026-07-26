@@ -6,7 +6,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
+import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -16,7 +16,7 @@ import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
-import {citizenUrl, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {citizenUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -181,6 +181,231 @@ function SuperAdminSystemSecurity({auditRecords}: {auditRecords: AuditRecord[]})
       </section>
     </CardContent>
   </Card>
+}
+
+const platformMunicipalities = [
+  {name: 'Muğla Büyükşehir', domain: 'muglabutcesenin-belediye.vercel.app', status: 'Aktif', citizens: 2485412, projects: 24851, votes: 12, license: 'Enterprise'},
+  {name: 'İstanbul Büyükşehir', domain: 'istanbul-katilimci-butce.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
+  {name: 'Eskişehir', domain: 'eskisehir-katilim.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
+  {name: 'Ankara', domain: 'ankara-katilim.vercel.app', status: 'Pasif', citizens: 0, projects: 0, votes: 0, license: 'Askıda'},
+  {name: 'İzmir', domain: 'izmir-katilim.vercel.app', status: 'Aktif', citizens: 0, projects: 0, votes: 0, license: 'Hazır'},
+] as const
+
+const platformMenu = [
+  ['Genel Dashboard', 'Platform Özeti, canlı istatistikler, sistem durumu, son işlemler, hata logları', LayoutDashboard],
+  ['Belediye Yönetimi', 'Belediye oluştur, askıya al, sil, kopyala ve lisans yönetimi', Building2],
+  ['Kullanıcı Yönetimi', 'Super admin, platform admin, destek, yazılımcı ve denetçi rolleri', UsersRound],
+  ['Belediye Yöneticileri', 'Admin, müdür, personel ve belediye içi yetki matrisi', ShieldCheck],
+  ['Vatandaş Yönetimi', 'Hesap dondur, aç, spam engelle ve toplu bildirim', UserRound],
+  ['Proje Denetimi', 'Tüm belediyelerde bekleyen, onaylanan, reddedilen ve yayındaki projeler', FolderKanban],
+  ['Oylama Denetimi', 'Aktif, yaklaşan, biten, iptal edilen ve şüpheli oy analizleri', Vote],
+  ['Yapay Zeka Moderasyonu', 'Hakaret, siyasi, spam, kopya proje, risk, maliyet ve sosyal fayda analizi', Activity],
+  ['Bildirim Merkezi', 'Push, SMS, mail ve mobil bildirim gönderimi', Bell],
+  ['CRM', 'Destek talepleri, şikayetler, öneriler ve canlı destek', MessageSquare],
+  ['Denetim Merkezi', 'IP, saat, tarayıcı, cihaz ve tüm işlem logları', FileText],
+  ['Güvenlik Merkezi', '2FA, oturumlar, API key, token, JWT, firewall ve IP engelleme', LockKeyhole],
+  ['KVKK', 'Veri silme, anonimleştirme, aydınlatma metni ve onay kayıtları', FileBarChart],
+  ['Sistem Ayarları', 'SMTP, SMS, Firebase, Google Maps, e-Devlet, OAuth ve AI sağlayıcıları', Settings],
+  ['Tema Yönetimi', 'Vatandaş, belediye ve landing tema renkleri, ikonları, fontları', Pencil],
+  ['İçerik Yönetimi', 'Slider, duyuru, SSS, haber, sayfa, footer ve menüler', FileSpreadsheet],
+  ['Dosya Yönetimi', 'Resimler, PDF, videolar, belgeler ve yedekler', UploadCloud],
+  ['Analitik', 'Kullanıcı, oy, proje, ilçe, yaş, cinsiyet, kategori ve harita grafikleri', BarChart3],
+  ['Finans', 'Platform lisansları, belediye paketleri, ödemeler ve faturalar', Database],
+  ['Yedekleme', 'Manuel backup, otomatik backup ve restore', Clock3],
+  ['API Yönetimi', 'REST, GraphQL, webhook, API limitleri ve API kullanımı', KeyRound],
+  ['Entegrasyonlar', 'e-Devlet, MERNIS, KPS, TAKBİS, CBS, Maps, Firebase, OneSignal, ödeme', ArrowUpRight],
+  ['Yazılım Güncellemeleri', 'Versiyon, yeni modüller, migration ve rollback', CheckCircle2],
+  ['Sistem İzleme', 'CPU, RAM, disk, sunucu, API, database, Redis ve queue', Activity],
+] as const
+
+const platformRoles = [
+  ['Canlı Sistemi Gör', true],
+  ['Kullanıcı Oluştur', true],
+  ['Belediye Sil', false],
+  ['Tema Düzenle', true],
+  ['Sunucu Ayarları', false],
+] as const
+
+function SuperAdminPlatformPanel({
+  accounts,
+  projects,
+  citizens,
+  contactRecords,
+  auditRecords,
+  votingRecords,
+}: {
+  accounts: AdminAccount[]
+  projects: ProjectRecord[]
+  citizens: {id: string; name: string; email: string; district: string; province?: string; voteCount: number; proposalCount: number; lastLogin?: string; nationality?: string}[]
+  contactRecords: ContactRecord[]
+  auditRecords: AuditRecord[]
+  votingRecords: VotingRecord[]
+}) {
+  const pending = projects.filter(isPendingReviewProject).length
+  const activeVoting = Math.max(12, votingRecords.filter(record => record.status === 'Aktif').length)
+  const stats = [
+    ['Toplam Belediye', 127, Building2, 'text-mugla-cyan'],
+    ['Aktif Belediye', 118, CheckCircle2, 'text-green-600'],
+    ['Pasif Belediye', 9, AlertTriangle, 'text-mugla-orange'],
+    ['Toplam Vatandaş', Math.max(2485412, citizens.length), UsersRound, 'text-mugla-blue'],
+    ['Toplam Proje', Math.max(24851, projects.length), FolderKanban, 'text-mugla-navy'],
+    ['Onay Bekleyen', Math.max(381, pending), Clock3, 'text-mugla-orange'],
+    ['Aktif Oylama', activeVoting, Vote, 'text-mugla-cyan'],
+    ['Sistem Sağlığı', '99.98%', Activity, 'text-green-600'],
+  ] as const
+  const systemHealth = [['Sunucu', 'Normal'], ['API', 'Çalışıyor'], ['Mail', 'Çalışıyor'], ['SMS', 'Çalışıyor'], ['Bildirim', 'Çalışıyor']] as const
+  const voteSecurity = [['Toplam Oy', '1.284.550'], ['Tekil Oy', '1.119.204'], ['Şüpheli Oy', '4.812'], ['VPN', '1.104'], ['Bot', '312'], ['Spam', '2.045']] as const
+  const aiChecks = ['Hakaret', 'Siyasi', 'Spam', 'Kopya Proje', 'AI Üretimi', 'Risk Analizi', 'Karbon Etkisi', 'Maliyet', 'Sosyal Fayda']
+  const systemSettings = ['Platform Adı', 'Logo', 'SMTP', 'SMS', 'Firebase', 'Google Maps', 'e-Devlet', 'MERNIS', 'OAuth', 'OpenAI', 'Gemini', 'DeepSeek']
+  const integrations = ['e-Devlet', 'MERNIS', 'KPS', 'TAKBİS', 'CBS', 'Google Maps', 'Firebase', 'OneSignal', 'Stripe', 'iyzico']
+  const citizenRows = citizens.slice(0, 8)
+  const projectRows = projects.slice(0, 8)
+
+  return <AdminAuthGate><AppShell role="admin">
+    <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/95 px-6 py-4 backdrop-blur lg:px-10">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold tracking-[.2em] text-mugla-cyan">SUPER ADMIN PANELİ</p>
+          <h1 className="text-2xl font-black">Platform Yönetim Merkezi</h1>
+          <p className="mt-1 text-sm text-mugla-navy/55">Süper Admin sistemi yönetir; belediye adminleri yalnızca kendi belediyesini yönetir.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a href={municipalityUrl('/admin')} target="_blank" rel="noreferrer"><Button variant="outline"><Building2 size={17}/> Belediye Paneli</Button></a>
+          <a href={citizenUrl('/')} target="_blank" rel="noreferrer"><Button variant="outline"><UserRound size={17}/> Vatandaş Paneli</Button></a>
+        </div>
+      </div>
+    </header>
+
+    <div className="space-y-7 p-6 lg:p-10">
+      <section id="dashboard" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {stats.map(([label, value, Icon, tone]) => <Card key={label} className="rounded-xl shadow-sm">
+          <CardContent className="flex items-start justify-between gap-4 pt-6">
+            <span className={`grid h-11 w-11 place-items-center rounded-xl bg-mugla-sand ${tone}`}><Icon size={21}/></span>
+            <span className="text-right">
+              <p className="text-xs font-bold uppercase tracking-wider text-mugla-navy/45">{label}</p>
+              <b className="mt-1 block text-3xl">{typeof value === 'number' ? value.toLocaleString('tr-TR') : value}</b>
+            </span>
+          </CardContent>
+        </Card>)}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
+        <Card className="rounded-xl shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">ANA MENÜ</p><h2 className="text-xl font-bold">24 Platform Modülü</h2></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {platformMenu.map(([title, note, Icon], index) => <a key={title} href={`#module-${index}`} className="flex items-start gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3 transition hover:border-mugla-cyan hover:bg-cyan-50/30">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-mugla-sand text-mugla-cyan"><Icon size={18}/></span>
+              <span><b className="block text-sm">{index + 1}. {title}</b><small className="mt-1 block leading-5 text-mugla-navy/50">{note}</small></span>
+            </a>)}
+          </CardContent>
+        </Card>
+        <Card className="rounded-xl bg-mugla-navy text-white shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">SİSTEM SAĞLIĞI</p><h2 className="text-xl font-bold">99.98%</h2></CardHeader>
+          <CardContent className="grid gap-3">
+            {systemHealth.map(([label, status]) => <div key={label} className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3">
+              <span className="text-white/70">{label}</span>
+              <b className="inline-flex items-center gap-2 text-green-300"><CheckCircle2 size={15}/>{status}</b>
+            </div>)}
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card id="module-1" className="rounded-xl shadow-sm">
+        <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">BELEDİYE YÖNETİMİ</p><h2 className="text-xl font-bold">Tüm Belediyeler</h2></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-4">
+            {['Belediye Oluştur', 'Belediye Askıya Al', 'Belediye Sil', 'Belediye Kopyala'].map(action => <Button key={action} variant={action.includes('Sil') ? 'outline' : 'orange'} className="justify-center">{action}</Button>)}
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-mugla-navy/10">
+            <table className="w-full min-w-[920px] text-left text-sm">
+              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Belediye</th><th>Alan Adı</th><th>Vatandaş</th><th>Projeler</th><th>Oylamalar</th><th>Lisans</th><th>Durum</th></tr></thead>
+              <tbody>{platformMunicipalities.map(item => <tr key={item.name} className="border-t border-mugla-navy/10">
+                <td className="p-3 font-black">{item.name}</td><td>{item.domain}</td><td>{item.citizens.toLocaleString('tr-TR')}</td><td>{item.projects.toLocaleString('tr-TR')}</td><td>{item.votes}</td><td>{item.license}</td>
+                <td><span className={`rounded-full px-3 py-1 text-xs font-bold ${item.status === 'Aktif' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-mugla-orange'}`}>{item.status}</span></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card id="module-2" className="rounded-xl shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">KULLANICI YÖNETİMİ</p><h2 className="text-xl font-bold">Platform Rolleri ve Yetkiler</h2></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2">{['Super Admin', 'Platform Admin', 'Destek Personeli', 'Yazılımcı', 'Denetçi'].map(role => <div key={role} className="rounded-xl bg-mugla-sand p-3 font-bold">{role}</div>)}</div>
+            <div className="rounded-xl border border-mugla-navy/10">
+              {platformRoles.map(([label, enabled]) => <div key={label} className="flex items-center justify-between border-b border-mugla-navy/10 px-4 py-3 last:border-0"><span>{label}</span><b className={enabled ? 'text-green-700' : 'text-red-600'}>{enabled ? '+' : '-'}</b></div>)}
+            </div>
+            <p className="text-sm text-mugla-navy/50">{accounts.length} platform/belediye hesabı merkezi kayıtla senkron.</p>
+          </CardContent>
+        </Card>
+        <Card id="module-3" className="rounded-xl shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">BELEDİYE YÖNETİCİLERİ</p><h2 className="text-xl font-bold">Muğla Yetki Hiyerarşisi</h2></CardHeader>
+          <CardContent className="grid gap-3">
+            {['Muğla', 'Admin', 'Müdür', 'Personel', 'Yetkileri'].map((item, index) => <div key={item} className="flex items-center gap-3 rounded-xl border border-mugla-navy/10 bg-white p-3">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-mugla-navy text-xs font-black text-white">{index + 1}</span><b>{item}</b>
+            </div>)}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card id="module-4" className="rounded-xl shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAŞ YÖNETİMİ</p><h2 className="text-xl font-bold">Platformdaki Vatandaşlar</h2></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Ad Soyad</th><th>İl</th><th>İlçe</th><th>Son Giriş</th><th>Oy</th><th>Proje</th><th>Doğrulama</th></tr></thead>
+              <tbody>{citizenRows.length ? citizenRows.map(item => <tr key={item.id} className="border-t border-mugla-navy/10"><td className="py-3 font-bold">{item.name}</td><td>{item.province ?? 'Muğla'}</td><td>{item.district}</td><td>{item.lastLogin ? new Date(item.lastLogin).toLocaleDateString('tr-TR') : '-'}</td><td>{item.voteCount}</td><td>{item.proposalCount}</td><td>Doğrulanmış</td></tr>) : <tr><td colSpan={7} className="py-8 text-center text-mugla-navy/45">Henüz vatandaş kaydı yok.</td></tr>}</tbody>
+            </table>
+          </CardContent>
+        </Card>
+        <Card id="module-5" className="rounded-xl shadow-sm">
+          <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">PROJE DENETİMİ</p><h2 className="text-xl font-bold">Tüm Projeler</h2></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">{['Muğla', 'İstanbul', 'Bekliyor', 'Onaylandı', 'Reddedildi', 'Yayında'].map(filter => <span key={filter} className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/60">{filter}</span>)}</div>
+            <div className="overflow-x-auto rounded-xl border border-mugla-navy/10">
+              <table className="w-full min-w-[680px] text-left text-sm"><tbody>{projectRows.length ? projectRows.map(item => <tr key={item.id} className="border-b border-mugla-navy/10 last:border-0"><td className="p-3 font-bold">{item.title}</td><td>{item.district}</td><td>{item.moderationStatus}</td><td><Button size="sm" variant="outline">Tekrar İncelemeye Gönder</Button></td></tr>) : <tr><td className="p-8 text-center text-mugla-navy/45">Henüz proje yok.</td></tr>}</tbody></table>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Card id="module-6" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">OYLAMA DENETİMİ</p><h2 className="text-xl font-bold">Oy Güvenliği</h2></CardHeader><CardContent className="grid gap-2">{voteSecurity.map(([label, value]) => <div key={label} className="flex justify-between rounded-xl bg-mugla-sand p-3"><span>{label}</span><b>{value}</b></div>)}</CardContent></Card>
+        <Card id="module-7" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">AI MODERASYONU</p><h2 className="text-xl font-bold">Kontrol Başlıkları</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{aiChecks.map(item => <span key={item} className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-mugla-cyan">{item}</span>)}</CardContent></Card>
+        <Card id="module-8" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">CRM VE BİLDİRİM</p><h2 className="text-xl font-bold">Platform Geneli</h2></CardHeader><CardContent className="grid gap-3">{['Push', 'SMS', 'Mail', 'Mobil Bildirim', `${contactRecords.length} destek/iletişim kaydı`].map(item => <div key={item} className="rounded-xl bg-mugla-sand p-3 font-bold">{item}</div>)}</CardContent></Card>
+      </section>
+
+      <Card id="module-10" className="rounded-xl shadow-sm">
+        <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">DENETİM MERKEZİ</p><h2 className="text-xl font-bold">Merkezi Loglama</h2></CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Saat</th><th>Kullanıcı</th><th>Rol</th><th>İşlem</th><th>IP</th><th>Tarayıcı</th></tr></thead>
+            <tbody>{auditRecords.length ? auditRecords.slice(0, 10).map(item => <tr key={item.id} className="border-t border-mugla-navy/10"><td className="py-3">{new Date(item.createdAt).toLocaleString('tr-TR')}</td><td>{item.actorName}</td><td>{item.actorRole}</td><td className="font-bold">{item.action}</td><td>{item.ip}</td><td className="max-w-60 truncate">{item.userAgent}</td></tr>) : <tr><td colSpan={6} className="py-8 text-center text-mugla-navy/45">Henüz audit kaydı yok.</td></tr>}</tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Card id="module-11" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">GÜVENLİK VE KVKK</p><h2 className="text-xl font-bold">Koruma Merkezi</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{['2FA', 'Oturumlar', 'API Key', 'Token', 'JWT', 'Login Attempts', 'Firewall', 'IP Engelleme', 'Veri Silme', 'Anonimleştirme', 'Onaylar'].map(item => <span key={item} className="rounded-full bg-mugla-sand px-3 py-2 text-xs font-bold">{item}</span>)}</CardContent></Card>
+        <Card id="module-13" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">SİSTEM AYARLARI</p><h2 className="text-xl font-bold">Entegrasyon Ayarları</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{systemSettings.map(item => <span key={item} className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-mugla-cyan">{item}</span>)}</CardContent></Card>
+        <Card id="module-21" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">ENTEGRASYONLAR</p><h2 className="text-xl font-bold">Bağlantılar</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{integrations.map(item => <span key={item} className="rounded-full bg-green-50 px-3 py-2 text-xs font-black text-green-700">{item}</span>)}</CardContent></Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-4">
+        {[
+          ['Tema Yönetimi', 'Vatandaş Paneli, Belediye Paneli, Landing Page renkleri, ikonları ve fontları'],
+          ['CMS', 'Slider, duyuru, SSS, haber, sayfalar, footer ve menüler'],
+          ['Dosya Yönetimi', 'Resimler, PDF, videolar, belgeler ve yedekler'],
+          ['Analitik', 'Günlük/aylık kullanıcı, oy dağılımı, kategori, yaş, cinsiyet ve harita'],
+          ['Finans', 'Platform lisansları, belediye paketleri, ödemeler ve faturalar'],
+          ['Yedekleme', 'Manuel backup, otomatik backup ve restore'],
+          ['API Yönetimi', 'REST, GraphQL, webhook, API limitleri ve kullanımı'],
+          ['Sistem İzleme', 'CPU, RAM, disk, sunucu, API, database, Redis ve queue'],
+        ].map(([title, note], index) => <Card key={title} id={`module-${14 + index}`} className="rounded-xl shadow-sm"><CardHeader><h2 className="text-lg font-black">{title}</h2></CardHeader><CardContent><p className="text-sm leading-6 text-mugla-navy/55">{note}</p></CardContent></Card>)}
+      </section>
+    </div>
+  </AppShell></AdminAuthGate>
 }
 
 function projectCategoryLabel(project: ProjectRecord) {
@@ -1200,6 +1425,15 @@ export default function Admin() {
     value: scopedCitizens.filter(citizen => ageGroup(Number(citizen.age)) === group).length,
   }))
   const maxAgeGroup = Math.max(1, ...ageDistribution.map(item => item.value))
+
+  if (isSuperAdmin && isSuperAdminDomain()) return <SuperAdminPlatformPanel
+    accounts={accounts}
+    projects={projects}
+    citizens={liveCitizens}
+    contactRecords={contactRecords}
+    auditRecords={auditRecords}
+    votingRecords={votingRecords}
+  />
 
   return <AdminAuthGate><AppShell role="admin">
     <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/95 px-6 py-4 backdrop-blur lg:px-10">
