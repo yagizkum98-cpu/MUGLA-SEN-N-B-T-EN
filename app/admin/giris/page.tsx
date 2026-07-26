@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
         <p className="mb-8 text-sm font-semibold text-mugla-navy/55 lg:hidden">Muğla Büyükşehir Belediyesi</p>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YETKILI GIRISI</p>
         <h2 className="mt-2 text-3xl font-bold">{isSuperAdminDomain() ? 'Super Admin Paneli' : 'Belediye Paneli'}</h2>
-        <p className="mt-3 text-sm leading-6 text-mugla-navy/55">Tanimli yetkili hesabinin e-posta ve sifresiyle giris yap.</p>
+        <p className="mt-3 text-sm leading-6 text-mugla-navy/55">{isSuperAdminDomain() ? 'Super admin hesabinin e-posta ve sifresiyle platform paneline giris yap.' : 'Super admin ve tanimli belediye yetkilileri ayni e-posta ve sifreyle belediye paneline giris yapabilir.'}</p>
         <form onSubmit={submit} className="mt-7 space-y-4">
           <label className="block"><span className="mb-2 block text-sm font-semibold">E-posta</span><input name="email" type="email" required className={field}/></label>
           <label className="block"><span className="mb-2 block text-sm font-semibold">Sifre</span><input name="password" type="password" required className={field}/></label>
