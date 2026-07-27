@@ -9,16 +9,16 @@ import {Button} from '@/components/ui/button'
 import {engagementScore, Channel, CrmRole, useCrm, type Citizen} from '@/lib/crm-store'
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {turkiyeProvinces} from '@/lib/turkiye-locations'
-import {getCurrentAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {changeOwnAdminProfile, getCurrentAdmin, type AdminAccount} from '@/lib/admin-auth'
 import {ageFromBirthDate, ageGroup, ageGroups, birthDateInputToIso, formatBirthDateInput, isoToBirthDateInput} from '@/lib/demographics'
-import {Activity, BarChart3, BellRing, Bot, Building2, ChevronRight, CircleDollarSign, Coins, FolderKanban, LockKeyhole, MapPinned, Megaphone, PieChart, Plus, Search, ShieldAlert, ShieldCheck, Trash2, UserRound, UsersRound, Vote} from 'lucide-react'
+import {Activity, BarChart3, BellRing, Bot, Building2, ChevronRight, CircleDollarSign, Coins, FolderKanban, KeyRound, LockKeyhole, MapPinned, Megaphone, PieChart, Plus, Search, ShieldAlert, ShieldCheck, Trash2, UserRound, UsersRound, Vote} from 'lucide-react'
 
 const ProjectMap = dynamic(() => import('@/components/project-map'), {
   ssr: false,
   loading: () => <div className="grid h-full min-h-[420px] place-items-center rounded-2xl bg-mugla-sand text-sm font-semibold text-mugla-navy/45">Harita hazirlaniyor...</div>,
 })
 
-type View = 'overview' | 'citizens' | 'segments' | 'communication' | 'districts' | 'moderation' | 'analytics'
+type View = 'overview' | 'citizens' | 'segments' | 'communication' | 'districts' | 'moderation' | 'analytics' | 'account'
 type Distribution = {label: string; value: number; color?: string}
 
 const views: [View, string, React.ElementType][] = [
@@ -29,6 +29,7 @@ const views: [View, string, React.ElementType][] = [
   ['districts', 'Ilceler', MapPinned],
   ['moderation', 'AI Moderasyon', ShieldAlert],
   ['analytics', 'BI & Analitik', BarChart3],
+  ['account', 'Hesabim', KeyRound],
 ]
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
@@ -115,6 +116,8 @@ export default function CrmPage() {
   const [birthDateText, setBirthDateText] = useState('')
   const [query, setQuery] = useState('')
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
+  const [message, setMessage] = useState('')
+  const [passwordChanging, setPasswordChanging] = useState(false)
   const citizen = citizens.find(item => item.id === selected)
   const canSeeUserInfo = adminUser?.role === 'super-admin'
   const activeUsers = citizens.filter(item => item.lastLogin && Date.now() - new Date(item.lastLogin).getTime() < 30 * 86400000).length
@@ -169,6 +172,16 @@ export default function CrmPage() {
     getCurrentAdmin().then(setAdminUser)
   }, [])
 
+  useEffect(() => {
+    const syncHash = () => {
+      const value = location.hash.replace('#', '') as View
+      if (views.some(([id]) => id === value)) setView(value)
+    }
+    syncHash()
+    window.addEventListener('hashchange', syncHash)
+    return () => window.removeEventListener('hashchange', syncHash)
+  }, [])
+
   function createCitizen(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -205,6 +218,30 @@ export default function CrmPage() {
     setShowCampaignForm(false)
   }
 
+  async function submitOwnPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!adminUser) return
+    const form = new FormData(event.currentTarget)
+    const currentPassword = String(form.get('currentPassword'))
+    const newPassword = String(form.get('newPassword'))
+    const confirmPassword = String(form.get('confirmPassword'))
+    if (newPassword !== confirmPassword) {
+      setMessage('Yeni sifre tekrari eslesmiyor.')
+      return
+    }
+    setPasswordChanging(true)
+    try {
+      const updated = await changeOwnAdminProfile({actor: adminUser, currentPassword, newPassword})
+      if (updated) setAdminUser(updated)
+      event.currentTarget.reset()
+      setMessage('Sifren guncellendi. CRM paneline yeni sifrenle giris yapabilirsin.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
+    } finally {
+      setPasswordChanging(false)
+    }
+  }
+
   return <AdminAuthGate><AppShell role="admin">
     <header className="border-b border-mugla-navy/10 bg-white px-6 py-5 lg:px-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -215,6 +252,7 @@ export default function CrmPage() {
     </header>
 
     <main className="space-y-6 p-6 lg:p-10">
+      {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
       {view === 'overview' && <section className="grid gap-4 md:grid-cols-3">
         <Card><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">UYRUK</p><h2 className="text-xl font-bold">Katilim kaynagi</h2></CardHeader><CardContent className="grid grid-cols-2 gap-3"><div className="rounded-2xl bg-mugla-sand p-4"><b className="text-2xl">{citizens.length - foreignUsers}</b><small className="block text-mugla-navy/50">T.C.</small></div><div className="rounded-2xl bg-mugla-sand p-4"><b className="text-2xl">{foreignUsers}</b><small className="block text-mugla-navy/50">Yabanci</small></div></CardContent></Card>
         <Card><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">TURKIYE</p><h2 className="text-xl font-bold">Il bazli katilim</h2></CardHeader><CardContent>{topProvinces.length ? topProvinces.map(([province, count]) => <div key={province} className="mb-3 flex items-center justify-between text-sm"><span>{province}</span><b>{count}</b></div>) : <p className="text-sm text-mugla-navy/45">Henuz il verisi yok.</p>}</CardContent></Card>
@@ -259,6 +297,44 @@ export default function CrmPage() {
         <Card><CardHeader><div className="flex items-center gap-3"><MapPinned className="text-mugla-cyan"/><div><h2 className="text-xl font-bold">Harita Analizi</h2><p className="text-sm text-mugla-navy/55">{analytics.mapProjects.length.toLocaleString('tr-TR')} konumlu proje haritada gosteriliyor.</p></div></div></CardHeader><CardContent><div className="overflow-hidden rounded-2xl border border-mugla-navy/10"><ProjectMap projects={analytics.mapProjects}/></div></CardContent></Card>
         <Card><CardHeader><div className="flex items-center gap-3"><Coins className="text-mugla-cyan"/><div><h2 className="text-xl font-bold">Butce Dagilimi</h2><p className="text-sm text-mugla-navy/55">Kategori bazinda toplam proje butcesi.</p></div></div></CardHeader><CardContent><MiniBarList items={analytics.budgetDistribution} valueLabel={formatBudget}/></CardContent></Card>
       </>}
+
+      {view === 'account' && <section className="grid gap-6 xl:grid-cols-[.85fr_1.15fr]">
+        <Card>
+          <CardHeader>
+            <p className="text-xs font-bold tracking-widest text-mugla-cyan">CRM YETKILI HESABI</p>
+            <h2 className="text-xl font-bold">{adminUser?.name ?? 'CRM yetkilisi'}</h2>
+            <p className="text-sm text-mugla-navy/55">{adminUser?.email ?? 'Oturum kontrol ediliyor'}</p>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm">
+            {[
+              ['Proje onaylama', 'Kapali'],
+              ['Oylama acma', 'Kapali'],
+              ['Yetki verme', 'Kapali'],
+              ['Sistem ayari', 'Kapali'],
+              ['Destek ve iletisim', 'Acik'],
+            ].map(([label, value]) => <div key={label} className="flex items-center justify-between rounded-xl bg-mugla-sand/55 px-4 py-3">
+              <span className="text-mugla-navy/60">{label}</span>
+              <b className={value === 'Acik' ? 'text-green-700' : 'text-red-600'}>{value}</b>
+            </div>)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <p className="text-xs font-bold tracking-widest text-mugla-cyan">SIFRE DEGISTIR</p>
+            <h2 className="text-xl font-bold">Mevcut sifreyle yeni sifre belirle</h2>
+            <p className="text-sm text-mugla-navy/55">CRM yetkilisi kendi sifresini manuel olarak degistirebilir. E-posta super admin tarafindan yetkili tanimlama ekraninda belirlenir.</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submitOwnPassword} className="grid gap-4 md:grid-cols-2">
+              <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">E-posta</span><input className={input} value={adminUser?.email ?? ''} readOnly/></label>
+              <label><span className="mb-2 block text-sm font-semibold">Mevcut sifre</span><input className={input} name="currentPassword" type="password" required minLength={8}/></label>
+              <label><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input className={input} name="newPassword" type="password" required minLength={8}/></label>
+              <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className={input} name="confirmPassword" type="password" required minLength={8}/></label>
+              <div className="md:col-span-2"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Sifremi guncelle'}</Button></div>
+            </form>
+          </CardContent>
+        </Card>
+      </section>}
     </main>
   </AppShell></AdminAuthGate>
 }

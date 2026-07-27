@@ -1,7 +1,7 @@
 'use client'
 
 import {createClient} from '@/lib/supabase/client'
-import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
+import {apiUrl} from '@/lib/domain-routing'
 
 export type VerificationMethod = 'phone' | 'email' | 'passport' | 'international-id'
 
@@ -39,8 +39,7 @@ export const AUTH_USERS_CHANGED_EVENT = 'mugla-auth-users-changed'
 const TRANSFER_TTL_MS = 2 * 60 * 1000
 
 function citizenRecordsApiUrl() {
-  if (typeof window === 'undefined' || isMunicipalityDomain()) return '/api/citizen-records'
-  return municipalityUrl('/api/citizen-records')
+  return apiUrl('/api/citizen-records')
 }
 
 export function normalizeLocalUser(user: LocalUser): LocalUser {

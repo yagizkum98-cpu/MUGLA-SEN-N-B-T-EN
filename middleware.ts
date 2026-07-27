@@ -1,6 +1,7 @@
 import {NextResponse, type NextRequest} from 'next/server'
 
 const SUPER_ADMIN_DOMAIN = 'muglabutcesenin-superadmin.vercel.app'
+const CRM_DOMAIN = 'muglabutcesenin-crm.vercel.app'
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0]
@@ -9,6 +10,12 @@ export function middleware(request: NextRequest) {
   if (host === SUPER_ADMIN_DOMAIN && pathname === '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/admin'
+    return NextResponse.redirect(url)
+  }
+
+  if (host === CRM_DOMAIN && pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/crm'
     return NextResponse.redirect(url)
   }
 

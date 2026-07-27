@@ -2,6 +2,7 @@
 
 import {projectCategories} from '@/lib/project-taxonomy'
 import {createClient} from '@/lib/supabase/client'
+import {apiUrl} from '@/lib/domain-routing'
 
 export const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040'] as const
 
@@ -102,7 +103,7 @@ function normalizeAnnualThemeSettingsPayload(value: unknown) {
 
 async function readRemoteAnnualThemeSettings() {
   try {
-    const response = await fetch(API_PATH, {cache: 'no-store'})
+    const response = await fetch(apiUrl(API_PATH), {cache: 'no-store'})
     const payload = await response.json().catch(() => null)
     if (response.ok && Array.isArray(payload?.settings)) return normalizeAnnualThemeSettingsPayload({settings: payload.settings})
   } catch {}
@@ -135,7 +136,7 @@ async function upsertRemoteAnnualThemeSetting(setting: AnnualThemeSetting) {
   if (typeof window === 'undefined') return
   const nextSettings = [...listAnnualThemeSettings().filter(item => item.year !== setting.year), setting].sort((a, b) => a.year.localeCompare(b.year))
   try {
-    const response = await fetch(API_PATH, {
+    const response = await fetch(apiUrl(API_PATH), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({setting}),

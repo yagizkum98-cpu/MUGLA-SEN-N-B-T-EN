@@ -16,7 +16,7 @@ import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
-import {citizenUrl, isMunicipalityDomain, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {apiUrl, citizenUrl, crmUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -80,6 +80,13 @@ const portalLinks = [
     note: 'Vatandas girisi, fikir basvurusu ve kisisel panel alani.',
     badge: 'Vatandas',
   },
+  {
+    id: 'crm',
+    label: 'CRM',
+    url: crmUrl('/crm'),
+    note: 'Cagri merkezi, WhatsApp, e-posta, destek, talep, sikayet, memnuniyet ve canli destek operasyonlari.',
+    badge: 'Destek',
+  },
 ] as const
 
 function CategoryBadge({label, color}: {label: string; color: string}) {
@@ -95,8 +102,8 @@ function SuperAdminPortalAccess() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold tracking-widest text-mugla-cyan">SUPER ADMIN PORTAL ERİŞİMLERİ</p>
-          <h2 className="mt-1 text-xl font-bold">Portal erişimleri ve bağlantı kontrolü</h2>
-          <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu kart yalnızca super admin hesabında görünür. Proje alanlarının karışmaması, erişimlerin tek merkezden izlenmesi ve bağlantıların doğrulanması için dashboard en üst kontrol noktasıdır.</p>
+          <h2 className="mt-1 text-xl font-bold">Platform Merkezi</h2>
+          <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Bu alan portal adreslerini metin olarak listelemez. Yetkili kullanıcı ilgili platforma buton üzerinden geçer; erişim her panelde rol kontrolüyle yeniden doğrulanır.</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-xs font-black text-green-700"><ShieldCheck size={15}/> Sadece super admin</span>
       </div>
@@ -108,25 +115,24 @@ function SuperAdminPortalAccess() {
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/75">{dashboard.badge}<ArrowUpRight size={14}/></span>
         </div>
         <h3 className="mt-6 text-2xl font-black">{dashboard.label}</h3>
-        <p className="mt-2 break-all text-sm font-semibold text-mugla-cyan">{dashboard.url}</p>
         <p className="mt-4 max-w-xl text-sm leading-6 text-white/65">{dashboard.note}</p>
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
           {['Alan kontrolü', 'Veri güvenliği', 'Portal ayrımı'].map(item => <span key={item} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white/75">{item}</span>)}
         </div>
+        <span className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-mugla-navy">Yönet <ArrowUpRight size={16}/></span>
       </a>
 
       <section className="grid gap-3">
         {others.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="group flex items-center gap-4 rounded-2xl border border-mugla-navy/10 bg-white p-4 transition hover:border-mugla-orange/45 hover:bg-mugla-sand/45">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mugla-sand text-mugla-orange">{item.id === 'landing' ? <Database size={21}/> : item.id === 'belediye' ? <LockKeyhole size={21}/> : <UserPlus size={21}/>}</span>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mugla-sand text-mugla-orange">{item.id === 'landing' ? <Database size={21}/> : item.id === 'belediye' ? <LockKeyhole size={21}/> : item.id === 'crm' ? <MessageSquare size={21}/> : <UserPlus size={21}/>}</span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
               <b>{item.label}</b>
               <span className="rounded-full bg-mugla-sand px-2 py-0.5 text-[11px] font-bold text-mugla-navy/50">{item.badge}</span>
             </span>
-            <span className="mt-1 block truncate text-xs font-semibold text-mugla-cyan">{item.url}</span>
             <span className="mt-1 block text-xs leading-5 text-mugla-navy/50">{item.note}</span>
           </span>
-          <ArrowUpRight className="shrink-0 text-mugla-navy/35 transition group-hover:text-mugla-orange" size={18}/>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-mugla-sand px-3 py-2 text-xs font-black text-mugla-navy/55 transition group-hover:bg-mugla-orange group-hover:text-white">Yönet <ArrowUpRight size={14}/></span>
         </a>)}
       </section>
     </CardContent>
@@ -135,12 +141,12 @@ function SuperAdminPortalAccess() {
 
 function SuperAdminSystemSecurity({auditRecords}: {auditRecords: AuditRecord[]}) {
   const systemGroups = [
-    ['Sistem Ayarları', ['Domain', 'SMTP', 'SMS API', 'e-Devlet API', 'KVKK ayarları', 'OAuth', 'JWT Secret', 'API Key']],
+    ['Sistem Ayarları', ['Portal durumu', 'Bildirim servisleri', 'Kimlik doğrulama', 'KVKK ayarları', 'SSO politikası', 'Yetki matrisi']],
     ['Kullanıcı Yetkileri', ['Admin oluştur/sil', 'Yetki değiştir', 'Rol oluştur/sil', 'Şifre sıfırla']],
     ['İlçe Yönetimi', ['İlçe oluştur', 'İlçe sil', 'İlçe kapat']],
     ['Oylama Sistemi', ['Oylamayı başlat/durdur', 'Sonuçları kilitle/aç', 'İkinci onay']],
     ['Yapay Zeka', ['Promptlar', 'AI puanlama', 'AI moderasyon', 'AI filtre']],
-    ['Yedekleme ve Güncelleme', ['Backup al', 'Restore yap', 'Log indir', 'Migration', 'Sunucu ayarları']],
+    ['Yedekleme ve Güncelleme', ['Backup planı', 'Geri yükleme talebi', 'Log denetimi', 'Sürüm geçişi', 'Altyapı durumu']],
     ['Gizli Analitik', ['Tüm ilçeler', 'Tüm kullanıcılar', 'Gerçek oylar', 'Sistem performansı']],
   ] as const
 
@@ -198,7 +204,7 @@ const platformMenu = [
   ['Denetim Merkezi', 'IP, saat, tarayıcı, cihaz ve tüm işlem logları', FileText],
   ['Güvenlik Merkezi', '2FA, oturumlar, API key, token, JWT, firewall ve IP engelleme', LockKeyhole],
   ['KVKK', 'Veri silme, anonimleştirme, aydınlatma metni ve onay kayıtları', FileBarChart],
-  ['Sistem Ayarları', 'SMTP, SMS, Firebase, Google Maps, e-Devlet, OAuth ve AI sağlayıcıları', Settings],
+  ['Sistem Ayarları', 'Bildirim, harita, kimlik doğrulama ve AI servis durumları', Settings],
   ['Tema Yönetimi', 'Vatandaş, belediye ve landing tema renkleri, ikonları, fontları', Pencil],
   ['İçerik Yönetimi', 'Slider, duyuru, SSS, haber, sayfa, footer ve menüler', FileSpreadsheet],
   ['Dosya Yönetimi', 'Resimler, PDF, videolar, belgeler ve yedekler', UploadCloud],
@@ -208,7 +214,7 @@ const platformMenu = [
   ['API Yönetimi', 'REST, GraphQL, webhook, API limitleri ve API kullanımı', KeyRound],
   ['Entegrasyonlar', 'e-Devlet, MERNIS, KPS, TAKBİS, CBS, Maps, Firebase, OneSignal, ödeme', ArrowUpRight],
   ['Yazılım Güncellemeleri', 'Versiyon, yeni modüller, migration ve rollback', CheckCircle2],
-  ['Sistem İzleme', 'CPU, RAM, disk, sunucu, API, database, Redis ve queue', Activity],
+  ['Sistem İzleme', 'Uygulama sağlığı, veri erişimi, kuyruk ve servis performansı', Activity],
 ] as const
 
 const platformRoles = [
@@ -292,7 +298,7 @@ function SuperAdminPlatformPanel({
   const systemHealth = [['Sunucu', 'Normal'], ['API', 'Çalışıyor'], ['Mail', 'Çalışıyor'], ['SMS', 'Çalışıyor'], ['Bildirim', 'Çalışıyor']] as const
   const voteSecurity = [['Toplam Oy', totalVotes], ['Tekil Oy', totalVotes], ['Şüpheli Oy', 0], ['VPN', 0], ['Bot', 0], ['Spam', 0]] as const
   const aiChecks = ['Hakaret', 'Siyasi', 'Spam', 'Kopya Proje', 'AI Üretimi', 'Risk Analizi', 'Karbon Etkisi', 'Maliyet', 'Sosyal Fayda']
-  const systemSettings = ['Platform Adı', 'Logo', 'SMTP', 'SMS', 'Firebase', 'Google Maps', 'e-Devlet', 'MERNIS', 'OAuth', 'OpenAI', 'Gemini', 'DeepSeek']
+  const systemSettings = ['Platform Adı', 'Logo', 'Bildirim servisi', 'Mesajlaşma servisi', 'Harita servisi', 'Kimlik doğrulama', 'Vatandaş doğrulama', 'AI sağlayıcı durumu', 'Moderasyon durumu']
   const integrations = ['e-Devlet', 'MERNIS', 'KPS', 'TAKBİS', 'CBS', 'Google Maps', 'Firebase', 'OneSignal', 'Stripe', 'iyzico']
   const citizenRows = citizens.slice(0, 8)
   const projectRows = projects.slice(0, 8)
@@ -486,7 +492,7 @@ function SuperAdminPlatformPanel({
       </Card>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <Card id="module-11" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">GÜVENLİK VE KVKK</p><h2 className="text-xl font-bold">Koruma Merkezi</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{['2FA', 'Oturumlar', 'API Key', 'Token', 'JWT', 'Login Attempts', 'Firewall', 'IP Engelleme', 'Veri Silme', 'Anonimleştirme', 'Onaylar'].map(item => <span key={item} className="rounded-full bg-mugla-sand px-3 py-2 text-xs font-bold">{item}</span>)}</CardContent></Card>
+        <Card id="module-11" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">GÜVENLİK VE KVKK</p><h2 className="text-xl font-bold">Koruma Merkezi</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{['2FA', 'Oturumlar', 'Erişim politikaları', 'Yetki kontrolü', 'Giriş denemeleri', 'Ağ koruması', 'IP kısıtları', 'Veri silme', 'Anonimleştirme', 'Onaylar'].map(item => <span key={item} className="rounded-full bg-mugla-sand px-3 py-2 text-xs font-bold">{item}</span>)}</CardContent></Card>
         <Card id="module-13" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">SİSTEM AYARLARI</p><h2 className="text-xl font-bold">Entegrasyon Ayarları</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{systemSettings.map(item => <span key={item} className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-mugla-cyan">{item}</span>)}</CardContent></Card>
         <Card id="module-21" className="rounded-xl shadow-sm"><CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">ENTEGRASYONLAR</p><h2 className="text-xl font-bold">Bağlantılar</h2></CardHeader><CardContent className="flex flex-wrap gap-2">{integrations.map(item => <span key={item} className="rounded-full bg-green-50 px-3 py-2 text-xs font-black text-green-700">{item}</span>)}</CardContent></Card>
       </section>
@@ -500,7 +506,7 @@ function SuperAdminPlatformPanel({
           ['Finans', 'Platform lisansları, belediye paketleri, ödemeler ve faturalar'],
           ['Yedekleme', 'Manuel backup, otomatik backup ve restore'],
           ['API Yönetimi', 'REST, GraphQL, webhook, API limitleri ve kullanımı'],
-          ['Sistem İzleme', 'CPU, RAM, disk, sunucu, API, database, Redis ve queue'],
+          ['Sistem İzleme', 'Uygulama sağlığı, veri erişimi, kuyruk ve servis performansı'],
         ].map(([title, note], index) => <Card key={title} id={`module-${14 + index}`} className="rounded-xl shadow-sm"><CardHeader><h2 className="text-lg font-black">{title}</h2></CardHeader><CardContent><p className="text-sm leading-6 text-mugla-navy/55">{note}</p></CardContent></Card>)}
       </section>
     </div>
@@ -516,8 +522,7 @@ function topicLabel(topic: ContactRecord['topic']) {
 }
 
 function votingRecordsApiUrl() {
-  if (typeof window === 'undefined' || isMunicipalityDomain()) return '/api/votings'
-  return municipalityUrl('/api/votings')
+  return apiUrl('/api/votings')
 }
 
 function readLocalVotingRecords(): VotingRecord[] {
@@ -2238,7 +2243,7 @@ export default function Admin() {
 
           {isSuperAdmin && <div className="rounded-2xl border border-mugla-cyan/25 bg-cyan-50/35 p-4">
             <h3 className="font-black">Super Admin entegrasyonları</h3>
-            <div className="mt-3 flex flex-wrap gap-2">{['SMTP', 'SMS API', 'Firebase', 'OneSignal', 'Mail Şablonları', 'Webhook', 'Bildirim Logları'].map(item => <span key={item} className="rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/60">{item}</span>)}</div>
+            <div className="mt-3 flex flex-wrap gap-2">{['E-posta kanalı', 'SMS kanalı', 'Push kanalı', 'Mesaj şablonları', 'Bildirim akışı', 'Gönderim logları'].map(item => <span key={item} className="rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/60">{item}</span>)}</div>
           </div>}
         </CardContent>
       </Card>}

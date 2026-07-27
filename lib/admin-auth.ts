@@ -1,6 +1,6 @@
 'use client'
 
-import {isAdminAuthorityDomain, municipalityUrl} from '@/lib/domain-routing'
+import {apiUrl} from '@/lib/domain-routing'
 
 export type AdminRole = 'super-admin' | 'belediye-admin' | 'ilce-yoneticisi' | 'degerlendirici' | 'crm' | 'admin' | 'yetkili'
 
@@ -30,8 +30,7 @@ const FALLBACK_SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const FALLBACK_SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
 
 function adminAccountsApiUrl() {
-  if (typeof window === 'undefined' || isAdminAuthorityDomain()) return '/api/admin-accounts'
-  return municipalityUrl('/api/admin-accounts')
+  return apiUrl('/api/admin-accounts')
 }
 
 export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin'> {

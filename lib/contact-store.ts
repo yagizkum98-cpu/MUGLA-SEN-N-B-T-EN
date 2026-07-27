@@ -2,7 +2,7 @@
 
 import {useCallback, useEffect, useState} from 'react'
 import {createClient} from '@/lib/supabase/client'
-import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
+import {apiUrl} from '@/lib/domain-routing'
 
 export type ContactTopic = 'Gorus' | 'Oneri' | 'Soru'
 
@@ -26,8 +26,7 @@ const REMOTE_TABLE = 'contact_records'
 export const contactChangeEvent = 'mugla-contact-records-changed'
 
 function contactCenterApiUrl() {
-  if (typeof window === 'undefined' || isMunicipalityDomain()) return '/api/contact-records'
-  return municipalityUrl('/api/contact-records')
+  return apiUrl('/api/contact-records')
 }
 
 function readLocalDeletedContactIds() {

@@ -3,7 +3,7 @@
 import {useCallback,useEffect,useState} from 'react'
 import {categoryColor, normalizeProjectCategory} from '@/lib/project-taxonomy'
 import {createClient} from '@/lib/supabase/client'
-import {isMunicipalityDomain, municipalityUrl} from '@/lib/domain-routing'
+import {apiUrl} from '@/lib/domain-routing'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
 export type ProjectModerationStatus='Bekliyor'|'Onaylandı'|'Reddedildi'
@@ -87,8 +87,7 @@ function normalizeText(value:unknown){
 }
 
 function projectCenterApiUrl(){
-  if(typeof window==='undefined'||isMunicipalityDomain())return '/api/projects'
-  return municipalityUrl('/api/projects')
+  return apiUrl('/api/projects')
 }
 
 function hasApplicantData(project:Partial<ProjectRecord>){

@@ -8,7 +8,7 @@ import {Bell, Building2, Clock3, ExternalLink, FileBarChart, FolderKanban, Home,
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
-import {citizenUrl, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {citizenUrl, crmUrl, isCrmDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const citizen = [
   ['/', 'Anasayfa', Home],
@@ -32,11 +32,17 @@ const admin = [
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
 ] as const
 
+const crm = [
+  {href: '/crm', label: 'CRM Merkezi', icon: UsersRound, roles: ['super-admin', 'crm']},
+  {href: '/crm#account', label: 'Hesabım', icon: UserRound, roles: ['super-admin', 'crm']},
+] as const
+
 const superAdminPortalLinks = [
   {label: 'Super Admin', url: superAdminUrl('/admin')},
   {label: 'Landing Page', url: publicUrl('/')},
   {label: 'Kullanıcı', url: citizenUrl('/')},
   {label: 'Belediye', url: municipalityUrl('/admin')},
+  {label: 'CRM', url: crmUrl('/crm')},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {
@@ -44,7 +50,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
   const [user, setUser] = useState<LocalUser | null>(null)
   const [adminUser, setAdminUser] = useState<AdminAccount | null>(null)
   const adminRole = normalizeAdminRole(adminUser?.role)
-  const links = role === 'admin' ? admin.filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizen
+  const links = role === 'admin' ? (isCrmDomain() ? crm : admin).filter(link => (link.roles as readonly string[]).includes(adminRole)) : citizen
 
   useEffect(() => {
     const sync = () => {
@@ -75,11 +81,11 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
 
   return <div className="min-h-screen bg-mugla-sand md:flex">
     <aside className={cn('bg-mugla-navy text-white md:sticky md:top-0 md:h-screen md:w-64 md:p-6', role === 'citizen' ? 'fixed inset-x-0 bottom-0 z-40 order-last p-2 md:relative md:inset-auto md:flex md:flex-col' : 'flex p-4 md:flex-col')}>
-      <Link href={role === 'admin' && adminRole === 'super-admin' ? superAdminUrl('/admin') : '/'} className={cn('mb-8 flex items-center gap-3', role === 'citizen' && 'hidden md:flex')}>
+      <Link href={role === 'admin' && isCrmDomain() ? '/crm' : role === 'admin' && adminRole === 'super-admin' ? superAdminUrl('/admin') : '/'} className={cn('mb-8 flex items-center gap-3', role === 'citizen' && 'hidden md:flex')}>
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
           {role === 'admin' && adminRole === 'super-admin' ? <ShieldCheck size={24} className="text-mugla-navy"/> : <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>}
         </span>
-        <span className="font-bold leading-tight">{role === 'admin' && adminRole === 'super-admin' ? 'Super Admin' : 'Mugla'}<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
+        <span className="font-bold leading-tight">{role === 'admin' && isCrmDomain() ? 'CRM' : role === 'admin' && adminRole === 'super-admin' ? 'Super Admin' : 'Mugla'}<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
       </Link>
       <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {
@@ -92,7 +98,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
       </nav>
       {role === 'admin' && adminRole === 'super-admin' && (
         <section className="mt-auto hidden rounded-lg border border-white/10 bg-white/5 p-3 md:block">
-          <p className="mb-2 text-[11px] font-black uppercase tracking-wider text-white/45">Portal Linkleri</p>
+          <p className="mb-2 text-[11px] font-black uppercase tracking-wider text-white/45">Platform Merkezi</p>
           <div className="grid gap-2">
             {superAdminPortalLinks.map((item) => (
               <a key={item.label} href={item.url} className="group rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white/75 transition hover:bg-white hover:text-mugla-navy">
@@ -100,7 +106,6 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
                   <span>{item.label}</span>
                   <ExternalLink size={13}/>
                 </span>
-                <span className="mt-1 block truncate text-[10px] font-semibold opacity-65">{item.url.replace('https://', '')}</span>
               </a>
             ))}
           </div>
