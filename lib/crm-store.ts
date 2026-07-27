@@ -92,7 +92,30 @@ export function engagementScore(citizen:Citizen){
 export function useCrm(){
   const[citizens,setCitizens]=useState<Citizen[]>([])
   const[campaigns,setCampaigns]=useState<Campaign[]>([])
-  useEffect(()=>{const sync=()=>{setCitizens(mergedCitizens());setCampaigns(read<Campaign>(CAMPAIGNS));void readRemoteUsers().then(users=>setCitizens(mergedCitizens(users.map(userToCitizen))))};sync();window.addEventListener('storage',sync);window.addEventListener(EVENT,sync);window.addEventListener(AUTH_USERS_CHANGED_EVENT,sync);return()=>{window.removeEventListener('storage',sync);window.removeEventListener(EVENT,sync);window.removeEventListener(AUTH_USERS_CHANGED_EVENT,sync)}},[])
+  useEffect(()=>{
+    const sync=()=>{setCitizens(mergedCitizens());setCampaigns(read<Campaign>(CAMPAIGNS))}
+    const syncRemote=async()=>{
+      sync()
+      const users=await readRemoteUsers()
+      setCitizens(mergedCitizens(users.map(userToCitizen)))
+    }
+    sync()
+    void syncRemote()
+    const remoteInterval=window.setInterval(()=>void syncRemote(),15000)
+    const syncOnFocus=()=>void syncRemote()
+    const syncOnAuthChange=()=>void syncRemote()
+    window.addEventListener('storage',sync)
+    window.addEventListener(EVENT,sync)
+    window.addEventListener(AUTH_USERS_CHANGED_EVENT,syncOnAuthChange)
+    window.addEventListener('focus',syncOnFocus)
+    return()=>{
+      window.clearInterval(remoteInterval)
+      window.removeEventListener('storage',sync)
+      window.removeEventListener(EVENT,sync)
+      window.removeEventListener(AUTH_USERS_CHANGED_EVENT,syncOnAuthChange)
+      window.removeEventListener('focus',syncOnFocus)
+    }
+  },[])
   const save=useCallback(<T,>(key:string,value:T[])=>{localStorage.setItem(key,JSON.stringify(value));window.dispatchEvent(new Event(EVENT))},[])
   const addCitizen=useCallback((input:Omit<Citizen,'id'|'createdAt'>)=>save(CITIZENS,[{...input,id:crypto.randomUUID(),createdAt:new Date().toISOString()},...read<Citizen>(CITIZENS)]),[save])
   const removeCitizen=useCallback((id:string)=>save(CITIZENS,read<Citizen>(CITIZENS).filter(x=>x.id!==id)),[save])

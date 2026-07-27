@@ -201,23 +201,33 @@ export async function addAdminAccount(input: {name: string; email: string; role:
   return account
 }
 
-export async function changeOwnAdminPassword(input: {actor: AdminAccount; currentPassword: string; newPassword: string}) {
-  if (input.newPassword.length < 8) throw new Error('Yeni sifre en az 8 karakter olmalidir.')
+export async function changeOwnAdminProfile(input: {actor: AdminAccount; currentPassword: string; email?: string; newPassword?: string}) {
+  const nextEmail = input.email?.trim().toLocaleLowerCase('tr')
+  const nextPassword = input.newPassword?.trim()
+  if (nextPassword && nextPassword.length < 8) throw new Error('Yeni sifre en az 8 karakter olmalidir.')
   const accounts = await ensureSeedAccount()
   const account = accounts.find(item => item.id === input.actor.id)
   if (!account) throw new Error('Oturum bulunamadi.')
   if (await derive(input.currentPassword, base64ToBytes(account.salt)) !== account.passwordHash) throw new Error('Mevcut sifre hatali.')
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const passwordHash = await derive(input.newPassword, salt)
+  if (nextEmail && accounts.some(item => item.id !== account.id && item.email === nextEmail)) throw new Error('Bu e-posta baska bir yetkili hesabinda tanimli.')
+  const salt = nextPassword ? crypto.getRandomValues(new Uint8Array(16)) : null
+  const passwordHash = salt && nextPassword ? await derive(nextPassword, salt) : null
   const updated = accounts.map(item => item.id === account.id ? {
     ...item,
-    passwordHash,
-    salt: bytesToBase64(salt),
-    passwordPreview: encodePasswordPreview(input.newPassword),
+    email: nextEmail || item.email,
+    ...(passwordHash && salt && nextPassword ? {
+      passwordHash,
+      salt: bytesToBase64(salt),
+      passwordPreview: encodePasswordPreview(nextPassword),
+    } : {}),
   } : item)
   saveAccounts(updated)
   void upsertRemoteAccounts(updated)
   return updated.find(item => item.id === account.id) ?? null
+}
+
+export async function changeOwnAdminPassword(input: {actor: AdminAccount; currentPassword: string; newPassword: string}) {
+  return changeOwnAdminProfile(input)
 }
 
 export async function revealOwnAdminPassword(actor: AdminAccount) {

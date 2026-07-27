@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import {FormEvent, useEffect, useRef, useState} from 'react'
+import {FormEvent, type ReactNode, useEffect, useRef, useState} from 'react'
 import Link from 'next/link'
 import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
@@ -8,7 +8,7 @@ import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
-import {addAdminAccount, changeOwnAdminPassword, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
+import {addAdminAccount, changeOwnAdminProfile, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
 import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, syncAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
@@ -16,7 +16,7 @@ import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
-import {citizenUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {citizenUrl, isMunicipalityDomain, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -39,6 +39,7 @@ type VotingRecord = {
   rules: string[]
   status: 'Taslak' | 'Planlandı' | 'Aktif' | 'Tamamlandı' | 'Sonuçlandı' | 'Arşiv'
   createdAt: string
+  updatedAt?: string
 }
 
 const roles: {value: AdminRole; label: string; note: string}[] = [
@@ -244,6 +245,7 @@ function SuperAdminPlatformPanel({
   contactRecords,
   auditRecords,
   votingRecords,
+  peopleManagementPanel,
 }: {
   accounts: AdminAccount[]
   projects: ProjectRecord[]
@@ -251,6 +253,7 @@ function SuperAdminPlatformPanel({
   contactRecords: ContactRecord[]
   auditRecords: AuditRecord[]
   votingRecords: VotingRecord[]
+  peopleManagementPanel: ReactNode
 }) {
   const [manualMunicipalities, setManualMunicipalities] = useState<ManualMunicipality[]>([])
   const [municipalityFormOpen, setMunicipalityFormOpen] = useState(false)
@@ -443,6 +446,8 @@ function SuperAdminPlatformPanel({
         </Card>
       </section>
 
+      {peopleManagementPanel}
+
       <section className="grid gap-6 xl:grid-cols-2">
         <Card id="module-4" className="rounded-xl shadow-sm">
           <CardHeader><p className="text-xs font-bold tracking-widest text-mugla-cyan">VATANDAŞ YÖNETİMİ</p><h2 className="text-xl font-bold">Platformdaki Vatandaşlar</h2></CardHeader>
@@ -508,6 +513,61 @@ function projectCategoryLabel(project: ProjectRecord) {
 
 function topicLabel(topic: ContactRecord['topic']) {
   return topic === 'Gorus' ? 'Gorus' : topic === 'Oneri' ? 'Oneri' : 'Soru'
+}
+
+function votingRecordsApiUrl() {
+  if (typeof window === 'undefined' || isMunicipalityDomain()) return '/api/votings'
+  return municipalityUrl('/api/votings')
+}
+
+function readLocalVotingRecords(): VotingRecord[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const value = JSON.parse(localStorage.getItem(VOTINGS_KEY) ?? '[]')
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
+}
+
+function sortVotingRecords(records: VotingRecord[]) {
+  return [...records].sort((a, b) => String(b.updatedAt ?? b.createdAt).localeCompare(String(a.updatedAt ?? a.createdAt)))
+}
+
+function mergeVotingRecords(records: VotingRecord[]) {
+  const map = new Map<string, VotingRecord>()
+  records.forEach(record => {
+    const current = map.get(record.id)
+    const recordTime = String(record.updatedAt ?? record.createdAt)
+    const currentTime = String(current?.updatedAt ?? current?.createdAt ?? '')
+    if (!current || recordTime.localeCompare(currentTime) >= 0) map.set(record.id, record)
+  })
+  return sortVotingRecords(Array.from(map.values()))
+}
+
+function saveLocalVotingRecords(records: VotingRecord[]) {
+  localStorage.setItem(VOTINGS_KEY, JSON.stringify(sortVotingRecords(records)))
+}
+
+async function readRemoteVotingRecords() {
+  if (typeof window === 'undefined') return []
+  try {
+    const response = await fetch(votingRecordsApiUrl(), {cache: 'no-store'})
+    const payload = await response.json().catch(() => null)
+    if (response.ok && Array.isArray(payload?.records)) return payload.records as VotingRecord[]
+  } catch {}
+  return []
+}
+
+async function upsertRemoteVotingRecords(records: VotingRecord[]) {
+  if (typeof window === 'undefined' || !records.length) return
+  try {
+    await fetch(votingRecordsApiUrl(), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({records}),
+    })
+  } catch {}
 }
 
 function csvCell(value: unknown) {
@@ -819,7 +879,7 @@ export default function Admin() {
   const isDistrictStaff = activeRole === 'yetkili'
   const isEvaluator = activeRole === 'degerlendirici'
   const isCrmRole = activeRole === 'crm'
-  const canManagePeople = isSuperAdmin
+  const canManagePeople = isSuperAdmin && isSuperAdminDomain()
   const canSeeSystem = isSuperAdmin
   const canSeeProjects = !isCrmRole
   const canReviewProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
@@ -926,17 +986,33 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    try {
-      const value = JSON.parse(localStorage.getItem(VOTINGS_KEY) ?? '[]')
-      setVotingRecords(Array.isArray(value) ? value : [])
-    } catch {
-      setVotingRecords([])
+    const syncLocal = () => setVotingRecords(readLocalVotingRecords())
+    const syncRemote = async () => {
+      const local = readLocalVotingRecords()
+      const remote = await readRemoteVotingRecords()
+      const merged = mergeVotingRecords([...local, ...remote])
+      saveLocalVotingRecords(merged)
+      setVotingRecords(merged)
+      if (merged.length) void upsertRemoteVotingRecords(merged)
+    }
+    syncLocal()
+    void syncRemote()
+    const remoteInterval = window.setInterval(() => void syncRemote(), 15000)
+    const syncOnFocus = () => void syncRemote()
+    window.addEventListener('storage', syncLocal)
+    window.addEventListener('focus', syncOnFocus)
+    return () => {
+      window.clearInterval(remoteInterval)
+      window.removeEventListener('storage', syncLocal)
+      window.removeEventListener('focus', syncOnFocus)
     }
   }, [])
 
   function saveVotingRecords(next: VotingRecord[]) {
-    setVotingRecords(next)
-    localStorage.setItem(VOTINGS_KEY, JSON.stringify(next))
+    const records = mergeVotingRecords(next.map(record => ({...record, updatedAt: record.updatedAt ?? new Date().toISOString()})))
+    setVotingRecords(records)
+    saveLocalVotingRecords(records)
+    void upsertRemoteVotingRecords(records)
   }
 
   function submitProject(event: FormEvent<HTMLFormElement>) {
@@ -1201,30 +1277,40 @@ export default function Admin() {
     setPasswordVisible(true)
   }
 
-  async function submitOwnPassword(event: FormEvent<HTMLFormElement>) {
+  async function submitOwnProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!adminUser) return
     const formElement = event.currentTarget
     const form = new FormData(formElement)
+    const email = String(form.get('email')).trim()
     const currentPassword = String(form.get('currentPassword'))
     const newPassword = String(form.get('newPassword'))
     const confirmPassword = String(form.get('confirmPassword'))
+    const wantsPasswordChange = Boolean(newPassword || confirmPassword)
     if (newPassword !== confirmPassword) {
       setMessage('Yeni sifre tekrari eslesmiyor.')
       return
     }
+    if (!email) {
+      setMessage('E-posta alani zorunludur.')
+      return
+    }
+    if (!wantsPasswordChange && email.toLocaleLowerCase('tr') === adminUser.email) {
+      setMessage('Guncellenecek yeni bilgi girilmedi.')
+      return
+    }
     setPasswordChanging(true)
     try {
-      const updated = await changeOwnAdminPassword({actor: adminUser, currentPassword, newPassword})
+      const updated = await changeOwnAdminProfile({actor: adminUser, currentPassword, email, newPassword: wantsPasswordChange ? newPassword : undefined})
       if (updated) setAdminUser(updated)
-      setOwnPassword(newPassword)
+      if (wantsPasswordChange) setOwnPassword(newPassword)
       setPasswordVisible(false)
       formElement.reset()
-      setMessage('Sifren kendi sectigin yeni sifreyle guncellendi. Yeni sifreyi goz ikonuyla sadece kendi hesabinda gorebilirsin.')
-      writeAuditLog(adminUser, 'Kendi sifresini guncelledi')
+      setMessage(wantsPasswordChange ? 'E-posta ve/veya sifren guncellendi. Yeni bilgilerle belediye paneline girebilirsin.' : 'E-posta adresin guncellendi.')
+      writeAuditLog(adminUser, 'Kendi hesap bilgilerini guncelledi', {details: email})
       await refreshAccounts()
     } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : 'Sifre guncellenemedi.')
+      setMessage(cause instanceof Error ? cause.message : 'Hesap bilgileri guncellenemedi.')
     } finally {
       setPasswordChanging(false)
     }
@@ -1388,6 +1474,7 @@ export default function Admin() {
       rules,
       status: 'Taslak',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     saveVotingRecords([record, ...votingRecords])
     setVotingWizardOpen(false)
@@ -1413,7 +1500,7 @@ export default function Admin() {
         }
       })
     }
-    saveVotingRecords(votingRecords.map(item => item.id === id ? {...item, status} : item))
+    saveVotingRecords(votingRecords.map(item => item.id === id ? {...item, status, updatedAt: new Date().toISOString()} : item))
     setMessage(status === 'Aktif' ? 'Oylama yayınlandı; vatandaş panelinde oylama süreci açılır ve bildirim gönderilir.' : `Oylama ${status} durumuna alındı.`)
   }
 
@@ -1519,6 +1606,56 @@ export default function Admin() {
     value: scopedCitizens.filter(citizen => ageGroup(Number(citizen.age)) === group).length,
   }))
   const maxAgeGroup = Math.max(1, ...ageDistribution.map(item => item.value))
+  const peopleManagementPanel = peopleOpen && canManagePeople ? <Card id="yetkililer">
+    <CardHeader>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Yetkili kisiler</h2>
+          <p className="mt-1 text-sm text-mugla-navy/55">Bu alan vatandaş hesabı oluşturmaz. Vatandaşlar üye ol ekranından kendileri kayıt olur; burada yalnızca belediye personeli için yetkili hesap tanımlanır. Belediye panelinde görünmez; hesap kapsamını yalnızca super admin belirler.</p>
+        </div>
+        <a href={municipalityUrl('/admin/giris')} target="_blank" rel="noreferrer" className="inline-flex"><Button variant="outline"><LockKeyhole size={17}/> Belediye giris baglantisi</Button></a>
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <label><span className="mb-2 block text-sm font-semibold">Ad Soyad</span><input className={field} name="name" required minLength={3}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input className={field} name="email" type="email" required/></label>
+        <label><span className="mb-2 block text-sm font-semibold">Rol</span><select className={field} name="role" required>{assignableRoles.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
+        <label><span className="mb-2 block text-sm font-semibold">Gecici sifre</span><input className={field} name="password" type="password" required minLength={8}/></label>
+        <label><span className="mb-2 block text-sm font-semibold">İlçe kapsamı</span><select className={field} name="district" defaultValue=""><option value="">Tüm ilçeler / atanmış proje</option>{districts.map(district => <option key={district}>{district}</option>)}</select></label>
+        <label><span className="mb-2 block text-sm font-semibold">Birim</span><input className={field} name="department" placeholder="Fen işleri, ulaşım, CRM..."/></label>
+        <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Atanan proje kodları / ID</span><input className={field} name="assignedProjectIds" placeholder="MSB-2026-0001, MSB-2026-0002"/></label>
+        <fieldset className="md:col-span-2 xl:col-span-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
+          <legend className="px-2 text-sm font-black">Özel veri izinleri</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
+              <input type="checkbox" name="liveCitizenData" className="mt-1 h-4 w-4 accent-mugla-orange"/>
+              <span><b className="block">Canlı veri listesini görsün</b><small className="mt-1 block text-mugla-navy/45">Giriş/kayıt yapan vatandaşların tanımlı bilgilerini görür.</small></span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
+              <input type="checkbox" name="citizenDataExport" className="mt-1 h-4 w-4 accent-mugla-orange"/>
+              <span><b className="block">Excel/PDF dışa aktarabilsin</b><small className="mt-1 block text-mugla-navy/45">Canlı veri listesini dosya olarak indirebilir.</small></span>
+            </label>
+          </div>
+        </fieldset>
+        <div className="md:col-span-2 xl:col-span-4"><Button type="submit" variant="orange"><UserPlus size={17}/> Yetkili tanimla</Button></div>
+      </form>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Kisi</th><th>E-posta</th><th>Rol</th><th>Kapsam</th><th>Veri izni</th><th>Tanimlayan</th><th className="text-right">Islem</th></tr></thead>
+          <tbody>{accounts.map(account => <tr key={account.id} className="border-t border-mugla-navy/10">
+            <td className="py-4 font-semibold">{account.name}</td>
+            <td>{account.email}</td>
+            <td><span className="inline-flex items-center gap-2 rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65"><ShieldCheck size={13}/>{account.role}</span></td>
+            <td className="text-xs text-mugla-navy/55">{account.district || account.department || account.assignedProjectIds?.join(', ') || 'Tüm yetkili kapsam'}</td>
+            <td><div className="flex flex-wrap gap-1">{account.role === 'super-admin' || account.permissions?.liveCitizenData ? <span className="rounded-full bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700">Canlı veri</span> : <span className="rounded-full bg-mugla-sand px-2 py-1 text-[11px] font-bold text-mugla-navy/45">Kapalı</span>}{account.role === 'super-admin' || account.permissions?.citizenDataExport ? <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-bold text-mugla-cyan">Dışa aktar</span> : null}</div></td>
+            <td className="text-mugla-navy/45">{account.createdBy ?? 'sistem'}</td>
+            <td className="text-right">{account.role !== 'super-admin' && account.id !== adminUser?.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}>Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </CardContent>
+  </Card> : null
 
   if (isSuperAdmin && isSuperAdminDomain()) return <SuperAdminPlatformPanel
     accounts={accounts}
@@ -1527,6 +1664,7 @@ export default function Admin() {
     contactRecords={contactRecords}
     auditRecords={auditRecords}
     votingRecords={votingRecords}
+    peopleManagementPanel={peopleManagementPanel}
   />
 
   return <AdminAuthGate><AppShell role="admin">
@@ -1543,7 +1681,7 @@ export default function Admin() {
             <input className="w-full bg-transparent text-sm outline-none" placeholder="Ara: proje, ilçe, vatandaş"/>
           </label>
           <a href="#bildirimler" className="grid h-11 w-11 place-items-center rounded-xl border border-mugla-navy/10 bg-white text-mugla-navy/65 hover:text-mugla-orange"><Bell size={18}/></a>
-          <button type="button" onClick={() => setPeopleOpen(value => !value)} className="grid h-11 w-11 place-items-center rounded-xl border border-mugla-navy/10 bg-white text-mugla-navy/65 hover:text-mugla-cyan" aria-label="Profil"><UserRound size={18}/></button>
+          <a href="#hesabim" className="grid h-11 w-11 place-items-center rounded-xl border border-mugla-navy/10 bg-white text-mugla-navy/65 hover:text-mugla-cyan" aria-label="Profil"><UserRound size={18}/></a>
         </div>
       </div>
     </header>
@@ -1736,10 +1874,10 @@ export default function Admin() {
       {isSuperAdmin && <SuperAdminPortalAccess/>}
       {canSeeSystem && <SuperAdminSystemSecurity auditRecords={auditRecords}/>}
 
-      <Card>
+      <Card id="hesabim">
         <CardHeader>
           <h2 className="text-xl font-bold">Kendi hesabim</h2>
-          <p className="text-sm text-mugla-navy/55">Super admin, admin ve yetkili rollerinin tamami kendi hesabinin sifresini buradan istedigi yeni sifreyle guncelleyebilir. Sifre alani yalnizca oturumdaki kullanici icin acilir.</p>
+          <p className="text-sm text-mugla-navy/55">Super admin ilk e-posta ve yetki kapsamını tanımlar. Belediye paneline giren her yetkili burada yalnızca kendi e-posta adresini ve şifresini mevcut şifresiyle doğrulayarak değiştirebilir.</p>
         </CardHeader>
         <CardContent className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]">
           <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-5">
@@ -1769,61 +1907,16 @@ export default function Admin() {
               </div>
             </div>
           </section>
-          <form onSubmit={submitOwnPassword} className="grid gap-4 md:grid-cols-3">
+          <form onSubmit={submitOwnProfile} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input className={field} name="email" type="email" required defaultValue={adminUser?.email ?? ''}/></label>
             <label><span className="mb-2 block text-sm font-semibold">Mevcut sifre</span><input className={field} name="currentPassword" type="password" required minLength={8}/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Istediğiniz yeni sifre</span><input className={field} name="newPassword" type="password" required minLength={8}/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className={field} name="confirmPassword" type="password" required minLength={8}/></label>
-            <p className="text-sm leading-6 text-mugla-navy/50 md:col-span-3">Yeni sifre en az 8 karakter olabilir; kaydedildikten sonra yalnizca ilgili kullanici kendi hesabinda gorup tekrar degistirebilir.</p>
-            <div className="md:col-span-3"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Kendi sifremi guncelle'}</Button></div>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre</span><input className={field} name="newPassword" type="password" minLength={8}/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yeni sifre tekrar</span><input className={field} name="confirmPassword" type="password" minLength={8}/></label>
+            <p className="text-sm leading-6 text-mugla-navy/50 md:col-span-2 xl:col-span-4">E-posta değişikliği ve şifre değişikliği mevcut şifreyle doğrulanır. Şifre değiştirmek istemiyorsan yeni şifre alanlarını boş bırakabilirsin.</p>
+            <div className="md:col-span-2 xl:col-span-4"><Button type="submit" variant="orange" disabled={passwordChanging}><KeyRound size={17}/>{passwordChanging ? 'Guncelleniyor...' : 'Hesap bilgilerimi guncelle'}</Button></div>
           </form>
         </CardContent>
       </Card>
-
-      {peopleOpen && canManagePeople && <Card id="yetkililer">
-        <CardHeader>
-          <h2 className="text-xl font-bold">Yetkili kisiler</h2>
-          <p className="text-sm text-mugla-navy/55">Bu alan vatandaş hesabı oluşturmaz. Vatandaşlar üye ol ekranından kendileri kayıt olur; burada yalnızca belediye personeli için yetkili hesap tanımlanır.</p>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {canManagePeople ? <form onSubmit={submitPerson} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label><span className="mb-2 block text-sm font-semibold">Ad Soyad</span><input className={field} name="name" required minLength={3}/></label>
-            <label><span className="mb-2 block text-sm font-semibold">E-posta</span><input className={field} name="email" type="email" required/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Rol</span><select className={field} name="role" required>{assignableRoles.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>
-            <label><span className="mb-2 block text-sm font-semibold">Gecici sifre</span><input className={field} name="password" type="password" required minLength={8}/></label>
-            <label><span className="mb-2 block text-sm font-semibold">İlçe kapsamı</span><select className={field} name="district" defaultValue=""><option value="">Tüm ilçeler / atanmış proje</option>{districts.map(district => <option key={district}>{district}</option>)}</select></label>
-            <label><span className="mb-2 block text-sm font-semibold">Birim</span><input className={field} name="department" placeholder="Fen işleri, ulaşım, CRM..."/></label>
-            <label className="md:col-span-2"><span className="mb-2 block text-sm font-semibold">Atanan proje kodları / ID</span><input className={field} name="assignedProjectIds" placeholder="MSB-2026-0001, MSB-2026-0002"/></label>
-            <fieldset className="md:col-span-2 xl:col-span-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4">
-              <legend className="px-2 text-sm font-black">Özel veri izinleri</legend>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
-                  <input type="checkbox" name="liveCitizenData" className="mt-1 h-4 w-4 accent-mugla-orange"/>
-                  <span><b className="block">Canlı veri listesini görsün</b><small className="mt-1 block text-mugla-navy/45">Giriş/kayıt yapan vatandaşların tanımlı bilgilerini görür.</small></span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm">
-                  <input type="checkbox" name="citizenDataExport" className="mt-1 h-4 w-4 accent-mugla-orange"/>
-                  <span><b className="block">Excel/PDF dışa aktarabilsin</b><small className="mt-1 block text-mugla-navy/45">Canlı veri listesini dosya olarak indirebilir.</small></span>
-                </label>
-              </div>
-            </fieldset>
-            <div className="md:col-span-2 xl:col-span-4"><Button type="submit" variant="orange"><UserPlus size={17}/> Yetkili tanimla</Button></div>
-          </form> : <p className="rounded-2xl bg-mugla-sand/70 p-4 text-sm font-semibold text-mugla-navy/55">Hesap ekleme ve silme yetkisi sadece super admin hesabindadir.</p>}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="pb-3">Kisi</th><th>E-posta</th><th>Rol</th><th>Kapsam</th><th>Veri izni</th><th>Tanimlayan</th><th className="text-right">Islem</th></tr></thead>
-              <tbody>{accounts.map(account => <tr key={account.id} className="border-t border-mugla-navy/10">
-                <td className="py-4 font-semibold">{account.name}</td>
-                <td>{account.email}</td>
-                <td><span className="inline-flex items-center gap-2 rounded-full bg-mugla-sand px-3 py-1 text-xs font-bold text-mugla-navy/65"><ShieldCheck size={13}/>{account.role}</span></td>
-                <td className="text-xs text-mugla-navy/55">{account.district || account.department || account.assignedProjectIds?.join(', ') || 'Tüm yetkili kapsam'}</td>
-                <td><div className="flex flex-wrap gap-1">{account.role === 'super-admin' || account.permissions?.liveCitizenData ? <span className="rounded-full bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700">Canlı veri</span> : <span className="rounded-full bg-mugla-sand px-2 py-1 text-[11px] font-bold text-mugla-navy/45">Kapalı</span>}{account.role === 'super-admin' || account.permissions?.citizenDataExport ? <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-bold text-mugla-cyan">Dışa aktar</span> : null}</div></td>
-                <td className="text-mugla-navy/45">{account.createdBy ?? 'sistem'}</td>
-                <td className="text-right">{canManagePeople && account.role !== 'super-admin' && account.id !== adminUser.id ? <button aria-label={`${account.name} hesabini sil`} className="inline-flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100" onClick={() => deletePerson(account.id)}>Sil</button> : <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Sistemde</span>}</td>
-              </tr>)}</tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>}
 
       {canSeeCategories && <Card id="ayarlar">
         <CardHeader>
