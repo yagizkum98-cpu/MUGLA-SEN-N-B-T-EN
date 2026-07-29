@@ -85,7 +85,7 @@ export function AppShell({children, role = 'citizen'}: {children: React.ReactNod
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1 shadow-sm">
           {role === 'admin' && adminRole === 'super-admin' ? <ShieldCheck size={24} className="text-mugla-navy"/> : <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>}
         </span>
-        <span className="font-bold leading-tight">{role === 'admin' && isCrmDomain() ? 'CRM' : role === 'admin' && adminRole === 'super-admin' ? 'Super Admin' : 'Mugla'}<br/><small className="font-normal tracking-wider text-white/65">Senin Butcen</small></span>
+        <span className="font-bold leading-tight">{role === 'admin' && isCrmDomain() ? 'CRM' : role === 'admin' && adminRole === 'super-admin' ? 'Super Admin' : 'Muğla'}<br/><small className="font-normal tracking-wider text-white/65">Bütçe Senin</small></span>
       </Link>
       <nav className={cn('flex gap-2 overflow-x-auto md:flex-col', role === 'citizen' && 'justify-around md:justify-start')}>
         {links.map((link) => {

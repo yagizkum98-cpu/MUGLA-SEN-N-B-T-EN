@@ -17,7 +17,7 @@ export default function BookletPage() {
     <section className="mx-auto max-w-5xl px-5 py-10">
       <div className="rounded-lg border border-mugla-navy/10 bg-white p-8">
         <span className="grid h-14 w-14 place-items-center rounded-lg bg-mugla-sand text-mugla-orange"><FileText size={28}/></span>
-        <p className="mt-6 text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Muğla Senin Bütçen Kitapçığı</p>
+        <p className="mt-6 text-xs font-bold uppercase tracking-[.22em] text-mugla-orange">Muğla Bütçe Senin Kitapçığı</p>
         <h1 className="mt-3 text-3xl font-black md:text-4xl">PDF alanı hazır.</h1>
         <p className="mt-4 max-w-2xl leading-7 text-mugla-navy/60">Kitapçık dosyası hazır olduğunda bu sekmede yayınlanacak.</p>
         <div className="mt-6 rounded-lg border border-dashed border-mugla-navy/20 bg-mugla-sand p-5 text-sm text-mugla-navy/60">

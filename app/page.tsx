@@ -206,10 +206,10 @@ export default function Home() {
           <span className="grid h-12 w-12 place-items-center rounded-full bg-white p-1 shadow-sm">
             <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
           </span>
-          <span className="text-sm font-bold leading-tight">Muğla Senin<br/><span className="text-mugla-orange">Bütçen</span></span>
+          <span className="text-sm font-bold leading-tight">Muğla<br/><span className="text-mugla-orange">Bütçe Senin</span></span>
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
-          <Link href="/">Muğla Senin Bütçen</Link>
+          <Link href="/">Muğla Bütçe Senin</Link>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>
@@ -227,7 +227,7 @@ export default function Home() {
           <div className="mt-7 space-y-5 text-sm leading-7 text-mugla-navy/70 md:text-base">
             <p><strong className="text-mugla-navy">Değerli Muğlalılar,</strong></p>
             <p>Muğla Büyükşehir Belediyesi olarak katılımcı, şeffaf ve demokratik yerel yönetim anlayışımız doğrultusunda kentimizin geleceğini sizlerle birlikte şekillendiriyoruz.</p>
-            <p>Senin Bütçen uygulamasıyla, kentimizin ihtiyaçlarını en iyi bilen Muğlalıların fikirlerini karar alma süreçlerinin merkezine taşıyoruz. Siz de çevreden ulaşıma, kültür ve sanattan gençlik, spor, tarım, kırsal kalkınma ve sosyal hizmetlere kadar birçok alanda yaşam kalitesini artıracak proje önerilerinizle bu sürece katkı sağlayabilirsiniz.</p>
+            <p>Bütçe Senin uygulamasıyla, kentimizin ihtiyaçlarını en iyi bilen Muğlalıların fikirlerini karar alma süreçlerinin merkezine taşıyoruz. Siz de çevreden ulaşıma, kültür ve sanattan gençlik, spor, tarım, kırsal kalkınma ve sosyal hizmetlere kadar birçok alanda yaşam kalitesini artıracak proje önerilerinizle bu sürece katkı sağlayabilirsiniz.</p>
             <p>Her bir fikir, Muğla'nın daha yaşanabilir, sürdürülebilir, erişilebilir ve güçlü bir kent olmasına katkı sunacaktır. Katılımcı bütçe modeliyle ortak aklı büyütüyor, kaynaklarımızı vatandaşlarımızın öncelikleri doğrultusunda birlikte planlıyoruz.</p>
             <p>Muğla Büyükşehir Belediyesi olarak; doğasını koruyan, kültürünü yaşatan, üretimi destekleyen ve insan odaklı hizmet anlayışıyla geleceğe güvenle bakan bir Muğla'yı hep birlikte inşa edeceğimize inanıyoruz.</p>
             <p><strong className="text-mugla-navy">Gelin, Muğla'nın geleceğini birlikte tasarlayalım. Çünkü en değerli fikir sizden gelir.</strong></p>
@@ -272,7 +272,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-gradient-to-r from-mugla-navy/94 via-mugla-navy/74 to-mugla-navy/36"/>
       <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-16 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:py-20">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Muğla Senin Bütçen Katılımcı Bütçe Platformu</p>
+          <p className="text-xs font-bold uppercase tracking-[.24em] text-mugla-cyan">Muğla Bütçe Senin Katılımcı Bütçe Platformu</p>
           <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-5xl">Senin Fikrin, Muğla'nın Geleceği</h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/78">Muğla'yı daha yaşanabilir, daha sürdürülebilir ve daha güçlü bir kent haline getirecek fikirlerini paylaş. Her öneri değerlidir, her oy geleceğe atılan bir adımdır.</p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -318,7 +318,7 @@ export default function Home() {
         </Link>
         <Link href="/kitapcik" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
           <FileText className="text-mugla-green"/>
-          <h3 className="mt-4 text-xl font-bold">Muğla Senin Bütçen Kitapçığı</h3>
+          <h3 className="mt-4 text-xl font-bold">Muğla Bütçe Senin Kitapçığı</h3>
           <p className="mt-2 text-sm leading-6 text-mugla-navy/60">Kitapçık PDF’i hazır olduğunda bu sekmede yayınlanır.</p>
         </Link>
         <Link href="/iletisim" className="rounded-lg border border-mugla-navy/10 p-6 hover:border-mugla-orange">
@@ -351,7 +351,7 @@ export default function Home() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
         <span>© 2026 Muğla Büyükşehir Belediyesi</span>
         <div className="flex gap-4">
-          <a href="#mugla-senin-butcen">Muğla Senin Bütçen</a>
+          <a href="#mugla-senin-butcen">Muğla Bütçe Senin</a>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>

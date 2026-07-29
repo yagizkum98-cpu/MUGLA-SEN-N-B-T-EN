@@ -1677,7 +1677,7 @@ export default function Admin() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs font-bold tracking-[.2em] text-mugla-cyan">YÖNETİM MERKEZİ</p>
-          <h1 className="text-2xl font-bold">Muğla Senin Bütçen Yönetim Paneli</h1>
+          <h1 className="text-2xl font-bold">Muğla Bütçe Senin Yönetim Paneli</h1>
           <p className="mt-1 text-sm text-mugla-navy/55">{adminUser ? `${adminUser.name} - ${adminUser.role}` : 'Yetki kontrol ediliyor'}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

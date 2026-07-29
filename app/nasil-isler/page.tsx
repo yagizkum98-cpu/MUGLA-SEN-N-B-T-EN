@@ -266,7 +266,7 @@ export default function NasilIslerPage() {
           <strong>Birlikte Tasarlıyoruz.</strong>
         </div>
         <motion.div className="how-hero-content" initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }}>
-          <span>Muğla Senin Bütçen</span>
+          <span>Muğla Bütçe Senin</span>
           <h1>Bir Fikir, Bir Şehri Değiştirebilir.</h1>
           <p>
             Vatandaşların, gençlerin, girişimcilerin ve dünyanın dört bir yanından katılımcıların şehir için fikir
@@ -288,7 +288,7 @@ export default function NasilIslerPage() {
         </motion.div>
         <div className="app-demo-stage">
           <motion.div className="demo-phone" initial={{ y: 22, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }}>
-            <div className="demo-phone-top"><i/><span>Muğla Senin Bütçen</span></div>
+            <div className="demo-phone-top"><i/><span>Muğla Bütçe Senin</span></div>
             <div className="demo-screen-flow">
               {[
                 ['Fikir Gönder', 'Kent Bostanı', Lightbulb],

@@ -4,7 +4,7 @@ Shared source of truth for Codex/Claude handoff.
 
 ## Product Objective
 
-Bring Mugla Senin Butcen to a production-ready participatory budgeting service inspired by the functional scope of Istanbul Butce Senin, without copying Istanbul assets, copy, code, or visual identity.
+Bring Mugla Butce Senin to a production-ready participatory budgeting service inspired by the functional scope of Istanbul Butce Senin, without copying Istanbul assets, copy, code, or visual identity.
 
 ## Current Stack
 
