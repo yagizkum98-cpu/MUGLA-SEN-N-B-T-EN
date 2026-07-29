@@ -5,12 +5,12 @@ import {pbkdf2Sync, randomBytes} from 'crypto'
 const TABLE = 'project_records'
 const ADMIN_ACCOUNTS_ID = 'admin-accounts'
 const allowedOrigins = [
-  'https://muglaseninbutcen.vercel.app',
+  'https://muglabutcesenin.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
   'https://muglabutcesenin-belediye.vercel.app',
   'https://muglabutcesenin-crm.vercel.app',
   'https://muglabutcesenin-superadmin.vercel.app',
-  'https://api.muglaseninbutcen.com',
+  'https://api.muglabutcesenin.com',
 ]
 
 type StoredAdminAccount = Record<string, unknown> & {

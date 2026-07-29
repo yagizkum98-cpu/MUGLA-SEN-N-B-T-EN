@@ -1,11 +1,11 @@
 'use client'
 
-export const PUBLIC_DOMAIN = 'muglaseninbutcen.vercel.app'
+export const PUBLIC_DOMAIN = 'muglabutcesenin.vercel.app'
 export const CITIZEN_DOMAIN = 'muglabutcesenin-vatandas.vercel.app'
 export const MUNICIPALITY_DOMAIN = 'muglabutcesenin-belediye.vercel.app'
 export const SUPER_ADMIN_DOMAIN = 'muglabutcesenin-superadmin.vercel.app'
 export const CRM_DOMAIN = 'muglabutcesenin-crm.vercel.app'
-export const API_DOMAIN = 'api.muglaseninbutcen.com'
+export const API_DOMAIN = 'api.muglabutcesenin.com'
 
 function host() {
   return typeof location === 'undefined' ? '' : location.hostname

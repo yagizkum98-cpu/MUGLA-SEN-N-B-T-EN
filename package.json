@@ -1,5 +1,5 @@
 {
-  "name": "mugla-senin-butcen",
+  "name": "mugla-butce-senin",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

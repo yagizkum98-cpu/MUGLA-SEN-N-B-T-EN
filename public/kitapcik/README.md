@@ -1,3 +1,3 @@
 Place the booklet PDF here with this exact filename:
 
-`mugla-senin-butcen-kitapcigi.pdf`
+`mugla-butce-senin-kitapcigi.pdf`

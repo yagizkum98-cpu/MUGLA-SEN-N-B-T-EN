@@ -4,12 +4,12 @@ import {createClient} from '@supabase/supabase-js'
 const TABLE = 'project_records'
 const VOTING_RECORDS_ID = 'admin-voting-records'
 const allowedOrigins = [
-  'https://muglaseninbutcen.vercel.app',
+  'https://muglabutcesenin.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
   'https://muglabutcesenin-belediye.vercel.app',
   'https://muglabutcesenin-crm.vercel.app',
   'https://muglabutcesenin-superadmin.vercel.app',
-  'https://api.muglaseninbutcen.com',
+  'https://api.muglabutcesenin.com',
 ]
 
 type VotingRecord = {

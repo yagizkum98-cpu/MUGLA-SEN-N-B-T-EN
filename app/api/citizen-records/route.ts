@@ -6,12 +6,12 @@ const requiredTextFields=['id','name','email','phone','nationality','province','
 type IncomingCitizen=Record<string,unknown>&{id:string;name:string;email:string}
 type StoredCitizenRow={id:string;data:IncomingCitizen;updated_at:string}
 const allowedOrigins=[
-  'https://muglaseninbutcen.vercel.app',
+  'https://muglabutcesenin.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
   'https://muglabutcesenin-belediye.vercel.app',
   'https://muglabutcesenin-crm.vercel.app',
   'https://muglabutcesenin-superadmin.vercel.app',
-  'https://api.muglaseninbutcen.com',
+  'https://api.muglabutcesenin.com',
 ]
 
 declare global{

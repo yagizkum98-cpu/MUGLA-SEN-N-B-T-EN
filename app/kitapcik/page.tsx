@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {ArrowLeft, FileText} from 'lucide-react'
 import {SiteUserMenu} from '@/components/site-user-menu'
 
-const pdfPath = '/kitapcik/mugla-senin-butcen-kitapcigi.pdf'
+const pdfPath = '/kitapcik/mugla-butce-senin-kitapcigi.pdf'
 
 export default function BookletPage() {
   return <main className="min-h-screen bg-mugla-sand text-mugla-navy">
@@ -21,7 +21,7 @@ export default function BookletPage() {
         <h1 className="mt-3 text-3xl font-black md:text-4xl">PDF alanı hazır.</h1>
         <p className="mt-4 max-w-2xl leading-7 text-mugla-navy/60">Kitapçık dosyası hazır olduğunda bu sekmede yayınlanacak.</p>
         <div className="mt-6 rounded-lg border border-dashed border-mugla-navy/20 bg-mugla-sand p-5 text-sm text-mugla-navy/60">
-          Beklenen dosya yolu: <b className="text-mugla-navy">public/kitapcik/mugla-senin-butcen-kitapcigi.pdf</b>
+          Beklenen dosya yolu: <b className="text-mugla-navy">public/kitapcik/mugla-butce-senin-kitapcigi.pdf</b>
         </div>
         <Link href={pdfPath} className="mt-6 inline-flex rounded-full bg-mugla-orange px-5 py-3 text-sm font-bold text-white">PDF’i aç</Link>
       </div>

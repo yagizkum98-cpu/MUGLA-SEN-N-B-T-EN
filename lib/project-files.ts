@@ -1,6 +1,6 @@
 'use client'
 
-const DB_NAME='mugla-senin-butcen-files'
+const DB_NAME='mugla-butce-senin-files'
 const STORE='project-files'
 
 function openDatabase(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}

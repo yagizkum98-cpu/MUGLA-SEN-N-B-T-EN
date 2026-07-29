@@ -1,3 +1,3 @@
-# MUGLA SENIN BUTCEN
+# MUĞLA BÜTÇE SENİN
 
 Next.js katilimci butce platformu.

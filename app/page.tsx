@@ -219,7 +219,7 @@ export default function Home() {
       </div>
     </header>
 
-    <section id="mugla-senin-butcen" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
+    <section id="mugla-butce-senin" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
         <article className="fade-up-card rounded-lg border border-mugla-navy/10 bg-mugla-sand/50 p-6 md:p-8">
           <p className="text-xs font-black uppercase tracking-[.22em] text-mugla-orange">MUĞLA BÜYÜKŞEHİR BELEDİYESİ</p>
@@ -351,7 +351,7 @@ export default function Home() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
         <span>© 2026 Muğla Büyükşehir Belediyesi</span>
         <div className="flex gap-4">
-          <a href="#mugla-senin-butcen">Muğla Bütçe Senin</a>
+          <a href="#mugla-butce-senin">Muğla Bütçe Senin</a>
           <Link href="/projeler">Projeler</Link>
           <Link href="/sss">S.S.S.</Link>
           <Link href="/kitapcik">Kitapçık</Link>

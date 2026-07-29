@@ -9,12 +9,12 @@ type IncomingProject=Record<string,unknown>&{id:string;projectCode:string;title:
 type DeletedProject={id:string;deleted:true;deletedAt:string}
 type StoredProjectRow={id:string;data:IncomingProject|DeletedProject;updated_at:string}
 const allowedOrigins=[
-  'https://muglaseninbutcen.vercel.app',
+  'https://muglabutcesenin.vercel.app',
   'https://muglabutcesenin-vatandas.vercel.app',
   'https://muglabutcesenin-belediye.vercel.app',
   'https://muglabutcesenin-crm.vercel.app',
   'https://muglabutcesenin-superadmin.vercel.app',
-  'https://api.muglaseninbutcen.com',
+  'https://api.muglabutcesenin.com',
 ]
 
 declare global{

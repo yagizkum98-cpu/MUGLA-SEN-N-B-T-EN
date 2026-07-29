@@ -75,8 +75,8 @@ export type ProjectRecord={
 export type NewProject=Omit<ProjectRecord,'id'|'projectCode'|'votes'|'progress'|'createdAt'|'moderationStatus'> & {moderationStatus?:ProjectModerationStatus}
 type RemoteProjectsPayload={projects:ProjectRecord[];deletedIds:string[]}
 
-const STORAGE_KEY='mugla-senin-butcen-projects-v1'
-const DELETED_STORAGE_KEY='mugla-senin-butcen-deleted-projects-v1'
+const STORAGE_KEY='mugla-butce-senin-projects-v1'
+const DELETED_STORAGE_KEY='mugla-butce-senin-deleted-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
 const REMOTE_TABLE='project_records'
 const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'

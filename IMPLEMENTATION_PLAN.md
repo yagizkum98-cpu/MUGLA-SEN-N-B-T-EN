@@ -4,7 +4,7 @@ Shared source of truth for Codex/Claude handoff.
 
 ## Product Objective
 
-Bring Mugla Butce Senin to a production-ready participatory budgeting service inspired by the functional scope of Istanbul Butce Senin, without copying Istanbul assets, copy, code, or visual identity.
+Bring MUĞLA BÜTÇE SENİN to a production-ready participatory budgeting service inspired by the functional scope of Istanbul Butce Senin, without copying Istanbul assets, copy, code, or visual identity.
 
 ## Current Stack
 
@@ -14,7 +14,7 @@ Bring Mugla Butce Senin to a production-ready participatory budgeting service in
 - Supabase tables: `project_records`, `citizen_records`
 - Auth: local citizen/admin helpers with hashed passwords and session storage
 - Domains:
-  - Landing: `https://muglaseninbutcen.vercel.app/`
+  - Landing: `https://muglabutcesenin.vercel.app/`
   - Dashboard: `https://muglabutcesenin-dashboard.vercel.app/`
   - Municipality: `https://muglabutcesenin-belediye.vercel.app/`
   - Citizen: `https://muglabutcesenin-vatandas.vercel.app/`

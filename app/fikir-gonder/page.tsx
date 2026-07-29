@@ -221,7 +221,7 @@ export default function IdeaForm(){
     <header className="border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-mugla-navy/60 hover:text-mugla-navy"><ArrowLeft size={17}/> Ana sayfaya don</Link>
-        <span className="hidden text-xs font-bold tracking-[.18em] text-mugla-orange sm:block">MUGLA SENIN BUTCEN</span>
+        <span className="hidden text-xs font-bold tracking-[.18em] text-mugla-orange sm:block">MUĞLA BÜTÇE SENİN</span>
       </div>
     </header>
 
