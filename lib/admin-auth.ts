@@ -1,7 +1,5 @@
 'use client'
 
-import {apiUrl} from '@/lib/domain-routing'
-
 export type AdminRole = 'super-admin' | 'belediye-admin' | 'ilce-yoneticisi' | 'degerlendirici' | 'crm' | 'admin' | 'yetkili'
 
 export type AdminAccount = {
@@ -30,7 +28,7 @@ const FALLBACK_SUPER_ADMIN_EMAIL = 'super.admin@mugla.bel.tr'
 const FALLBACK_SUPER_ADMIN_PASSWORD = 'Superadmin4848!'
 
 function adminAccountsApiUrl() {
-  return apiUrl('/api/admin-accounts')
+  return '/api/admin-accounts'
 }
 
 export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin'> {
@@ -198,7 +196,7 @@ export async function addAdminAccount(input: {name: string; email: string; role:
   const account = await createAccount({...input, email, createdBy: input.actor.email})
   const updated = mergeAccounts([account, ...accounts])
   saveAccounts(updated)
-  void upsertRemoteAccounts([account])
+  await upsertRemoteAccounts([account])
   return account
 }
 
