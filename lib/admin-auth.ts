@@ -142,14 +142,16 @@ async function createAccount(input: {name: string; email: string; role: AdminRol
 
 async function ensureSeedAccount() {
   const accounts = mergeAccounts([...readRawAccounts(), ...await readRemoteAccounts()])
+  const configuredSuperAdmin = accounts.find(account => account.role === 'super-admin' && account.email === FALLBACK_SUPER_ADMIN_EMAIL)
+  if (configuredSuperAdmin) return accounts
+
+  const seed = await createFallbackSeedAccount()
   if (accounts.length) {
-    const superAdmin = accounts.find(account => account.role === 'super-admin')
-    const updated = superAdmin ? accounts : [await createFallbackSeedAccount(), ...accounts]
+    const updated = mergeAccounts([seed, ...accounts])
     saveAccounts(updated)
-    void upsertRemoteAccounts(updated)
+    void upsertRemoteAccounts([seed])
     return updated
   }
-  const seed = await createFallbackSeedAccount()
   saveAccounts([seed])
   void upsertRemoteAccounts([seed])
   return [seed]
