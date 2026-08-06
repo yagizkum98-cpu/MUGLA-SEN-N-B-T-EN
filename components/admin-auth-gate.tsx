@@ -5,7 +5,7 @@ import {useEffect, useState} from 'react'
 import {LockKeyhole} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {getCurrentAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
-import {crmUrl, isAdminAuthorityDomain, isCrmDomain, isMunicipalityDomain, isSuperAdminDomain, municipalityUrl, superAdminUrl} from '@/lib/domain-routing'
+import {isAdminAuthorityDomain, isCrmDomain, isSuperAdminDomain, municipalityUrl, superAdminUrl} from '@/lib/domain-routing'
 
 export function AdminAuthGate({children}: {children: React.ReactNode}) {
   const [admin, setAdmin] = useState<AdminAccount | null>(null)
@@ -32,8 +32,8 @@ export function AdminAuthGate({children}: {children: React.ReactNode}) {
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-mugla-navy text-white"><LockKeyhole size={28}/></span>
       <p className="mt-6 text-xs font-bold tracking-[.2em] text-mugla-orange">{isSuperAdminDomain() ? 'SUPER ADMIN GIRISI GEREKLI' : isCrmDomain() ? 'CRM GIRISI GEREKLI' : 'BELEDIYE PANELI GIRISI GEREKLI'}</p>
       <h1 className="mt-2 text-3xl font-bold">Bu alan yetkili kullanicilar icindir.</h1>
-      <p className="mt-3 leading-7 text-mugla-navy/55">{isCrmDomain() ? 'Sadece super admin tarafindan CRM yetkilisi olarak tanimlanan hesaplar e-posta ve sifreyle girebilir.' : 'Sadece super admin, belediye admini, ilce yoneticisi, degerlendirici ve CRM yetkilisi olarak tanimli hesaplar e-posta ve sifreyle girebilir.'}</p>
-      <Link href={isSuperAdminDomain() ? superAdminUrl('/admin/giris') : isCrmDomain() ? crmUrl('/admin/giris') : '/admin/giris'} className="mt-7 inline-flex"><Button variant="orange"><LockKeyhole size={17}/>{isSuperAdminDomain() ? 'Super admin girisi' : isCrmDomain() ? 'CRM girisi' : 'Belediye paneli girisi'}</Button></Link>
+      <p className="mt-3 leading-7 text-mugla-navy/55">{isCrmDomain() ? 'CRM verileri belediye paneline taşındı. Sadece super admin ve tanımlı CRM yetkilisi belediye panelindeki CRM alanını görebilir.' : 'Sadece tanimli belediye yetkilileri e-posta ve sifreyle panele girebilir.'}</p>
+      <Link href={isSuperAdminDomain() ? superAdminUrl('/admin/giris') : '/admin/giris'} className="mt-7 inline-flex"><Button variant="orange"><LockKeyhole size={17}/>{isSuperAdminDomain() ? 'Super admin girisi' : 'Belediye paneli girisi'}</Button></Link>
     </section>
   </main>
 
@@ -54,16 +54,6 @@ export function AdminAuthGate({children}: {children: React.ReactNode}) {
       <h1 className="mt-2 text-3xl font-bold">Bu portal sadece CRM ekibine aciktir.</h1>
       <p className="mt-3 leading-7 text-mugla-navy/55">Belediye admini, ilce yoneticisi ve proje ekipleri operasyon panelinden devam etmelidir.</p>
       <Link href={municipalityUrl('/admin')} className="mt-7 inline-flex"><Button variant="orange">Belediye paneline git</Button></Link>
-    </section>
-  </main>
-
-  if (isMunicipalityDomain() && normalizeAdminRole(admin.role) === 'crm') return <main className="grid min-h-screen place-items-center bg-mugla-sand p-6">
-    <section className="w-full max-w-lg rounded-3xl bg-white p-8 text-center shadow-soft">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-mugla-navy text-white"><LockKeyhole size={28}/></span>
-      <p className="mt-6 text-xs font-bold tracking-[.2em] text-mugla-orange">CRM PORTALI AYRI</p>
-      <h1 className="mt-2 text-3xl font-bold">CRM personeli destek portalindan devam eder.</h1>
-      <p className="mt-3 leading-7 text-mugla-navy/55">CRM; cagri merkezi, WhatsApp, e-posta, destek, talep, sikayet, memnuniyet ve canli destek sureclerini yurutur. Proje onayi, oylama, yetki ve sistem ayarlari bu rolde kapali kalir.</p>
-      <a href={crmUrl('/crm')} className="mt-7 inline-flex"><Button variant="orange">CRM paneline git</Button></a>
     </section>
   </main>
 

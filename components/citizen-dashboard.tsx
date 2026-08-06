@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import {FormEvent, useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, Bell, Camera, CheckCircle2, FileBarChart, FileText, Home, KeyRound, Lightbulb, LockKeyhole, LogOut, Phone, Plus, ShieldCheck, ShoppingCart, Trash2, Trophy, UserRound, Vote} from 'lucide-react'
+import {ArrowUpRight, Bell, CalendarDays, Camera, CheckCircle2, Clock3, FileBarChart, FileText, Home, KeyRound, Lightbulb, LockKeyhole, LogOut, MapPin, Phone, Plus, ShieldCheck, ShoppingCart, Trash2, Trophy, UserRound, Vote} from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {changeCurrentUserPassword, consumeCitizenSessionTransfer, getCurrentUser, logoutUser, updateCurrentUserActivity, updateCurrentUserProfile, type LocalUser} from '@/lib/local-auth'
 import {formatBudget, useProjects} from '@/lib/projects-store'
 import {useVoteBasket, VOTE_CREDIT_LIMIT} from '@/lib/vote-basket'
+import {useCivicUpdates} from '@/lib/civic-updates'
 
 function Metric({label, value, note, icon: Icon}: {label: string; value: string; note: string; icon: typeof UserRound}) {
   return <Card><CardContent className="flex min-h-28 items-center gap-4 pt-6"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mugla-navy text-white"><Icon size={22}/></span><div className="min-w-0"><p className="text-sm text-mugla-navy/55">{label}</p><b className="mt-1 block break-words text-2xl">{value}</b><p className="mt-1 text-xs text-mugla-navy/45">{note}</p></div></CardContent></Card>
@@ -81,6 +82,7 @@ export function CitizenDashboard() {
   const [user, setUser] = useState<LocalUser | null>(null)
   const [message, setMessage] = useState('')
   const {projects, voteProject} = useProjects()
+  const {notifications: civicNotifications, events: civicEvents} = useCivicUpdates()
   const {basket, confirmed, remaining, add, remove, confirm} = useVoteBasket(user?.id)
   const [profileTab, setProfileTab] = useState<'profile' | 'security' | 'preferences'>('profile')
 
@@ -116,18 +118,41 @@ export function CitizenDashboard() {
     {value: 'preferences', label: 'Diğer ayarlar', icon: Bell},
   ] as const
 
-  const quickActions = [
-    {label: 'Anasayfa', href: '/', icon: Home, note: 'Kamuya açık ana sayfa'},
-    {label: 'Fikir Gönder', href: '/fikir-gonder', icon: Lightbulb, note: 'En fazla 3 tıklamayla başvuru'},
-    {label: 'Oy Ver', href: '/projeler#oy-ver', icon: Vote, note: `${activeVoteProjects.length} proje oylamada`},
-    {label: 'Sonuçlar', href: '/projeler#sonuclar', icon: Trophy, note: 'Kazanan projeler'},
-    {label: 'Projelerim', href: '#oylar', icon: FileText, note: `${myProjects.length} başvuru`},
-  ] as const
   const citizenNotifications = myProjects.slice(0, 4).map(project => {
     const stage = citizenProjectStage(project)
     const title = stage === 'Revizyon' ? 'Revizyon istendi' : stage === 'Kabul edilmedi' ? 'Başvuru kabul edilmedi' : stage === 'Oylamada' ? 'Projeniz oylamaya açıldı' : stage === 'Kazandı' ? 'Projeniz kazandı' : stage === 'Tamamlandı' ? 'Proje tamamlandı' : 'Başvurunuz iş akışında'
     return {id: project.id, title, text: `${project.projectCode} - ${project.title}`, tone: stage === 'Kabul edilmedi' ? 'bg-red-50 text-red-700' : stage === 'Revizyon' ? 'bg-orange-50 text-mugla-orange' : 'bg-green-50 text-green-700'}
   })
+  const visibleCivicNotifications = useMemo(() => user ? civicNotifications
+    .filter(item => item.status !== 'Taslak')
+    .filter(item => ['Vatandaş', 'Sistem', 'Belediye Geneli', 'Tüm Sistem'].includes(item.targetRole || 'Vatandaş'))
+    .filter(item => !item.district || item.district === user.district)
+    .sort((a, b) => String(b.publishAt).localeCompare(String(a.publishAt))) : [], [civicNotifications, user])
+  const allCitizenNotifications = [
+    ...visibleCivicNotifications.map(item => ({
+      id: item.id,
+      title: item.title,
+      text: item.body,
+      date: item.publishAt,
+      tone: item.priority === 'Kritik' ? 'bg-red-50 text-red-700' : item.priority === 'Acil' ? 'bg-orange-50 text-mugla-orange' : item.priority === 'Uyarı' ? 'bg-amber-50 text-amber-700' : item.status === 'Planlandı' ? 'bg-cyan-50 text-mugla-cyan' : 'bg-green-50 text-green-700',
+      meta: `${item.priority} · ${item.district || 'Muğla geneli'} · ${item.channels.join(', ')}`,
+    })),
+    ...citizenNotifications.map(item => ({...item, date: new Date().toISOString(), meta: 'Başvuru süreci'})),
+  ].sort((a, b) => String(b.date).localeCompare(String(a.date)))
+  const visibleEvents = useMemo(() => user ? civicEvents
+    .filter(item => item.status === 'Yayında' || item.status === 'Planlandı')
+    .filter(item => !item.district || item.district === user.district)
+    .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate))) : [], [civicEvents, user])
+  const upcomingEvents = visibleEvents.filter(item => new Date(item.startDate).getTime() >= Date.now()).slice(0, 4)
+  const calendarDays = visibleEvents.slice(0, 8)
+  const quickActions = [
+    {label: 'Anasayfa', href: '/', icon: Home, note: 'Kamuya açık ana sayfa'},
+    {label: 'Fikir Gönder', href: '/fikir-gonder', icon: Lightbulb, note: 'En fazla 3 tıklamayla başvuru'},
+    {label: 'Oy Ver', href: '/projeler#oy-ver', icon: Vote, note: `${activeVoteProjects.length} proje oylamada`},
+    {label: 'Takvim', href: '#takvim', icon: CalendarDays, note: `${upcomingEvents.length} yaklaşan etkinlik`},
+    {label: 'Sonuçlar', href: '/projeler#sonuclar', icon: Trophy, note: 'Kazanan projeler'},
+    {label: 'Projelerim', href: '#oylar', icon: FileText, note: `${myProjects.length} başvuru`},
+  ] as const
 
   function signOut() {
     logoutUser()
@@ -228,7 +253,7 @@ export function CitizenDashboard() {
 
       {message && <div className="rounded-2xl bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">{message}</div>}
 
-      <section className="grid gap-3 md:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         {quickActions.map(({label, href, icon: Icon, note}) => <Link key={label} href={href} className="group rounded-2xl border border-mugla-navy/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mugla-orange">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-mugla-sand text-mugla-orange transition group-hover:bg-mugla-orange group-hover:text-white"><Icon size={20}/></span>
           <b className="mt-4 block text-sm">{label}</b>
@@ -240,16 +265,55 @@ export function CitizenDashboard() {
         <CardHeader className="flex-row items-center justify-between">
           <div>
             <p className="text-xs font-bold tracking-widest text-mugla-cyan">BİLDİRİMLER</p>
-            <h2 className="mt-1 text-xl font-bold">Başvuru durumları</h2>
-            <p className="mt-1 text-sm text-mugla-navy/55">Belediye panelindeki onay, revizyon, red ve oylama kararları burada görünür.</p>
+            <h2 className="mt-1 text-xl font-bold">Canlı bildirim alanı</h2>
+            <p className="mt-1 text-sm text-mugla-navy/55">Belediye panelinden gönderilen duyurular, yaklaşan oylama hatırlatmaları ve başvuru durumları burada tarih sırasıyla görünür.</p>
           </div>
-          <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{citizenNotifications.length} yeni</span>
+          <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{allCitizenNotifications.length} kayıt</span>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {citizenNotifications.length ? citizenNotifications.map(item => <div key={item.id} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${item.tone}`}>
+          {allCitizenNotifications.length ? allCitizenNotifications.slice(0, 8).map(item => <div key={item.id} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${item.tone}`}>
             <b className="block">{item.title}</b>
             <span className="mt-1 block opacity-75">{item.text}</span>
+            <span className="mt-2 block text-xs opacity-60">{new Date(item.date).toLocaleString('tr-TR')} · {item.meta}</span>
           </div>) : <div className="rounded-2xl border border-dashed border-mugla-navy/20 p-8 text-center text-mugla-navy/45 md:col-span-2"><Bell className="mx-auto mb-3"/><p className="font-semibold">Henüz bildiriminiz yok.</p></div>}
+        </CardContent>
+      </Card>
+
+      <Card id="takvim">
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-mugla-cyan">TAKVİM</p>
+            <h2 className="mt-1 text-xl font-bold">Yaklaşan etkinlikler</h2>
+            <p className="mt-1 text-sm text-mugla-navy/55">Belediye panelinde yayınlanan etkinlikler takvime göre otomatik listelenir.</p>
+          </div>
+          <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{visibleEvents.length} etkinlik</span>
+        </CardHeader>
+        <CardContent className="grid gap-5 xl:grid-cols-[1fr_320px]">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between"><h3 className="font-bold">Yaklaşanlar</h3><span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Canlı veri</span></div>
+            {upcomingEvents.length ? upcomingEvents.map(item => <article key={item.id} className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <b className="block">{item.title}</b>
+                  <p className="mt-2 text-sm leading-6 text-mugla-navy/60">{item.description || 'Etkinlik detayı belediye takviminden güncellenecek.'}</p>
+                </div>
+                <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{item.category}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs font-bold text-mugla-navy/50">
+                <span className="inline-flex items-center gap-1"><Clock3 size={14}/>{new Date(item.startDate).toLocaleString('tr-TR')}</span>
+                <span className="inline-flex items-center gap-1"><MapPin size={14}/>{item.location || item.district || 'Muğla geneli'}</span>
+              </div>
+            </article>) : <div className="rounded-2xl border border-dashed border-mugla-navy/20 p-8 text-center text-mugla-navy/45"><CalendarDays className="mx-auto mb-3"/><p className="font-semibold">Yaklaşan etkinlik yok.</p></div>}
+          </section>
+          <aside className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/55 p-4">
+            <h3 className="font-bold">Takvim akışı</h3>
+            <div className="mt-4 space-y-3">
+              {calendarDays.length ? calendarDays.map(item => <div key={item.id} className="grid grid-cols-[56px_1fr] gap-3 rounded-xl bg-white p-3">
+                <time className="text-center text-xs font-black text-mugla-cyan"><span className="block text-2xl text-mugla-navy">{new Date(item.startDate).getDate()}</span>{new Date(item.startDate).toLocaleDateString('tr-TR', {month: 'short'})}</time>
+                <span className="min-w-0"><b className="block truncate text-sm">{item.title}</b><small className="mt-1 block text-mugla-navy/45">{item.district || 'Muğla geneli'}</small></span>
+              </div>) : <p className="rounded-xl bg-white p-4 text-sm font-semibold text-mugla-navy/45">Takvimde kayıt yok.</p>}
+            </div>
+          </aside>
         </CardContent>
       </Card>
 

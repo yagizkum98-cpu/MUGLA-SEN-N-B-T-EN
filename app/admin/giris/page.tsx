@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
         logoutAdmin()
         throw new Error('Bu portal sadece CRM yetkilisi olarak tanimlanan hesaplara aciktir.')
       }
-      location.href = isCrmDomain() ? '/crm' : '/admin'
+      location.href = isCrmDomain() ? municipalityUrl('/admin#crm') : '/admin'
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Giris yapilamadi.')
     } finally {
@@ -40,8 +40,8 @@ export default function AdminLoginPage() {
       <span className="text-sm font-semibold text-white/60">Muğla Büyükşehir Belediyesi</span>
       <div className="my-auto max-w-xl">
         <span className="grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-mugla-cyan"><ShieldCheck size={32}/></span>
-        <h1 className="mt-8 text-5xl font-bold leading-tight">{isSuperAdminDomain() ? 'Super admin merkezi tum portallari tek otoriteden kontrol eder.' : isCrmDomain() ? 'CRM portali destek operasyonlarini belediye sureclerinden ayirir.' : 'Belediye paneli yalnizca tanimli yetkililere aciktir.'}</h1>
-        <p className="mt-5 text-lg leading-8 text-white/60">{isSuperAdminDomain() ? 'Belediye yonetim paneli, vatandas paneli, veriler, roller ve kritik baglantilar burada toplanir.' : isCrmDomain() ? 'Cagri merkezi, WhatsApp, e-posta, destek, talep, sikayet, memnuniyet ve canli destek isleri burada yurutulur.' : 'Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.'}</p>
+        <h1 className="mt-8 text-5xl font-bold leading-tight">{isSuperAdminDomain() ? 'Super admin merkezi tum portallari tek otoriteden kontrol eder.' : isCrmDomain() ? 'CRM verileri belediye panelinde yetkili alanda toplanir.' : 'Belediye paneli yalnizca tanimli yetkililere aciktir.'}</h1>
+        <p className="mt-5 text-lg leading-8 text-white/60">{isSuperAdminDomain() ? 'Belediye yonetim paneli, vatandas paneli, veriler, roller ve kritik baglantilar burada toplanir.' : isCrmDomain() ? 'Sadece super admin ve tanimli CRM yetkilisi belediye panelindeki CRM alanina erisebilir.' : 'Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.'}</p>
       </div>
     </section>
 

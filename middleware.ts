@@ -2,6 +2,7 @@ import {NextResponse, type NextRequest} from 'next/server'
 
 const SUPER_ADMIN_DOMAIN = 'muglabutcesenin-superadmin.vercel.app'
 const CRM_DOMAIN = 'muglabutcesenin-crm.vercel.app'
+const MUNICIPALITY_DOMAIN = 'muglabutcesenin-belediye.vercel.app'
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0]
@@ -13,9 +14,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (host === CRM_DOMAIN && pathname === '/') {
+  if (host === CRM_DOMAIN && (pathname === '/' || pathname.startsWith('/crm'))) {
     const url = request.nextUrl.clone()
-    url.pathname = '/crm'
+    url.protocol = 'https'
+    url.host = MUNICIPALITY_DOMAIN
+    url.pathname = '/admin'
+    url.hash = '#crm'
     return NextResponse.redirect(url)
   }
 
@@ -23,5 +27,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/'],
+  matcher: ['/', '/crm/:path*'],
 }

@@ -10,6 +10,7 @@ import {engagementScore, Channel, CrmRole, useCrm, type Citizen} from '@/lib/crm
 import {formatBudget, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {turkiyeProvinces} from '@/lib/turkiye-locations'
 import {changeOwnAdminProfile, getCurrentAdmin, type AdminAccount} from '@/lib/admin-auth'
+import {isLocalDomain, municipalityUrl} from '@/lib/domain-routing'
 import {ageFromBirthDate, ageGroup, ageGroups, birthDateInputToIso, formatBirthDateInput, isoToBirthDateInput} from '@/lib/demographics'
 import {Activity, BarChart3, BellRing, Bot, Building2, ChevronRight, CircleDollarSign, Coins, FolderKanban, KeyRound, LockKeyhole, MapPinned, Megaphone, PieChart, Plus, Search, ShieldAlert, ShieldCheck, Trash2, UserRound, UsersRound, Vote} from 'lucide-react'
 
@@ -107,6 +108,14 @@ function Donut({items}: {items: Distribution[]}) {
 }
 
 export default function CrmPage() {
+  useEffect(() => {
+    location.replace(isLocalDomain() ? '/admin#crm' : municipalityUrl('/admin#crm'))
+  }, [])
+
+  return <AdminAuthGate><main className="grid min-h-screen place-items-center bg-mugla-sand p-6">
+    <p className="font-semibold text-mugla-navy/55">CRM verileri belediye paneline taşındı. Yönlendiriliyorsunuz...</p>
+  </main></AdminAuthGate>
+
   const [view, setView] = useState<View>('overview')
   const {citizens, campaigns, addCitizen, removeCitizen, addCampaign} = useCrm()
   const {projects} = useProjects()

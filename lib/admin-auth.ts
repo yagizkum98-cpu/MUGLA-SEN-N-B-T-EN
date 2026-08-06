@@ -1,6 +1,6 @@
 'use client'
 
-export type AdminRole = 'super-admin' | 'belediye-admin' | 'ilce-yoneticisi' | 'degerlendirici' | 'crm' | 'admin' | 'yetkili'
+export type AdminRole = 'super-admin' | 'belediye-admin' | 'daire-baskani' | 'mudur' | 'sef' | 'uzman-personel' | 'komisyon-uyesi' | 'crm' | 'mali-hizmetler' | 'gozlemci' | 'ilce-yoneticisi' | 'degerlendirici' | 'admin' | 'yetkili'
 
 export type AdminAccount = {
   id: string
@@ -32,7 +32,7 @@ function adminAccountsApiUrl() {
 }
 
 export function normalizeAdminRole(role?: AdminRole | string): Exclude<AdminRole, 'admin'> {
-  if (role === 'super-admin' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'crm' || role === 'yetkili') return role
+  if (role === 'super-admin' || role === 'belediye-admin' || role === 'daire-baskani' || role === 'mudur' || role === 'sef' || role === 'uzman-personel' || role === 'komisyon-uyesi' || role === 'crm' || role === 'mali-hizmetler' || role === 'gozlemci' || role === 'ilce-yoneticisi' || role === 'degerlendirici' || role === 'yetkili') return role
   return 'belediye-admin'
 }
 
@@ -187,7 +187,7 @@ export async function getCurrentAdmin() {
 }
 
 export async function addAdminAccount(input: {name: string; email: string; role: AdminRole; password: string; actor: AdminAccount; district?: string; department?: string; assignedProjectIds?: string[]; permissions?: AdminAccount['permissions']}) {
-  if (normalizeAdminRole(input.actor.role) !== 'super-admin') throw new Error('Sadece super admin admin ve yetkili hesabi tanimlayabilir.')
+  if (!['super-admin', 'belediye-admin'].includes(normalizeAdminRole(input.actor.role))) throw new Error('Sadece super admin ve belediye admini yetkili hesabi tanimlayabilir.')
   if (input.role === 'super-admin') throw new Error('Yeni super admin hesabi tanimlanamaz.')
   const accounts = await ensureSeedAccount()
   const email = input.email.trim().toLocaleLowerCase('tr')

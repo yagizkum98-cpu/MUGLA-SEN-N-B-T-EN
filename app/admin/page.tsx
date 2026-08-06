@@ -6,7 +6,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
+import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CalendarDays, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminProfile, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -14,6 +14,8 @@ import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, an
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
+import {useCivicUpdates} from '@/lib/civic-updates'
+import {accountMatchesProjectScope, canAccessModule, canDo} from '@/lib/access-control'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
 import {apiUrl, citizenUrl, crmUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
@@ -45,10 +47,17 @@ type VotingRecord = {
 const roles: {value: AdminRole; label: string; note: string}[] = [
   {value: 'super-admin', label: 'Super admin', note: 'Platform sahibi; sistem, API, backup, audit ve lisans kontrolu'},
   {value: 'belediye-admin', label: 'Belediye admini', note: 'Proje, oylama, CRM, rapor, kategori ve belediye operasyonlari'},
+  {value: 'daire-baskani', label: 'Daire başkanı', note: 'Bağlı daire ve müdürlüklerde proje, görev, rapor ve komisyon akışı'},
+  {value: 'mudur', label: 'Müdür', note: 'Kendi müdürlüğündeki proje inceleme, revizyon, puanlama ve görevler'},
+  {value: 'sef', label: 'Şef', note: 'Personel yönetimi, dosya inceleme, eksik evrak ve ön değerlendirme'},
+  {value: 'uzman-personel', label: 'Uzman personel', note: 'Atanmış projelerde teknik inceleme, dosya, rapor ve AI önerileri'},
+  {value: 'komisyon-uyesi', label: 'Komisyon üyesi', note: 'Atandığı projelerde teknik puan ve görüş'},
+  {value: 'crm', label: 'CRM yetkilisi', note: 'Vatandas talep, sikayet, mesaj, destek ve basvuru durumu'},
+  {value: 'mali-hizmetler', label: 'Mali hizmetler', note: 'Bütçe, harcama, finans raporları ve proje maliyeti'},
+  {value: 'gozlemci', label: 'Gözlemci', note: 'Salt okunur panel erişimi'},
   {value: 'ilce-yoneticisi', label: 'Ilce yoneticisi', note: 'Sadece kendi ilcesindeki proje, vatandas, oy ve raporlar'},
   {value: 'yetkili', label: 'Ilce personeli', note: 'Kendi ilcesi icin taslak proje olusturur ve incelemeye gonderir'},
   {value: 'degerlendirici', label: 'Degerlendirici', note: 'Kendisine atanan projelerde teknik/mali degerlendirme'},
-  {value: 'crm', label: 'CRM yetkilisi', note: 'Vatandas talep, sikayet, mesaj, destek ve basvuru durumu'},
 ]
 const assignableRoles = roles.filter(role => role.value !== 'super-admin')
 const portalLinks = [
@@ -842,6 +851,7 @@ export default function Admin() {
   const {projects, addProject, mergeProjects, removeProject, reviewProject, updateProject} = useProjects()
   const {records: contactRecords, removeContactRecord} = useContactRecords()
   const {citizens, campaigns, addCampaign} = useCrm()
+  const {notifications: civicNotifications, events: civicEvents, addNotification: addCivicNotification, addEvent: addCivicEvent} = useCivicUpdates()
   const [open, setOpen] = useState(false)
   const [peopleOpen, setPeopleOpen] = useState(true)
   const [message, setMessage] = useState('')
@@ -882,35 +892,35 @@ export default function Admin() {
   const isMunicipalityAdmin = activeRole === 'belediye-admin'
   const isDistrictManager = activeRole === 'ilce-yoneticisi'
   const isDistrictStaff = activeRole === 'yetkili'
-  const isEvaluator = activeRole === 'degerlendirici'
+  const isEvaluator = activeRole === 'degerlendirici' || activeRole === 'uzman-personel' || activeRole === 'komisyon-uyesi'
   const isCrmRole = activeRole === 'crm'
-  const canManagePeople = isSuperAdmin && isSuperAdminDomain()
+  const canManagePeople = canDo(activeRole, 'users', 'create') || canDo(activeRole, 'users', 'edit')
   const canSeeSystem = isSuperAdmin
-  const canSeeProjects = !isCrmRole
-  const canReviewProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canPublishProjects = isSuperAdmin || isMunicipalityAdmin
-  const canEditProjects = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
-  const canArchiveProjects = isSuperAdmin || isMunicipalityAdmin
-  const canRestoreProjects = isSuperAdmin || isMunicipalityAdmin
+  const canSeeProjects = canAccessModule(activeRole, 'projects') || canAccessModule(activeRole, 'applications')
+  const canReviewProjects = canDo(activeRole, 'projects', 'approve') || canDo(activeRole, 'applications', 'approve')
+  const canPublishProjects = canDo(activeRole, 'projects', 'publish')
+  const canEditProjects = canDo(activeRole, 'projects', 'edit') || canDo(activeRole, 'applications', 'edit')
+  const canArchiveProjects = canDo(activeRole, 'projects', 'archive')
+  const canRestoreProjects = canDo(activeRole, 'projects', 'archive')
   const canPermanentDeleteProjects = isSuperAdmin
-  const canSendProjectsToVote = isSuperAdmin || isMunicipalityAdmin
-  const canCreateMunicipalProject = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
-  const canSeeCrm = isSuperAdmin || isMunicipalityAdmin || isCrmRole
+  const canSendProjectsToVote = canDo(activeRole, 'projects', 'publish') || canDo(activeRole, 'votings', 'publish')
+  const canCreateMunicipalProject = canDo(activeRole, 'projects', 'create') || canDo(activeRole, 'applications', 'create')
+  const canSeeCrm = canAccessModule(activeRole, 'crm')
   const canSeeLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.liveCitizenData)
   const canExportLiveCitizenData = isSuperAdmin || Boolean(adminUser?.permissions?.citizenDataExport)
   const canSeeDistricts = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isDistrictStaff
-  const canSeeVoting = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canManageVoting = isSuperAdmin || isMunicipalityAdmin
-  const canSeeVoteDetails = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canSeeCategories = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canManageAnnualThemes = isSuperAdmin || isMunicipalityAdmin
-  const canSeeReports = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isEvaluator
-  const canSeeNotifications = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isCrmRole
-  const canSendNotification = isSuperAdmin || isMunicipalityAdmin || isDistrictManager || isCrmRole
-  const canSendBulkNotification = isSuperAdmin || isMunicipalityAdmin || isDistrictManager
-  const canScheduleNotification = isSuperAdmin || isMunicipalityAdmin
+  const canSeeVoting = canAccessModule(activeRole, 'votings')
+  const canManageVoting = canDo(activeRole, 'votings', 'create') || canDo(activeRole, 'votings', 'publish')
+  const canSeeVoteDetails = canAccessModule(activeRole, 'votings')
+  const canSeeCategories = canAccessModule(activeRole, 'settings')
+  const canManageAnnualThemes = canDo(activeRole, 'settings', 'edit')
+  const canSeeReports = canAccessModule(activeRole, 'reports')
+  const canSeeNotifications = canAccessModule(activeRole, 'notifications')
+  const canSendNotification = canDo(activeRole, 'notifications', 'notify') || canDo(activeRole, 'notifications', 'create')
+  const canSendBulkNotification = isSuperAdmin || isMunicipalityAdmin || activeRole === 'mudur' || activeRole === 'daire-baskani'
+  const canScheduleNotification = isSuperAdmin || isMunicipalityAdmin || activeRole === 'daire-baskani'
   const canDeleteNotification = isSuperAdmin
-  const scopedProjects = isCrmRole ? [] : isDistrictStaff ? projects.filter(project => project.createdByAdminId === adminUser?.id || projectMatchesDistrict(project, adminUser?.district)) : isDistrictManager && adminUser?.district ? projects.filter(project => projectMatchesDistrict(project, adminUser.district)) : isEvaluator && adminUser?.assignedProjectIds?.length ? projects.filter(project => adminUser.assignedProjectIds?.includes(project.id) || adminUser.assignedProjectIds?.includes(project.projectCode)) : projects
+  const scopedProjects = canSeeProjects ? projects.filter(project => accountMatchesProjectScope(adminUser, project)) : []
   const liveCitizens = citizens.map(citizen => {
     const citizenProjects = projects.filter(project => project.ownerId === citizen.id.replace(/^auth-/, '') || project.ownerEmail?.toLocaleLowerCase('tr') === citizen.email.toLocaleLowerCase('tr'))
     return {
@@ -1429,6 +1439,9 @@ export default function Admin() {
     const title = String(data.get('title') ?? '').trim()
     const body = String(data.get('body') ?? '').trim()
     const recipient = String(data.get('recipient') ?? 'Vatandaş')
+    const targetRole = String(data.get('targetRole') ?? recipient)
+    const targetDepartment = String(data.get('targetDepartment') ?? '').trim()
+    const priority = String(data.get('priority') || 'Bilgi') as 'Bilgi' | 'İşlem' | 'Uyarı' | 'Acil' | 'Kritik'
     const district = isDistrictManager ? adminUser?.district ?? '' : String(data.get('district') ?? '')
     const channels = ['Push', 'E-posta', 'SMS', 'WhatsApp'].filter(channel => data.get(channel)) as Channel[]
     if (!title || !body) {
@@ -1441,14 +1454,55 @@ export default function Admin() {
       channels: channels.length ? channels : ['Push'],
       status,
     })
-    writeAuditLog(adminUser, `Bildirim ${status}`, {target: title, details: `${recipient} ${district}`.trim()})
-    setMessage(status === 'Gönderildi' ? 'Bildirim gönderildi.' : status === 'Planlandı' ? 'Bildirim planlandı.' : 'Bildirim taslak olarak kaydedildi.')
+    addCivicNotification({
+      title,
+      body,
+      district,
+      targetRole,
+      targetDepartment,
+      category: String(data.get('category') ?? 'Duyuru'),
+      priority,
+      channels: channels.length ? channels : ['Push'],
+      status,
+      source: 'Manuel',
+      publishAt: String(data.get('publishAt') || new Date().toISOString()),
+      createdBy: adminUser?.name,
+    })
+    writeAuditLog(adminUser, `Bildirim ${status}`, {target: title, details: `${targetRole} ${targetDepartment} ${district}`.trim()})
+    setMessage(status === 'Gönderildi' ? 'Bildirim vatandaş paneline gönderildi.' : status === 'Planlandı' ? 'Bildirim planlandı ve vatandaş paneli takvimli duyuru alanına eklendi.' : 'Bildirim taslak olarak kaydedildi.')
     form.reset()
   }
 
   function submitNotification(event: FormEvent<HTMLFormElement>, status: 'Taslak' | 'Planlandı' | 'Gönderildi') {
     event.preventDefault()
     saveNotificationFromForm(event.currentTarget, status)
+  }
+
+  function submitCivicEvent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const title = String(form.get('title') ?? '').trim()
+    const startDate = String(form.get('startDate') ?? '').trim()
+    if (!title || !startDate) {
+      setMessage('Etkinlik başlığı ve başlangıç tarihi zorunludur.')
+      return
+    }
+    const district = isDistrictManager ? adminUser?.district ?? '' : String(form.get('district') ?? '')
+    const status = String(form.get('status') ?? 'Yayında') as 'Taslak' | 'Planlandı' | 'Yayında' | 'Tamamlandı'
+    addCivicEvent({
+      title,
+      description: String(form.get('description') ?? '').trim(),
+      district,
+      location: String(form.get('location') ?? '').trim(),
+      startDate,
+      endDate: String(form.get('endDate') ?? '').trim() || undefined,
+      category: String(form.get('category') ?? 'Etkinlik'),
+      status,
+      createdBy: adminUser?.name,
+    })
+    writeAuditLog(adminUser, 'Etkinlik olusturdu', {target: title, details: `${district || 'Muğla geneli'} · ${startDate}`})
+    setMessage('Etkinlik kaydedildi; vatandaş panelinde takvim ve yaklaşan etkinlikler alanına otomatik eklendi.')
+    event.currentTarget.reset()
   }
 
   function toggleVotingProject(id: string) {
@@ -1534,9 +1588,32 @@ export default function Admin() {
       && (!keyword || `${project.title} ${project.projectCode} ${project.summary ?? ''} ${project.shortDescription ?? ''}`.toLocaleLowerCase('tr').includes(keyword))
   })
   const notificationScope = isDistrictManager && adminUser?.district ? campaigns.filter(item => item.segment.includes(adminUser.district ?? '')) : isCrmRole ? campaigns.filter(item => item.segment.includes('Vatandaş')) : campaigns
-  const notificationRead = Math.round(notificationScope.filter(item => item.status === 'Gönderildi').length * 0.81)
-  const notificationPending = notificationScope.filter(item => item.status !== 'Gönderildi').length
-  const notificationOpenRate = notificationScope.length ? Math.round(notificationRead / Math.max(1, notificationScope.length) * 100) : 0
+  const activeRoleNotificationLabels = {
+    'super-admin': ['Süper Admin', 'Tüm Sistem', 'Sistem'],
+    'belediye-admin': ['Belediye Admin', 'Belediye Geneli', 'Sistem'],
+    'daire-baskani': ['Daire Başkanı', 'Daire', 'Belediye Personeli'],
+    mudur: ['Müdür', 'Müdürlük', 'Belediye Personeli'],
+    sef: ['Belediye Yetkilisi', 'Müdürlük', 'Belediye Personeli'],
+    'uzman-personel': ['Belediye Yetkilisi', 'Belediye Personeli'],
+    'komisyon-uyesi': ['Belediye Yetkilisi', 'Belediye Personeli'],
+    crm: ['CRM Personeli', 'Vatandaş'],
+    'mali-hizmetler': ['Belediye Yetkilisi', 'Belediye Personeli'],
+    gozlemci: ['Belediye Geneli', 'Sistem'],
+    'ilce-yoneticisi': ['Belediye Yetkilisi', 'Belediye Personeli'],
+    yetkili: ['Belediye Yetkilisi', 'Belediye Personeli'],
+    degerlendirici: ['Belediye Yetkilisi', 'Belediye Personeli'],
+  }[activeRole]
+  const civicNotificationScope = civicNotifications.filter(item => {
+    const districtOk = !item.district || !adminUser?.district || item.district === adminUser.district || isSuperAdmin || isMunicipalityAdmin
+    const roleOk = activeRoleNotificationLabels.includes(item.targetRole || 'Vatandaş') || item.targetRole === 'Tüm Sistem'
+    const departmentOk = !item.targetDepartment || !adminUser?.department || item.targetDepartment === adminUser.department || isSuperAdmin || isMunicipalityAdmin
+    return districtOk && roleOk && departmentOk
+  })
+  const visibleCivicEvents = isDistrictManager && adminUser?.district ? civicEvents.filter(item => item.district === adminUser.district || !item.district) : civicEvents
+  const notificationTotal = notificationScope.length + civicNotificationScope.length
+  const notificationRead = Math.round((notificationScope.filter(item => item.status === 'Gönderildi').length + civicNotificationScope.filter(item => item.status === 'Gönderildi').length) * 0.81)
+  const notificationPending = notificationScope.filter(item => item.status !== 'Gönderildi').length + civicNotificationScope.filter(item => item.status !== 'Gönderildi').length
+  const notificationOpenRate = notificationTotal ? Math.round(notificationRead / Math.max(1, notificationTotal) * 100) : 0
   const todayKey = new Date().toISOString().slice(0, 10)
   const todayNewProjects = scopedProjects.filter(project => String(project.createdAt ?? '').slice(0, 10) === todayKey)
   const revisionProjects = scopedProjects.filter(project => String(project.workflowStatus ?? '').includes('Revizyon') || String(project.workflowStatus ?? '').includes('Eksik'))
@@ -1604,6 +1681,7 @@ export default function Admin() {
     ...(canSeeLiveCitizenData ? [{label: 'Canlı veri', href: '#canli-veri-listesi', count: scopedCitizens.length, icon: Database, note: 'Giriş ve kayıt bilgileri.'}] : []),
     {label: 'Yetkililer', href: '#yetkililer', count: accounts.length, icon: UsersRound, note: 'Sadece süper admin kapsam belirler.'},
     {label: 'Oylamalar', href: '#oylamalar', count: activeVotingProjects.length, icon: Vote, note: 'Yayındaki projelere tek tık.'},
+    {label: 'Takvim', href: '#etkinlikler', count: visibleCivicEvents.length, icon: CalendarDays, note: 'Vatandaş takvimine düşen etkinlikler.'},
     {label: 'Raporlar', href: '#raporlar', count: voteLeaderboard.length, icon: FileBarChart, note: 'Canlı özet ve çıktılar.'},
   ]
   const ageDistribution = ageGroups.map(group => ({
@@ -1759,6 +1837,7 @@ export default function Admin() {
           <CardContent className="grid gap-3">
             {canCreateMunicipalProject && <Button variant="orange" className="rounded-xl bg-mugla-cyan hover:bg-mugla-blue" onClick={() => setOpen(true)}><Plus size={17}/> Yeni Proje</Button>}
             <Button variant="outline" className="w-full justify-start" disabled={!canManageVoting} onClick={() => {setVotingWizardOpen(true); setVotingWizardStep(1)}}><Vote size={17}/> Oylama Oluştur</Button>
+            <a href="#etkinlikler"><Button variant="outline" className="w-full justify-start"><CalendarDays size={17}/> Etkinlik Yarat</Button></a>
             {canManagePeople && <Button variant="outline" onClick={() => setPeopleOpen(true)}><UserPlus size={17}/> Yeni Yetkili Ekle</Button>}
             <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileBarChart size={17}/> Rapor Al</Button></a>
             <a href="#raporlar"><Button variant="outline" className="w-full justify-start"><FileText size={17}/> CSV Aktar</Button></a>
@@ -1768,6 +1847,8 @@ export default function Admin() {
           </CardContent>
         </Card>
       </section>
+
+      {peopleManagementPanel}
 
       <Card id="projeler" className="rounded-xl shadow-sm">
         <CardHeader>
@@ -2169,7 +2250,7 @@ export default function Admin() {
         <CardContent className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              ['Bugün', notificationScope.length.toLocaleString('tr-TR')],
+              ['Toplam', notificationTotal.toLocaleString('tr-TR')],
               ['Okundu', notificationRead.toLocaleString('tr-TR')],
               ['Bekliyor', notificationPending.toLocaleString('tr-TR')],
               ['Açılma', `%${notificationOpenRate}`],
@@ -2185,9 +2266,13 @@ export default function Admin() {
 
           {(notificationTab === 'Yeni Bildirim' || notificationTab === 'Toplu Bildirim' || notificationTab === 'Planlı Bildirimler') && <form onSubmit={event => submitNotification(event, notificationTab === 'Planlı Bildirimler' ? 'Planlandı' : 'Gönderildi')} className="grid gap-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4 lg:grid-cols-2">
             <label><span className="mb-2 block text-sm font-semibold">Başlık</span><input className={field} name="title" required placeholder="Başvurular başladı"/></label>
-            <label><span className="mb-2 block text-sm font-semibold">Alıcı</span><select className={field} name="recipient" disabled={isCrmRole}><option>Vatandaş</option><option>İlçe</option><option>Admin</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Alıcı</span><select className={field} name="recipient" disabled={isCrmRole}><option>Vatandaş</option><option>Belediye Personeli</option><option>Müdürlük</option><option>Daire</option><option>Belediye Geneli</option><option>Tüm Sistem</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Hedef rol</span><select className={field} name="targetRole" defaultValue={isCrmRole ? 'Vatandaş' : 'Vatandaş'}><option>Vatandaş</option><option>Belediye Yetkilisi</option><option>Müdür</option><option>Daire Başkanı</option><option>Belediye Admin</option><option>Süper Admin</option><option>CRM Personeli</option><option>AI Servisi</option><option>Sistem</option></select></label>
             <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} name="district" disabled={isDistrictManager || isCrmRole}><option value="">{isDistrictManager ? adminUser?.district : 'Tüm yetkili kapsam'}</option>{districts.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Daire / müdürlük</span><input className={field} name="targetDepartment" placeholder="Fen İşleri, Ulaşım, Kültür..."/></label>
             <label><span className="mb-2 block text-sm font-semibold">Kategori / Segment</span><select className={field} name="category" disabled={notificationTab !== 'Toplu Bildirim'}><option>Tümü</option>{categories.map(([item]) => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Öncelik</span><select className={field} name="priority" defaultValue="Bilgi"><option>Bilgi</option><option>İşlem</option><option>Uyarı</option><option>Acil</option><option>Kritik</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Yayın / duyuru tarihi</span><input className={field} name="publishAt" type="datetime-local"/></label>
             <label className="lg:col-span-2"><span className="mb-2 block text-sm font-semibold">Mesaj</span><textarea className={`${field} min-h-28`} name="body" required placeholder="Başvurunuz başarıyla alınmıştır."/></label>
             <fieldset className="lg:col-span-2">
               <legend className="mb-2 text-sm font-black">Bildirim türleri</legend>
@@ -2226,6 +2311,33 @@ export default function Admin() {
 
           {notificationTab === 'Şablonlar' && <div className="flex flex-wrap gap-2">{['Başvuru', 'Onay', 'Red', 'Revizyon', 'Oylama', 'Kazandı', 'Tamamlandı', 'CRM'].map(item => <span key={item} className="rounded-full bg-white px-4 py-2 text-sm font-black text-mugla-navy/60">{item}</span>)}</div>}
 
+          <section className="rounded-2xl border border-mugla-navy/10 bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-black">Vatandaş paneline düşen canlı bildirimler</h3>
+                <p className="mt-1 text-sm text-mugla-navy/50">Manuel oluşturulan duyurular tarihine göre sıralanır; SMS/WhatsApp/Push alanları ileride telefon entegrasyonuna hazır tutulur.</p>
+              </div>
+              <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{civicNotificationScope.length} kayıt</span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {civicNotificationScope.slice(0, 6).map(item => <article key={item.id} className="rounded-xl border border-mugla-navy/10 bg-mugla-sand/35 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <b>{item.title}</b>
+                  <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black text-mugla-navy/55">{item.status}</span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-mugla-navy/60">{item.body}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-mugla-navy/50">
+                  <span>{item.district || 'Muğla geneli'}</span>
+                  <span>{item.targetRole}</span>
+                  <span>{item.priority}</span>
+                  <span>{new Date(item.publishAt).toLocaleString('tr-TR')}</span>
+                  <span>{item.channels.join(', ')}</span>
+                </div>
+              </article>)}
+              {!civicNotificationScope.length && <div className="rounded-xl border border-dashed border-mugla-navy/20 p-8 text-center text-sm font-semibold text-mugla-navy/45 md:col-span-2">Henüz vatandaş paneline aktarılmış manuel bildirim yok.</div>}
+            </div>
+          </section>
+
           {(notificationTab === 'Taslaklar' || notificationTab === 'Gönderilmişler' || notificationTab === 'İstatistikler') && <div className="overflow-x-auto rounded-2xl border border-mugla-navy/10 bg-white">
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Başlık</th><th>Kime</th><th>Kanal</th><th>Tarih</th><th>Durum</th><th>Açılma</th><th className="text-right">İşlem</th></tr></thead>
@@ -2245,6 +2357,46 @@ export default function Admin() {
             <h3 className="font-black">Super Admin entegrasyonları</h3>
             <div className="mt-3 flex flex-wrap gap-2">{['E-posta kanalı', 'SMS kanalı', 'Push kanalı', 'Mesaj şablonları', 'Bildirim akışı', 'Gönderim logları'].map(item => <span key={item} className="rounded-full bg-white px-3 py-2 text-xs font-black text-mugla-navy/60">{item}</span>)}</div>
           </div>}
+        </CardContent>
+      </Card>}
+
+      {canSeeNotifications && <Card id="etkinlikler">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-widest text-mugla-cyan">CANLI ETKİNLİK TAKVİMİ</p>
+              <h2 className="mt-1 text-xl font-bold">Etkinlik yarat ve vatandaş takvimine aktar</h2>
+              <p className="mt-1 max-w-3xl text-sm text-mugla-navy/55">Belediye panelinde oluşturulan etkinlikler yayın durumuna göre vatandaş panelindeki takvim ve yaklaşan etkinlikler alanında otomatik görünür.</p>
+            </div>
+            <span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/55">{visibleCivicEvents.length} etkinlik</span>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <form onSubmit={submitCivicEvent} className="grid gap-4 rounded-2xl border border-mugla-navy/10 bg-mugla-sand/45 p-4 lg:grid-cols-2">
+            <label><span className="mb-2 block text-sm font-semibold">Etkinlik başlığı</span><input className={field} name="title" required placeholder="Mahalle buluşması"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">İlçe</span><select className={field} name="district" disabled={isDistrictManager}><option value="">{isDistrictManager ? adminUser?.district : 'Muğla geneli'}</option>{districts.map(item => <option key={item}>{item}</option>)}</select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Başlangıç</span><input className={field} name="startDate" type="datetime-local" required/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Bitiş</span><input className={field} name="endDate" type="datetime-local"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Konum</span><input className={field} name="location" placeholder="Menteşe Kent Meydanı"/></label>
+            <label><span className="mb-2 block text-sm font-semibold">Durum</span><select className={field} name="status" defaultValue="Yayında"><option>Taslak</option><option>Planlandı</option><option>Yayında</option><option>Tamamlandı</option></select></label>
+            <label><span className="mb-2 block text-sm font-semibold">Kategori</span><select className={field} name="category"><option>Katılımcı Bütçe</option><option>Oylama</option><option>Bilgilendirme</option><option>Atölye</option><option>Toplantı</option></select></label>
+            <label className="lg:col-span-2"><span className="mb-2 block text-sm font-semibold">Açıklama</span><textarea className={`${field} min-h-28`} name="description" placeholder="Etkinlik kapsamı ve vatandaşlara gösterilecek duyuru metni"/></label>
+            <div className="lg:col-span-2"><Button type="submit" variant="orange"><CalendarDays size={17}/> Etkinliği Yarat</Button></div>
+          </form>
+
+          <div className="overflow-x-auto rounded-2xl border border-mugla-navy/10 bg-white">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="bg-mugla-sand/60 text-xs uppercase tracking-wider text-mugla-navy/45"><tr><th className="p-3">Etkinlik</th><th>İlçe</th><th>Konum</th><th>Tarih</th><th>Durum</th><th>Oluşturan</th></tr></thead>
+              <tbody>{visibleCivicEvents.length ? visibleCivicEvents.map(item => <tr key={item.id} className="border-t border-mugla-navy/10">
+                <td className="p-3 font-bold">{item.title}<span className="block text-xs font-normal text-mugla-navy/45">{item.category}</span></td>
+                <td>{item.district || 'Muğla geneli'}</td>
+                <td>{item.location || '-'}</td>
+                <td>{new Date(item.startDate).toLocaleString('tr-TR')}{item.endDate ? ` / ${new Date(item.endDate).toLocaleString('tr-TR')}` : ''}</td>
+                <td><span className="rounded-full bg-mugla-sand px-3 py-1 text-xs font-black text-mugla-navy/60">{item.status}</span></td>
+                <td>{item.createdBy ?? 'Belediye'}</td>
+              </tr>) : <tr><td colSpan={6} className="p-8 text-center text-mugla-navy/45">Henüz etkinlik yok. Etkinlik yaratıldığında vatandaş takvimine aktarılır.</td></tr>}</tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>}
 

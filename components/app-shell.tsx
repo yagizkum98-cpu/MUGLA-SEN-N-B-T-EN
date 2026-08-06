@@ -19,21 +19,22 @@ const citizen = [
 ] as const
 
 const admin = [
-  {href: '/admin#dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
-  {href: '/admin#projeler', label: 'Başvurular', icon: Clock3, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
-  {href: '/admin#proje-havuzu', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
-  {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
+  {href: '/admin#dashboard', label: 'Dashboard', icon: Home, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'komisyon-uyesi', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
+  {href: '/admin#projeler', label: 'Başvurular', icon: Clock3, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'komisyon-uyesi', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
+  {href: '/admin#proje-havuzu', label: 'Projeler', icon: FolderKanban, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'komisyon-uyesi', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici', 'yetkili']},
+  {href: '/admin#oylamalar', label: 'Oylamalar', icon: Vote, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'gozlemci', 'ilce-yoneticisi']},
   {href: '/admin#vatandaslar', label: 'Vatandaşlar', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
   {href: '/admin#ilceler', label: 'İlçeler', icon: Building2, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
   {href: '/admin#ayarlar', label: 'Kategoriler', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
-  {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'crm']},
-  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi', 'degerlendirici']},
-  {href: '/admin#crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'komisyon-uyesi', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
+  {href: '/admin#etkinlikler', label: 'Takvim', icon: Clock3, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'gozlemci', 'ilce-yoneticisi', 'yetkili']},
+  {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'uzman-personel', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici']},
+  {href: '/admin#crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'crm']},
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
 ] as const
 
 const crm = [
-  {href: '/crm', label: 'CRM Merkezi', icon: UsersRound, roles: ['super-admin', 'crm']},
+  {href: '/admin#crm', label: 'CRM Merkezi', icon: UsersRound, roles: ['super-admin', 'crm']},
   {href: '/crm#account', label: 'Hesabım', icon: UserRound, roles: ['super-admin', 'crm']},
 ] as const
 
