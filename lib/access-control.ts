@@ -11,7 +11,7 @@ const moduleAccess: Record<Exclude<AdminRole, 'admin'>, Partial<Record<AdminModu
     dashboard: 'full', applications: 'full', projects: 'full', votings: 'full', results: 'full', citizens: 'full', notifications: 'full', reports: 'full', crm: 'full', users: 'full', settings: 'full', calendar: 'full', ai: 'full',
   },
   'belediye-admin': {
-    dashboard: 'full', applications: 'full', projects: 'full', votings: 'full', results: 'full', citizens: 'full', notifications: 'full', reports: 'full', users: 'full', settings: 'view', calendar: 'full', ai: 'full',
+    dashboard: 'full', applications: 'full', projects: 'full', votings: 'full', results: 'full', citizens: 'full', notifications: 'full', reports: 'full', crm: 'full', users: 'full', settings: 'view', calendar: 'full', ai: 'full',
   },
   'daire-baskani': {
     dashboard: 'full', applications: 'full', projects: 'full', votings: 'view', results: 'full', notifications: 'full', reports: 'full', calendar: 'full', ai: 'full',

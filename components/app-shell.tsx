@@ -8,7 +8,7 @@ import {Bell, Building2, Clock3, ExternalLink, FileBarChart, FolderKanban, Home,
 import {cn} from '@/lib/utils'
 import {getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {getCurrentAdmin, logoutAdmin, normalizeAdminRole, type AdminAccount} from '@/lib/admin-auth'
-import {citizenUrl, crmUrl, isCrmDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {citizenUrl, isCrmDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const citizen = [
   ['/', 'Anasayfa', Home],
@@ -29,13 +29,13 @@ const admin = [
   {href: '/admin#bildirimler', label: 'Bildirimler', icon: Bell, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'komisyon-uyesi', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici', 'crm', 'yetkili']},
   {href: '/admin#etkinlikler', label: 'Takvim', icon: Clock3, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'sef', 'uzman-personel', 'gozlemci', 'ilce-yoneticisi', 'yetkili']},
   {href: '/admin#raporlar', label: 'Raporlar', icon: FileBarChart, roles: ['super-admin', 'belediye-admin', 'daire-baskani', 'mudur', 'uzman-personel', 'mali-hizmetler', 'gozlemci', 'ilce-yoneticisi', 'degerlendirici']},
-  {href: '/admin#crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'crm']},
+  {href: '/admin#crm', label: 'CRM', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
   {href: '/admin#ayarlar', label: 'Ayarlar', icon: Settings, roles: ['super-admin', 'belediye-admin', 'ilce-yoneticisi']},
 ] as const
 
 const crm = [
-  {href: '/admin#crm', label: 'CRM Merkezi', icon: UsersRound, roles: ['super-admin', 'crm']},
-  {href: '/crm#account', label: 'Hesabım', icon: UserRound, roles: ['super-admin', 'crm']},
+  {href: '/admin#crm', label: 'CRM Merkezi', icon: UsersRound, roles: ['super-admin', 'belediye-admin', 'crm']},
+  {href: '/admin#hesabim', label: 'Hesabım', icon: UserRound, roles: ['super-admin', 'belediye-admin', 'crm']},
 ] as const
 
 const superAdminPortalLinks = [
@@ -43,7 +43,7 @@ const superAdminPortalLinks = [
   {label: 'Landing Page', url: publicUrl('/')},
   {label: 'Kullanıcı', url: citizenUrl('/')},
   {label: 'Belediye', url: municipalityUrl('/admin')},
-  {label: 'CRM', url: crmUrl('/crm')},
+  {label: 'CRM', url: municipalityUrl('/admin#crm')},
 ] as const
 
 export function AppShell({children, role = 'citizen'}: {children: React.ReactNode; role?: 'citizen' | 'admin'}) {

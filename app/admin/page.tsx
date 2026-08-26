@@ -18,7 +18,7 @@ import {useCivicUpdates} from '@/lib/civic-updates'
 import {accountMatchesProjectScope, canAccessModule, canDo} from '@/lib/access-control'
 import {ageGroup, ageGroups} from '@/lib/demographics'
 import {readAuditLog, writeAuditLog, type AuditRecord} from '@/lib/audit-log'
-import {apiUrl, citizenUrl, crmUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
+import {apiUrl, citizenUrl, isSuperAdminDomain, municipalityUrl, publicUrl, superAdminUrl} from '@/lib/domain-routing'
 
 const districts = ['Bodrum', 'Dalaman', 'Datca', 'Fethiye', 'Kavaklidere', 'Koycegiz', 'Marmaris', 'Mentese', 'Milas', 'Ortaca', 'Seydikemer', 'Ula', 'Yatagan']
 const categories = projectCategories
@@ -92,7 +92,7 @@ const portalLinks = [
   {
     id: 'crm',
     label: 'CRM',
-    url: crmUrl('/crm'),
+    url: municipalityUrl('/admin#crm'),
     note: 'Cagri merkezi, WhatsApp, e-posta, destek, talep, sikayet, memnuniyet ve canli destek operasyonlari.',
     badge: 'Destek',
   },

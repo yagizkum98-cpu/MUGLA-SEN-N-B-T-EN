@@ -23,9 +23,9 @@ export default function AdminLoginPage() {
     const form = new FormData(event.currentTarget)
     try {
       const account = await loginAdmin(String(form.get('email')), String(form.get('password')))
-      if (isCrmDomain() && !['crm', 'super-admin'].includes(normalizeAdminRole(account.role))) {
+      if (isCrmDomain() && !['super-admin', 'belediye-admin', 'crm'].includes(normalizeAdminRole(account.role))) {
         logoutAdmin()
-        throw new Error('Bu portal sadece CRM yetkilisi olarak tanimlanan hesaplara aciktir.')
+        throw new Error('Bu portal sadece super admin, belediye admini ve CRM yetkilisi hesaplara aciktir.')
       }
       location.href = isCrmDomain() ? municipalityUrl('/admin#crm') : '/admin'
     } catch (cause) {
@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
       <div className="my-auto max-w-xl">
         <span className="grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-mugla-cyan"><ShieldCheck size={32}/></span>
         <h1 className="mt-8 text-5xl font-bold leading-tight">{isSuperAdminDomain() ? 'Super admin merkezi tum portallari tek otoriteden kontrol eder.' : isCrmDomain() ? 'CRM verileri belediye panelinde yetkili alanda toplanir.' : 'Belediye paneli yalnizca tanimli yetkililere aciktir.'}</h1>
-        <p className="mt-5 text-lg leading-8 text-white/60">{isSuperAdminDomain() ? 'Belediye yonetim paneli, vatandas paneli, veriler, roller ve kritik baglantilar burada toplanir.' : isCrmDomain() ? 'Sadece super admin ve tanimli CRM yetkilisi belediye panelindeki CRM alanina erisebilir.' : 'Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.'}</p>
+        <p className="mt-5 text-lg leading-8 text-white/60">{isSuperAdminDomain() ? 'Belediye yonetim paneli, vatandas paneli, veriler, roller ve kritik baglantilar burada toplanir.' : isCrmDomain() ? 'Sadece super admin, belediye admini ve tanimli CRM yetkilisi belediye panelindeki CRM alanina erisebilir.' : 'Super admin, admin ve yetkili rollerinden biri tanimli olmayan kullanici bu panele giremez.'}</p>
       </div>
     </section>
 
@@ -50,7 +50,7 @@ export default function AdminLoginPage() {
         <p className="mb-8 text-sm font-semibold text-mugla-navy/55 lg:hidden">Muğla Büyükşehir Belediyesi</p>
         <p className="text-xs font-bold tracking-[.2em] text-mugla-orange">YETKILI GIRISI</p>
         <h2 className="mt-2 text-3xl font-bold">{isSuperAdminDomain() ? 'Super Admin Paneli' : isCrmDomain() ? 'CRM Paneli' : 'Belediye Paneli'}</h2>
-        <p className="mt-3 text-sm leading-6 text-mugla-navy/55">{isSuperAdminDomain() ? 'Super admin hesabinin e-posta ve sifresiyle platform paneline giris yap.' : isCrmDomain() ? 'Super admin tarafindan CRM yetkilisi olarak tanimlanan hesapla giris yap.' : 'Super admin ve tanimli belediye yetkilileri ayni e-posta ve sifreyle belediye paneline giris yapabilir.'}</p>
+        <p className="mt-3 text-sm leading-6 text-mugla-navy/55">{isSuperAdminDomain() ? 'Super admin hesabinin e-posta ve sifresiyle platform paneline giris yap.' : isCrmDomain() ? 'Super admin, belediye admini veya super admin tarafindan CRM yetkilisi olarak tanimlanan hesapla giris yap.' : 'Super admin ve tanimli belediye yetkilileri ayni e-posta ve sifreyle belediye paneline giris yapabilir.'}</p>
         <form onSubmit={submit} className="mt-7 space-y-4">
           <label className="block"><span className="mb-2 block text-sm font-semibold">E-posta</span><input name="email" type="email" required className={field}/></label>
           <label className="block"><span className="mb-2 block text-sm font-semibold">Sifre</span><input name="password" type="password" required className={field}/></label>
