@@ -32,7 +32,7 @@ export function AdminAuthGate({children}: {children: React.ReactNode}) {
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-mugla-navy text-white"><LockKeyhole size={28}/></span>
       <p className="mt-6 text-xs font-bold tracking-[.2em] text-mugla-orange">{isSuperAdminDomain() ? 'SUPER ADMIN GIRISI GEREKLI' : isCrmDomain() ? 'CRM GIRISI GEREKLI' : 'BELEDIYE PANELI GIRISI GEREKLI'}</p>
       <h1 className="mt-2 text-3xl font-bold">Bu alan yetkili kullanicilar icindir.</h1>
-      <p className="mt-3 leading-7 text-mugla-navy/55">{isCrmDomain() ? 'CRM verileri belediye paneline taşındı. Sadece super admin, belediye admini ve tanımlı CRM yetkilisi belediye panelindeki CRM alanını görebilir.' : 'Sadece tanimli belediye yetkilileri e-posta ve sifreyle panele girebilir.'}</p>
+      <p className="mt-3 leading-7 text-mugla-navy/55">{isCrmDomain() ? 'CRM verileri özel panelde tutulur. Sadece super admin, belediye admini ve tanımlı CRM yetkilisi bu alana girebilir.' : 'Sadece tanimli belediye yetkilileri e-posta ve sifreyle panele girebilir.'}</p>
       <Link href={isSuperAdminDomain() ? superAdminUrl('/admin/giris') : '/admin/giris'} className="mt-7 inline-flex"><Button variant="orange"><LockKeyhole size={17}/>{isSuperAdminDomain() ? 'Super admin girisi' : 'Belediye paneli girisi'}</Button></Link>
     </section>
   </main>

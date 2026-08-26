@@ -14,12 +14,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (host === CRM_DOMAIN && (pathname === '/' || pathname.startsWith('/crm'))) {
+  if (host === CRM_DOMAIN && pathname === '/') {
     const url = request.nextUrl.clone()
-    url.protocol = 'https'
-    url.host = MUNICIPALITY_DOMAIN
-    url.pathname = '/admin'
-    url.hash = '#crm'
+    url.pathname = '/crm'
     return NextResponse.redirect(url)
   }
 
