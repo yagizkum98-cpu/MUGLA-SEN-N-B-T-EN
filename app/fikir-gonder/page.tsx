@@ -44,8 +44,8 @@ export default function IdeaForm(){
   const[themesLoaded,setThemesLoaded]=useState(false)
   const[themeVersion,setThemeVersion]=useState(0)
   const activeThemeSetting=useMemo(()=>resolveAnnualThemeSetting(themeSettings,applicationYear),[themeSettings,applicationYear,themeVersion])
-  const categoryOptions=useMemo(()=>themesLoaded?allowedCategoriesForSetting(activeThemeSetting):[],[activeThemeSetting,themesLoaded])
-  const activeThemeLabels=themesLoaded?annualThemeLabelsForSetting(activeThemeSetting):[]
+  const categoryOptions=useMemo(()=>allowedCategoriesForSetting(activeThemeSetting),[activeThemeSetting])
+  const activeThemeLabels=annualThemeLabelsForSetting(activeThemeSetting)
   const yearlyIdeaCount=useMemo(()=>{
     if(!currentUser)return 0
     return projects.filter(project=>{
@@ -80,6 +80,9 @@ export default function IdeaForm(){
   },[])
 
   useEffect(()=>{
+    const localSettings=listAnnualThemeSettings()
+    setThemeSettings(localSettings)
+    setThemesLoaded(true)
     const refreshLocal=()=>{setThemeSettings(listAnnualThemeSettings());setThemesLoaded(true);setThemeVersion(value=>value+1)}
     void syncAnnualThemeSettings().then(settings=>{setThemeSettings(settings);setThemesLoaded(true);setThemeVersion(value=>value+1)})
     window.addEventListener(annualThemeChangeEvent,refreshLocal)
@@ -265,7 +268,7 @@ export default function IdeaForm(){
             <div className="mb-4 flex flex-wrap gap-2">{themesLoaded&&activeThemeLabels.length?activeThemeLabels.map(label=><span key={label} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/65">{label}</span>):<span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-mugla-navy/50">Bu yıl için açık tema yok</span>}</div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="mb-2 block text-sm font-semibold">Başvuru yılı <span className="text-red-500">*</span></span><select name="applicationYear" className={field} value={applicationYear} onChange={event=>setApplicationYear(event.target.value)} required>{annualThemeYears.map(year=><option key={year} value={year}>{year}</option>)}</select></label>
-              <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={categoryOptions.some(([name])=>name===category)?category:''} onChange={e=>{setCategory(e.target.value as ProjectCategory); if(e.target.value!=='Diğer')setCustomTheme('')}} disabled={!themesLoaded||!categoryOptions.length} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
+              <label><span className="mb-2 block text-sm font-semibold">Kategori <span className="text-red-500">*</span></span><select name="category" className={field} value={categoryOptions.some(([name])=>name===category)?category:''} onChange={e=>{setCategory(e.target.value as ProjectCategory); if(e.target.value!=='Diğer')setCustomTheme('')}} disabled={!categoryOptions.length} required>{categoryOptions.map(item=><option key={item[0]}>{item[0]}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Hedef Grup <span className="text-red-500">*</span></span><select name="targetGroup" className={field} required>{targetGroups.map(group=><option key={group}>{group}</option>)}</select></label>
               <label><span className="mb-2 block text-sm font-semibold">Projenin uygulanacağı ilçe <span className="text-red-500">*</span></span><select name="district" className={field} required>{projectDistrictOptions.map(district=><option key={district}>{district}</option>)}</select></label>
             </div>
@@ -297,7 +300,7 @@ export default function IdeaForm(){
             </label>
           </section>
           <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvuru gönderildiğinde belediye panelindeki Proje Merkezi'ne otomatik kaydedilir.</p></div>
-          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!themesLoaded||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
+          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
