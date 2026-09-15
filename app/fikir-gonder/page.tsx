@@ -147,7 +147,6 @@ export default function IdeaForm(){
       summary:String(data.get('summary')).trim(),
       activities:String(data.get('activities')).trim(),
       expectedResults:String(data.get('expectedResults')).trim(),
-      budgetJustification:String(data.get('budgetJustification')).trim(),
       country:applicantCountry,
       countryCode:applicantCountryCode,
       province:applicantProvince,
@@ -277,8 +276,6 @@ export default function IdeaForm(){
           <div><label className="mb-2 block font-semibold" htmlFor="activities">Projenin adımları / faaliyetleri <span className="text-red-500">*</span></label><textarea id="activities" name="activities" className={`${field} min-h-40 resize-y`} required maxLength={1500} placeholder={'1. Hazırlık çalışmaları\n2. Uygulama aşaması\n3. İzleme ve değerlendirme'}/></div>
           <div><label className="mb-2 block font-semibold" htmlFor="purpose">Proje açıklaması <span className="text-red-500">*</span></label><textarea id="purpose" name="purpose" className={`${field} min-h-44 resize-y`} required maxLength={3000} placeholder="Projenin çözmek istediği sorunu, kapsamını ve temel amacını açıklayın"/></div>
           <div><label className="mb-2 block font-semibold" htmlFor="expectedResults">Projeden beklenen sonuçlar <span className="text-red-500">*</span></label><textarea id="expectedResults" name="expectedResults" className={`${field} min-h-32 resize-y`} required maxLength={1500} placeholder="Proje tamamlandığında oluşacak somut faydaları açıklayın"/></div>
-          <div><label className="mb-2 block font-semibold" htmlFor="budgetJustification">Tahmini bütçe gerekçesi <span className="text-red-500">*</span></label><textarea id="budgetJustification" name="budgetJustification" className={`${field} min-h-28 resize-y`} required maxLength={1000} placeholder="Tahmini bütçe ihtiyacını, ana gider kalemlerini ve gerekçesini açıklayın"/></div>
-
           <div>
             <div className="mb-2 flex items-center justify-between gap-3"><span className="font-semibold">Proje dosyalari</span><span className={`text-xs font-semibold ${total>MAX_TOTAL*.9?'text-red-600':'text-mugla-navy/45'}`}>{size(total)} / 100 MB</span></div>
             <input ref={inputRef} className="hidden" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" onChange={(e:ChangeEvent<HTMLInputElement>)=>{addFiles(e.target.files);e.target.value=''}}/>
@@ -306,4 +303,3 @@ export default function IdeaForm(){
     </div>
   </main>
 }
-
