@@ -174,6 +174,10 @@ export function getAnnualThemeSetting(year: string) {
   return listAnnualThemeSettings().find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
 }
 
+export function resolveAnnualThemeSetting(settings: AnnualThemeSetting[], year: string) {
+  return settings.find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
+}
+
 export function isAllThemesOpen(year: string) {
   const setting = getAnnualThemeSetting(year)
   return !setting.themes.length || setting.themes.includes('all')
@@ -217,3 +221,6 @@ export function isProjectThemeAllowed(year: string, category: string, subcategor
   return allowedCategoriesForYear(year).some(([name]) => name === category)
 }
 
+export function isProjectThemeAllowedForSetting(setting: AnnualThemeSetting, category: string) {
+  return allowedCategoriesForSetting(setting).some(([name]) => name === category)
+}

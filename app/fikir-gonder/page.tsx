@@ -11,7 +11,7 @@ import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity
 import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
-import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowed,listAnnualThemeSettings,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
+import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowedForSetting,listAnnualThemeSettings,resolveAnnualThemeSetting,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
 
 const MAX_TOTAL=100*1024*1024
 const YEARLY_IDEA_LIMIT=5
@@ -43,9 +43,9 @@ export default function IdeaForm(){
   const[themeSettings,setThemeSettings]=useState<AnnualThemeSetting[]>([])
   const[themesLoaded,setThemesLoaded]=useState(false)
   const[themeVersion,setThemeVersion]=useState(0)
-  const activeThemeSetting=useMemo(()=>themeSettings.find(setting=>setting.year===applicationYear)??null,[themeSettings,applicationYear,themeVersion])
-  const categoryOptions=useMemo(()=>activeThemeSetting?allowedCategoriesForSetting(activeThemeSetting):[],[activeThemeSetting])
-  const activeThemeLabels=activeThemeSetting?annualThemeLabelsForSetting(activeThemeSetting):[]
+  const activeThemeSetting=useMemo(()=>resolveAnnualThemeSetting(themeSettings,applicationYear),[themeSettings,applicationYear,themeVersion])
+  const categoryOptions=useMemo(()=>themesLoaded?allowedCategoriesForSetting(activeThemeSetting):[],[activeThemeSetting,themesLoaded])
+  const activeThemeLabels=themesLoaded?annualThemeLabelsForSetting(activeThemeSetting):[]
   const yearlyIdeaCount=useMemo(()=>{
     if(!currentUser)return 0
     return projects.filter(project=>{
@@ -117,7 +117,7 @@ export default function IdeaForm(){
       setSubmitting(false)
       return
     }
-    if(!isProjectThemeAllowed(applicationYear,selectedCategory,'Genel')){
+    if(!isProjectThemeAllowedForSetting(activeThemeSetting,selectedCategory)){
       setError(`${applicationYear} yili icin bu tema basvuruya acik degil. Lutfen acik temalardan bir kategori secin.`)
       setSubmitting(false)
       return
