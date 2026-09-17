@@ -15,13 +15,20 @@ const allowedOrigins = [
 
 type AnnualThemeSetting = {year: string; themes: string[]; updatedAt: string}
 
+const annualThemeYears = ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039', '2040']
+const defaultAnnualThemeSettings: AnnualThemeSetting[] = annualThemeYears.map(year => ({
+  year,
+  themes: year === '2026' ? ['afet'] : ['all'],
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}))
+
 declare global {
   // eslint-disable-next-line no-var
   var muglaAnnualThemeFallbackStore: AnnualThemeSetting[] | undefined
 }
 
 function fallbackStore() {
-  globalThis.muglaAnnualThemeFallbackStore ??= []
+  globalThis.muglaAnnualThemeFallbackStore ??= defaultAnnualThemeSettings
   return globalThis.muglaAnnualThemeFallbackStore
 }
 
@@ -99,7 +106,7 @@ export async function GET(request: Request) {
       if (!error && Array.isArray(data)) tableSettings = normalizeSettings(data)
     } catch {}
     const fallbackSettings = await readFallbackSettings(supabase)
-    return NextResponse.json({settings: mergeSettings([...fallbackSettings, ...tableSettings]), synced: true}, {headers: corsHeaders(request)})
+    return NextResponse.json({settings: mergeSettings([...defaultAnnualThemeSettings, ...fallbackSettings, ...tableSettings]), synced: true}, {headers: corsHeaders(request)})
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Yillik tema ayarlari okunamadi.'
     return NextResponse.json({error: message}, {status: 400, headers: corsHeaders(request)})
@@ -113,7 +120,7 @@ export async function POST(request: Request) {
     if (!setting) throw new Error('Yillik tema ayari gecersiz.')
     const supabase = supabaseAdmin()
     const current = supabase ? await readFallbackSettings(supabase) : fallbackStore()
-    const settings = mergeSettings([...current.filter(item => item.year !== setting.year), setting])
+    const settings = mergeSettings([...defaultAnnualThemeSettings, ...current.filter(item => item.year !== setting.year), setting])
     if (supabase) {
       try {
         await supabase.from(TABLE).upsert({

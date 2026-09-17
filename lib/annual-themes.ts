@@ -14,6 +14,12 @@ export type AnnualThemeSetting = {
   updatedAt: string
 }
 
+export const defaultAnnualThemeSettings: AnnualThemeSetting[] = annualThemeYears.map(year => ({
+  year,
+  themes: year === '2026' ? ['afet'] : ['all'],
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}))
+
 export const annualThemeOptions: {id: AnnualThemeId; label: string; note: string; categories?: string[]}[] = [
   {id: 'all', label: 'Tüm temalar', note: 'Vatandaşlar o yıl tüm kategorilerden fikir gönderebilir.'},
   {id: 'afet', label: 'Afet ve Risk Yönetimi', note: 'Afet hazırlığı, risk azaltma ve kriz koordinasyonu fikirleri.', categories: ['Afet ve Risk Yönetimi']},
@@ -53,17 +59,19 @@ function normalizeThemeId(value: string): AnnualThemeId | null {
 }
 
 export function listAnnualThemeSettings(): AnnualThemeSetting[] {
+  const defaults = defaultAnnualThemeSettings
   if (typeof window === 'undefined') return []
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-    if (!Array.isArray(value)) return []
-    return value.map(item => ({
+    if (!Array.isArray(value)) return defaults
+    const local = value.map(item => ({
       year: String(item.year),
       themes: Array.isArray(item.themes) ? item.themes.map((theme: string) => normalizeThemeId(theme)).filter(Boolean) : [],
       updatedAt: item.updatedAt ?? new Date().toISOString(),
     })).filter(item => annualThemeYears.includes(item.year as typeof annualThemeYears[number]))
+    return mergeAnnualThemeSettings(defaults, local)
   } catch {
-    return []
+    return defaults
   }
 }
 
@@ -171,11 +179,11 @@ export function upsertAnnualThemeSetting(year: string, themes: AnnualThemeId[]) 
 }
 
 export function getAnnualThemeSetting(year: string) {
-  return listAnnualThemeSettings().find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
+  return listAnnualThemeSettings().find(item => item.year === year) ?? defaultAnnualThemeSettings.find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
 }
 
 export function resolveAnnualThemeSetting(settings: AnnualThemeSetting[], year: string) {
-  return settings.find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
+  return settings.find(item => item.year === year) ?? defaultAnnualThemeSettings.find(item => item.year === year) ?? {year, themes: ['all' as AnnualThemeId], updatedAt: ''}
 }
 
 export function isAllThemesOpen(year: string) {

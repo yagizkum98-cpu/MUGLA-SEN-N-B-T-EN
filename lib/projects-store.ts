@@ -398,8 +398,15 @@ export function useProjects(){
   const reviewProject=useCallback((id:string,moderationStatus:ProjectModerationStatus)=>{
     save(readProjects().map(project=>{
       if(project.id!==id)return project
-      const approved=!['Bekliyor','Reddedildi'].includes(String(moderationStatus))
-      return {...project,moderationStatus,status:approved?'Uygun':project.status,workflowStatus:approved?'Oylamaya Hazır':project.workflowStatus,progress:approved?0:project.progress}
+      const approved=moderationStatus==='Onaylandı'
+      const rejected=moderationStatus==='Reddedildi'
+      return {
+        ...project,
+        moderationStatus,
+        status:approved?'Uygun':rejected?'Ertelendi':project.status,
+        workflowStatus:approved?'Oylamaya Hazır':rejected?'Reddedildi':project.workflowStatus,
+        progress:approved?0:project.progress,
+      }
     }))
   },[save])
   const voteProject=useCallback((id:string,delta:1|-1)=>{

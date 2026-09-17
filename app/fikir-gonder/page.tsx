@@ -8,7 +8,7 @@ import {saveProjectFiles} from '@/lib/project-files'
 import {submitProjectToProjectCenter,syncProjectRecord,useProjects} from '@/lib/projects-store'
 import {muglaDistricts} from '@/lib/locations'
 import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity} from '@/lib/local-auth'
-import {citizenUrl, isCitizenDomain, municipalityUrl, publicUrl} from '@/lib/domain-routing'
+import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
 import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
 import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowedForSetting,listAnnualThemeSettings,resolveAnnualThemeSetting,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
@@ -208,12 +208,12 @@ export default function IdeaForm(){
     <section className="w-full max-w-xl rounded-[32px] bg-white p-10 text-center shadow-soft">
       <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-green-50 text-mugla-green"><CheckCircle2 size={38}/></span>
       <p className="mt-7 text-xs font-bold tracking-[.2em] text-mugla-orange">BASVURU ALINDI</p>
-      <h1 className="mt-2 text-3xl font-bold">Fikriniz belediye Proje Merkezi'ne gönderildi.</h1>
-      <div className="mx-auto mt-5 inline-flex rounded-full bg-mugla-sand px-4 py-2 text-sm font-black text-mugla-navy/70">Proje kodu: {success}</div>
-      <p className="mt-4 leading-7 text-mugla-navy/55">Başvurunuz Bekliyor durumuyla belediye panelindeki Proje Merkezi'ne otomatik kaydedildi. Yetkili ekip proje bilgilerini düzenleyebilir, onay/red verebilir ve uygun projeyi ayrıca oylamaya sunabilir.</p>
+      <h1 className="mt-2 text-3xl font-bold">Fikriniz başarıyla alındı.</h1>
+      <div className="mx-auto mt-5 inline-flex rounded-full bg-mugla-sand px-4 py-2 text-sm font-black text-mugla-navy/70">Başvuru numarası: {success}</div>
+      <p className="mt-4 leading-7 text-mugla-navy/55">Başvurunuz inceleme sırasına alındı. Durumunu, oylama aşamasını ve süreçteki gelişmeleri vatandaş panelinizden başvuru numarasıyla takip edebilirsiniz.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link href="/projeler"><Button variant="orange">Projeleri goruntule</Button></Link>
-        <a href={municipalityUrl('/admin#projeler')} target="_blank" rel="noreferrer"><Button variant="outline">Belediye Proje Merkezi</Button></a>
+        <Link href={`/vatandas/panel?basvuru=${encodeURIComponent(success)}#oylar`}><Button variant="orange">Vatandaş panelinde takip et</Button></Link>
+        <Link href="/projeler#oy-ver"><Button variant="outline">Oylamadaki projeler</Button></Link>
         <Button variant="outline" onClick={()=>setSuccess('')}>Yeni fikir gonder</Button>
       </div>
     </section>
@@ -299,7 +299,7 @@ export default function IdeaForm(){
               <span>Okudum, anladım ve proje fikrime ilişkin fikri/sınai haklar ile proje kullanım haklarının yukarıdaki kapsamda Muğla Büyükşehir Belediyesi tarafından kullanılabileceğini kabul ve taahhüt ederim.</span>
             </label>
           </section>
-          <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvuru gönderildiğinde belediye panelindeki Proje Merkezi'ne otomatik kaydedilir.</p></div>
+          <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvurunuzun durumunu vatandaş panelinizden takip edebilirsiniz.</p></div>
           <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>

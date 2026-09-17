@@ -4,6 +4,10 @@ create table if not exists public.annual_theme_settings (
   updated_at timestamptz not null default now()
 );
 
+insert into public.annual_theme_settings (year, themes, updated_at)
+values ('2026', '["afet"]'::jsonb, '2026-01-01T00:00:00Z'::timestamptz)
+on conflict (year) do nothing;
+
 alter table public.annual_theme_settings enable row level security;
 
 drop policy if exists "Annual theme settings are readable" on public.annual_theme_settings;

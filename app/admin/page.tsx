@@ -10,7 +10,7 @@ import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, Calen
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminProfile, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
-import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, syncAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
+import {allowedCategoriesForYear, annualThemeChangeEvent, annualThemeOptions, annualThemeYears, listAnnualThemeSettings, resolveAnnualThemeSetting, syncAnnualThemeSettings, upsertAnnualThemeSetting, type AnnualThemeId, type AnnualThemeSetting} from '@/lib/annual-themes'
 import {type ContactRecord, useContactRecords} from '@/lib/contact-store'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
 import {type Channel, useCrm} from '@/lib/crm-store'
@@ -812,6 +812,13 @@ function ProjectManagementPanel({
         </div>
       </section>
       </div>
+      <section className={adminPanel}>
+        <div className="border-b border-mugla-navy/10 p-4">
+          <h3 className="font-black">Başvuru Bilgilerinin Tamamı</h3>
+          <p className="mt-1 text-sm text-mugla-navy/55">Vatandaşın formda gönderdiği bilgiler, ekler ve değerlendirme verileri.</p>
+        </div>
+        <div className="p-4"><ProjectDetailBlock project={project}/></div>
+      </section>
       {canEdit && <form onSubmit={onSave} className="grid gap-4 rounded-2xl border border-mugla-navy/10 bg-white p-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <p className="text-xs font-black uppercase tracking-wider text-mugla-cyan">Hızlı düzenle</p>
@@ -867,7 +874,7 @@ export default function Admin() {
   const [themeSettings, setThemeSettings] = useState<AnnualThemeSetting[]>([])
   const [themeYear, setThemeYear] = useState<string>(annualThemeYears[0])
   const themeYearRef = useRef<string>(annualThemeYears[0])
-  const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(['all'])
+  const [themeDraft, setThemeDraft] = useState<AnnualThemeId[]>(() => resolveAnnualThemeSetting([], annualThemeYears[0]).themes)
   const [votingYear, setVotingYear] = useState<string>(String(new Date().getFullYear()))
   const [manualProjectCategory, setManualProjectCategory] = useState<string>(categories[0]?.[0] ?? '')
   const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([])
@@ -1346,7 +1353,7 @@ export default function Admin() {
   }
 
   function themesForYear(year: string) {
-    return themeSettings.find(setting => setting.year === year)?.themes ?? ['all' as AnnualThemeId]
+    return resolveAnnualThemeSetting(themeSettings, year).themes
   }
 
   function changeThemeYear(year: string) {
@@ -1570,7 +1577,7 @@ export default function Admin() {
   const archivedProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Reddedildi' || project.moderationStatus === 'Reddedildi')
   const projectCenterProjects = scopedProjects.filter(project => {
     if (projectCenterTab === 'Onay Bekleyen') return isPendingReviewProject(project)
-    if (projectCenterTab === 'Onaylanan') return approvedWaitingProjects.some(item => item.id === project.id)
+    if (projectCenterTab === 'Onaylanan') return project.moderationStatus === 'Onaylandı'
     if (projectCenterTab === 'Oylama Zamanı') return activeVotingProjects.some(item => item.id === project.id)
     if (projectCenterTab === 'Reddedilenler') return project.moderationStatus === 'Reddedildi' || String(project.workflowStatus) === 'Reddedildi'
     if (projectCenterTab === 'Arşiv') return projectLifecycleLabel(project) === 'Arşiv'
@@ -1867,7 +1874,7 @@ export default function Admin() {
               ['Tümü', scopedProjects.length],
               ['Proje Havuzu', scopedProjects.length],
               ['Onay Bekleyen', pendingProjects.length],
-              ['Onaylanan', approvedWaitingProjects.length],
+              ['Onaylanan', approvedProjects.length],
               ['Oylama Zamanı', activeVotingProjects.length],
               ['Reddedilenler', archivedProjects.length],
               ['Arşiv', archivedProjects.length],
@@ -1942,7 +1949,7 @@ export default function Admin() {
                 <td><span className="rounded-lg bg-mugla-sand px-2 py-1 text-xs font-bold text-mugla-navy/65">{project.workflowStatus ?? project.moderationStatus}</span></td>
                 <td className="p-3">
                   <div className="flex justify-end gap-1">
-                    <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Eye size={14}/> İncele</button>
+                    <button type="button" className={tableAction} onClick={() => setManagedProjectId(project.id)}><Eye size={14}/> Bilgileri görüntüle</button>
                     {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={tableAction} onClick={() => approvePendingProject(project)}><CheckCircle2 size={14}/> Onayla</button>}
                     {canReviewProjects && isPendingReviewProject(project) && <button type="button" className={`${tableAction} border-red-100 bg-red-50 text-red-700 hover:bg-red-100`} onClick={() => rejectPendingProject(project)}><XCircle size={14}/> Reddet</button>}
                     {canSendProjectsToVote && project.moderationStatus === 'Onaylandı' && !isProjectOnVoting(project) && <button type="button" className={tableAction} onClick={() => sendProjectToVote(project)}><Vote size={14}/> Oylamaya Sun</button>}
@@ -2760,7 +2767,7 @@ export default function Admin() {
                     <span><b className="block text-mugla-navy">Kategori</b>{projectCategoryLabel(project)}</span>
                     <span><b className="block text-mugla-navy">Son işlem</b>{last ? new Date(last.date).toLocaleDateString('tr-TR') : '-'}</span>
                   </div>
-                  <button type="button" onClick={() => setManagedProjectId(project.id)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-bold text-white hover:bg-mugla-blue"><Eye size={15}/> Detay</button>
+                  <button type="button" onClick={() => setManagedProjectId(project.id)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-mugla-navy px-4 py-2 text-sm font-bold text-white hover:bg-mugla-blue"><Eye size={15}/> Bilgileri görüntüle</button>
                 </div>
               </article>
             })}
@@ -2883,4 +2890,3 @@ export default function Admin() {
     </div>
   </AppShell></AdminAuthGate>
 }
-

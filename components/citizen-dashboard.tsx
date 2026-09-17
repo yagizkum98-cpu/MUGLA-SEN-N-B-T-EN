@@ -81,6 +81,7 @@ function fileToDataUrl(file: File) {
 export function CitizenDashboard() {
   const [user, setUser] = useState<LocalUser | null>(null)
   const [message, setMessage] = useState('')
+  const [applicationQuery, setApplicationQuery] = useState('')
   const {projects, voteProject} = useProjects()
   const {notifications: civicNotifications, events: civicEvents} = useCivicUpdates()
   const {basket, confirmed, remaining, add, remove, confirm} = useVoteBasket(user?.id)
@@ -88,6 +89,7 @@ export function CitizenDashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
+    setApplicationQuery(params.get('basvuru')?.trim() ?? '')
     if (consumeCitizenSessionTransfer(params.get('auth_transfer'))) {
       params.delete('auth_transfer')
       window.history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}${location.hash || '#panelim'}`)
@@ -105,6 +107,11 @@ export function CitizenDashboard() {
   }, [])
 
   const myProjects = useMemo(() => user ? projects.filter(project => project.ownerId === user.id || project.ownerEmail === user.email) : [], [projects, user])
+  const queriedProjects = useMemo(() => {
+    const query = applicationQuery.trim().toLocaleLowerCase('tr')
+    if (!query) return myProjects
+    return myProjects.filter(project => project.projectCode.toLocaleLowerCase('tr').includes(query))
+  }, [applicationQuery, myProjects])
   const districtProjects = useMemo(() => user ? projects.filter(project => project.district === user.district && !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))) : [], [projects, user])
   const activeVoteProjects = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus)) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status))), [projects])
   const basketProjects = useMemo(() => activeVoteProjects.filter(project => basket.includes(project.id)), [activeVoteProjects, basket])
@@ -417,10 +424,10 @@ export function CitizenDashboard() {
         </CardContent>
       </Card>
 
-      <Card id="oylar"><CardHeader className="flex-row items-center justify-between"><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">BAŞVURULARIM</p><h2 className="mt-1 text-xl font-bold">Kendi fikirlerim ve durumları</h2></div><Link className="text-sm font-semibold text-mugla-blue" href="/projeler">Projeleri gör <ArrowUpRight className="inline" size={15}/></Link></CardHeader><CardContent className="space-y-3">{myProjects.length ? myProjects.map(project => {
+      <Card id="oylar"><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold tracking-widest text-mugla-cyan">BAŞVURULARIM</p><h2 className="mt-1 text-xl font-bold">Kendi fikirlerim ve durumları</h2></div><Link className="text-sm font-semibold text-mugla-blue" href="/projeler">Projeleri gör <ArrowUpRight className="inline" size={15}/></Link></div><label className="mt-4 block"><span className="mb-2 block text-sm font-semibold">Başvuru numarasıyla sorgula</span><input value={applicationQuery} onChange={event => setApplicationQuery(event.target.value)} className="w-full rounded-xl border border-mugla-navy/15 bg-white px-4 py-3 outline-none focus:border-mugla-cyan" placeholder="Örn. MBS-2026-0001" aria-label="Başvuru numarası"/></label></CardHeader><CardContent className="space-y-3">{queriedProjects.length ? queriedProjects.map(project => {
         const votingLabel = projectVotingSubmissionLabel(project)
         return <div key={project.id} className="fade-up-card flex flex-wrap items-center gap-4 rounded-2xl border border-mugla-navy/10 p-4"><span className="h-14 w-2 rounded-full" style={{background: project.color}}/><div className="min-w-0 flex-1"><p className="font-bold">{project.title}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-mugla-navy/50"><span className="rounded-full bg-mugla-sand px-2 py-0.5 font-black text-mugla-navy/65">{project.projectCode}</span><span>{project.district}</span><CategoryBadge label={projectCategoryLabel(project)} color={project.color}/><span className={`rounded-full px-2 py-0.5 font-black ${votingSubmissionClass(votingLabel)}`}>{votingLabel}</span></div></div><div className="grid grid-cols-2 gap-3 text-right text-sm"><span><b className="block">{project.votes}</b>destek</span><span><b className="block">{formatBudget(project.budget)}</b>bütçe</span></div></div>
-      }) : <div className="py-14 text-center text-mugla-navy/45"><Lightbulb className="mx-auto mb-3"/><p className="font-semibold">Henüz fikir başvurunuz yok.</p><Link href="/fikir-gonder" className="mt-4 inline-flex"><Button variant="orange">İlk fikrimi gönder</Button></Link></div>}</CardContent></Card>
+      }) : <div className="py-14 text-center text-mugla-navy/45"><Lightbulb className="mx-auto mb-3"/><p className="font-semibold">{applicationQuery ? 'Bu numarayla size ait bir başvuru bulunamadı.' : 'Henüz fikir başvurunuz yok.'}</p>{!applicationQuery && <Link href="/fikir-gonder" className="mt-4 inline-flex"><Button variant="orange">İlk fikrimi gönder</Button></Link>}</div>}</CardContent></Card>
     </div>
   </AppShell>
 }
