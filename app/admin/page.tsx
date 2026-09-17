@@ -891,6 +891,7 @@ export default function Admin() {
   const [projectCenterTab, setProjectCenterTab] = useState('Tümü')
   const [notificationTab, setNotificationTab] = useState('Yeni Bildirim')
   const [votingWizardOpen, setVotingWizardOpen] = useState(false)
+  const [votingProjectToQueue, setVotingProjectToQueue] = useState<ProjectRecord | null>(null)
   const [votingWizardStep, setVotingWizardStep] = useState(1)
   const [selectedVotingProjects, setSelectedVotingProjects] = useState<string[]>([])
   const [votingRecords, setVotingRecords] = useState<VotingRecord[]>([])
@@ -962,7 +963,7 @@ export default function Admin() {
   const voteNeighborhoodOptions = Array.from(new Set(voteBaseProjects.map(project => project.neighborhood || project.applicantDistrict || project.district).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'))
   const votingAllowedCategories = allowedCategoriesForYear(votingYear)
   const votingAllowedCategoryNames = new Set(votingAllowedCategories.map(item => item[0]))
-  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && projectApplicationYear(project) === votingYear && votingAllowedCategoryNames.has(projectCategoryLabel(project)))
+  const approvedVotingCandidates = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && project.votingYear === votingYear && votingAllowedCategoryNames.has(projectCategoryLabel(project)))
   const activeVotingRecords = votingRecords.filter(record => record.status === 'Aktif')
   const votingProjectCount = votingRecords.reduce((sum, record) => sum + record.projectIds.length, 0)
   const votingRecordsVoteTotal = votingRecords.reduce((sum, record) => sum + record.projectIds.reduce((projectSum, id) => projectSum + (projects.find(project => project.id === id)?.votes ?? 0), 0), 0)
@@ -1115,9 +1116,26 @@ export default function Admin() {
 
   function sendProjectToVote(project: ProjectRecord) {
     if (!canSendProjectsToVote) return
-    updateProjectWithHistory(project, {workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'}, 'Proje oylamaya sunuldu', project.title)
+    setVotingProjectToQueue(project)
+  }
+
+  function confirmProjectVotingYear() {
+    if (!votingProjectToQueue) return
+    const allowedNames = new Set(allowedCategoriesForYear(votingYear).map(item => item[0]))
+    if (!allowedNames.has(projectCategoryLabel(votingProjectToQueue))) {
+      setMessage(`${votingYear} yılı temaları bu projenin kategorisini kapsamıyor.`)
+      return
+    }
+    updateProjectWithHistory(
+      votingProjectToQueue,
+      {votingYear, workflowStatus: 'Oylamaya Hazır', moderationStatus: 'Onaylandı', status: 'Uygun'},
+      `${votingYear} oylamasına aday gösterildi`,
+      votingProjectToQueue.title,
+    )
+    setSelectedVotingProjects(current => current.includes(votingProjectToQueue.id) ? current : [...current, votingProjectToQueue.id])
+    setVotingProjectToQueue(null)
     setProjectCenterTab('Oylama Zamanı')
-    setMessage('Proje oylamaya sunuldu; vatandaş ekranında Oylamaya sunuldu ibaresi görünür.')
+    setMessage(`Proje ${votingYear} yılında oylamaya sunulacak projeler arasına eklendi. Oylama aktif edildiğinde vatandaş ekranında yayınlanacak.`)
   }
 
   function saveManagedProject(event: FormEvent<HTMLFormElement>) {
@@ -1556,11 +1574,11 @@ export default function Admin() {
       const allowedNames = new Set(allowedCategoriesForYear(recordYear).map(item => item[0]))
       const selectedIds = new Set(record.projectIds)
       projects.forEach(project => {
-        const inVotingYear = projectApplicationYear(project) === recordYear
+        const inVotingYear = project.votingYear === recordYear
         const inVotingDistrict = record.districts.includes(project.district) || project.district === 'Tüm İlçeler'
         const eligible = project.moderationStatus === 'Onaylandı' && inVotingYear && inVotingDistrict && allowedNames.has(projectCategoryLabel(project))
         if (selectedIds.has(project.id)) {
-          updateProject(project.id, {workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'})
+          updateProject(project.id, {votingYear: recordYear, workflowStatus: 'Yayında', moderationStatus: 'Onaylandı', status: 'Oylamada'})
         } else if (eligible && !isProjectOnVoting(project)) {
           updateProject(project.id, {workflowStatus: 'Oylamaya Sunulmadı', status: 'Uygun'})
         }
@@ -1571,6 +1589,7 @@ export default function Admin() {
   }
 
   const activeVotingProjects = scopedProjects.filter(isProjectOnVoting)
+  const queuedVotingProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı' && Boolean(project.votingYear) && !isProjectOnVoting(project))
   const approvedProjects = scopedProjects.filter(project => project.moderationStatus === 'Onaylandı')
   const approvedWaitingProjects = approvedProjects.filter(project => !isProjectOnVoting(project) && projectLifecycleLabel(project) !== 'Arşiv')
   const winningProjects = scopedProjects.filter(project => String(project.workflowStatus) === 'Kazandı' || String(project.status).includes('Kazanan'))
@@ -1578,7 +1597,7 @@ export default function Admin() {
   const projectCenterProjects = scopedProjects.filter(project => {
     if (projectCenterTab === 'Onay Bekleyen') return isPendingReviewProject(project)
     if (projectCenterTab === 'Onaylanan') return project.moderationStatus === 'Onaylandı'
-    if (projectCenterTab === 'Oylama Zamanı') return activeVotingProjects.some(item => item.id === project.id)
+    if (projectCenterTab === 'Oylama Zamanı') return [...queuedVotingProjects, ...activeVotingProjects].some(item => item.id === project.id)
     if (projectCenterTab === 'Reddedilenler') return project.moderationStatus === 'Reddedildi' || String(project.workflowStatus) === 'Reddedildi'
     if (projectCenterTab === 'Arşiv') return projectLifecycleLabel(project) === 'Arşiv'
     return true
@@ -1875,7 +1894,7 @@ export default function Admin() {
               ['Proje Havuzu', scopedProjects.length],
               ['Onay Bekleyen', pendingProjects.length],
               ['Onaylanan', approvedProjects.length],
-              ['Oylama Zamanı', activeVotingProjects.length],
+              ['Oylama Zamanı', queuedVotingProjects.length + activeVotingProjects.length],
               ['Reddedilenler', archivedProjects.length],
               ['Arşiv', archivedProjects.length],
             ].map(([label, count]) => <button key={label} type="button" onClick={() => setProjectCenterTab(String(label))} className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold ${projectCenterTab === label ? 'border-mugla-cyan bg-cyan-50 text-mugla-navy' : 'border-mugla-navy/10 bg-white text-mugla-navy/55 hover:text-mugla-navy'}`}>{label} <span className="ml-1 text-xs opacity-60">{count}</span></button>)}
@@ -2835,6 +2854,17 @@ export default function Admin() {
             </Card>}
           </div>
         </aside>
+      </div>}
+
+      {votingProjectToQueue && <div className="fixed inset-0 z-[60] grid place-items-center bg-mugla-navy/45 p-4 backdrop-blur-sm" onClick={() => setVotingProjectToQueue(null)}>
+        <section className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onClick={event => event.stopPropagation()}>
+          <p className="text-xs font-black tracking-[.18em] text-mugla-cyan">OYLAMAYA SUNULACAK PROJE</p>
+          <h2 className="mt-2 text-xl font-black">Oylama yılını belirleyin</h2>
+          <p className="mt-2 text-sm leading-6 text-mugla-navy/55"><b>{votingProjectToQueue.title}</b> seçilen yılın aday proje listesine eklenir. Vatandaşlar projeyi ancak oylama aktif edildiğinde görebilir ve oylayabilir.</p>
+          <label className="mt-5 block"><span className="mb-2 block text-sm font-semibold">Oylama yılı</span><select className={field} value={votingYear} onChange={event => setVotingYear(event.target.value)}>{annualThemeYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+          <div className="mt-4 rounded-xl bg-mugla-sand/60 p-4 text-sm text-mugla-navy/60"><b className="block text-mugla-navy">{votingYear} açık temaları</b><p className="mt-1">{allowedCategoriesForYear(votingYear).map(item => item[0]).join(', ') || 'Açık tema bulunmuyor'}</p></div>
+          <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setVotingProjectToQueue(null)}>Vazgeç</Button><Button type="button" variant="orange" onClick={confirmProjectVotingYear}><Vote size={17}/> Aday listesine ekle</Button></div>
+        </section>
       </div>}
 
       {votingWizardOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-mugla-navy/45 p-4 backdrop-blur-sm">

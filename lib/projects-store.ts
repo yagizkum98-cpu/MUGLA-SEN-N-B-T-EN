@@ -47,6 +47,7 @@ export type ProjectRecord={
   workflowStatus?:ProjectWorkflowStatus
   createdAt:string
   applicationYear?:string
+  votingYear?:string
   createdByAdminId?:string
   createdByAdminName?:string
   source?:'citizen'|'municipality'

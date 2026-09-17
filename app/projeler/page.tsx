@@ -173,7 +173,7 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
           {project.targetGroup && <span>Hedef grup: {project.targetGroup}</span>}
           <span>Başvuru yılı: {applicationYear(project) || '-'}</span>
           <span>{formatBudget(project.budget)}</span>
-          <span>{project.votes.toLocaleString('tr-TR')} destek</span>
+          {!['Oylamada', 'Yılın Kazanan Adayı'].includes(status) && <span>{project.votes.toLocaleString('tr-TR')} destek</span>}
         </div>
         {project.summary && <p className="mt-2 line-clamp-2 text-sm leading-6 text-mugla-navy/55">{project.summary}</p>}
       </div>
@@ -226,7 +226,7 @@ export default function Projects() {
   }, [approved])
   const selectedParticipationStep = participationSteps.find(step => step.id === participationStep) ?? participationSteps[0]
   const matchesYear = (project: ProjectRecord) => !appliedFilters.years.length || appliedFilters.years.includes(applicationYear(project))
-  const votingProjects = approved.filter(project => matchesYear(project) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
+  const votingProjects = approved.filter(project => (!appliedFilters.years.length || appliedFilters.years.includes(project.votingYear ?? applicationYear(project))) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const votingOpen = scheduleVotingOpen || votingProjects.length > 0
   const winnerProjects = approved.filter(project => matchesYear(project) && ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
   const filtered = approved.filter(project => {
@@ -403,7 +403,7 @@ export default function Projects() {
                     {project.mergedFrom?.length ? <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">Birleştirilmiş proje</span> : null}
                   </div>
                   <h3 className="mt-2 font-black">{project.title}</h3>
-                  <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
+                  <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · Oylama sürüyor</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={(event) => {event.stopPropagation(); showDetails(project)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
@@ -421,7 +421,7 @@ export default function Projects() {
               <div className="p-4">
               <div className="flex flex-wrap gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{project.projectCode}</span><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(String(project.status))}`}>{project.status}</span><CategoryBadge project={project}/></div>
               <h3 className="mt-2 font-black">{project.title}</h3>
-              <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.votes.toLocaleString('tr-TR')} destek</p>
+              <p className="mt-1 text-sm text-mugla-navy/55">{project.district} · {project.status === 'Yılın Kazanan Adayı' ? 'Canlı sonuçlar gizli' : `${project.votes.toLocaleString('tr-TR')} destek`}</p>
               </div>
             </article>) : <div className="rounded-lg border border-dashed border-mugla-navy/20 bg-white p-6 text-center text-sm font-semibold text-mugla-navy/45">Kazanan projeler henüz ilan edilmedi.</div>}
           </div>}
@@ -450,11 +450,15 @@ export default function Projects() {
         </div>
         <div className="mt-4 grid gap-3 rounded-lg border border-mugla-navy/10 p-4 text-sm md:grid-cols-3">
           <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Başvuru yılı</span><p className="mt-1 font-bold">{applicationYear(selectedProject)}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Oylama yılı</span><p className="mt-1 font-bold">{selectedProject.votingYear || 'Belirtilmedi'}</p></div>
           <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Hedef grup</span><p className="mt-1 font-bold">{selectedProject.targetGroup || 'Belirtilmedi'}</p></div>
-          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Oy desteği</span><p className="mt-1 font-bold">{selectedProject.votes.toLocaleString('tr-TR')}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Oylama bilgisi</span><p className="mt-1 font-bold">{['Oylamada', 'Yılın Kazanan Adayı'].includes(String(selectedProject.status)) ? 'Oylama sürüyor; canlı sonuçlar gizlidir.' : `${selectedProject.votes.toLocaleString('tr-TR')} destek`}</p></div>
           <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Mahalle</span><p className="mt-1 font-bold">{selectedProject.neighborhood || 'Belirtilmedi'}</p></div>
           <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Başvuru ilçesi</span><p className="mt-1 font-bold">{selectedProject.applicantDistrict || 'Belirtilmedi'}</p></div>
           <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Durum</span><p className="mt-1 font-bold">{selectedProject.status}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Süre</span><p className="mt-1 font-bold">{selectedProject.duration || 'Belirtilmedi'}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Öncelik</span><p className="mt-1 font-bold">{selectedProject.priority || 'Belirtilmedi'}</p></div>
+          <div><span className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Konum</span><p className="mt-1 font-bold">{selectedProject.locationNote || 'Belirtilmedi'}</p></div>
         </div>
         <div className="mt-4 rounded-lg border border-mugla-navy/10 p-4">
           <p className="text-xs font-black uppercase tracking-[.14em] text-mugla-orange">Ek dosyalar</p>
