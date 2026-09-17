@@ -888,7 +888,7 @@ export default function Admin() {
   const [poolNeighborhoodFilter, setPoolNeighborhoodFilter] = useState('')
   const [poolCategoryFilter, setPoolCategoryFilter] = useState('')
   const [poolKeyword, setPoolKeyword] = useState('')
-  const [projectCenterTab, setProjectCenterTab] = useState('Tümü')
+  const [projectCenterTab, setProjectCenterTab] = useState('Onay Bekleyen')
   const [notificationTab, setNotificationTab] = useState('Yeni Bildirim')
   const [votingWizardOpen, setVotingWizardOpen] = useState(false)
   const [votingProjectToQueue, setVotingProjectToQueue] = useState<ProjectRecord | null>(null)
