@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check:navigation": "node --experimental-strip-types scripts/check-navigation.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

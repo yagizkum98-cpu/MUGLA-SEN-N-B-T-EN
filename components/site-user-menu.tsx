@@ -6,6 +6,7 @@ import {ArrowUpRight, LogOut, UserRound} from 'lucide-react'
 import {citizenUrl, isCitizenDomain} from '@/lib/domain-routing'
 import {createCitizenSessionTransfer, getCurrentUser, logoutUser, type LocalUser} from '@/lib/local-auth'
 import {useProjects} from '@/lib/projects-store'
+import {projectPath} from '@/lib/project-routes'
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).map(part => part[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || 'V'
@@ -42,11 +43,12 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
     location.href = '/'
   }
 
-  function panelHref() {
-    const target = '/vatandas/panel#panelim'
+  function panelHref(target = '/vatandas/panel#panelim') {
     if (!user) return citizenUrl(target)
     if (isCitizenDomain()) return target
-    return citizenUrl(`/vatandas/panel?auth_transfer=${encodeURIComponent(createCitizenSessionTransfer(user))}#panelim`)
+    const url = new URL(target, 'https://citizen.invalid')
+    url.searchParams.set('auth_transfer', createCitizenSessionTransfer(user))
+    return citizenUrl(`${url.pathname}${url.search}${url.hash}`)
   }
 
   if (!user) {
@@ -84,7 +86,7 @@ export function SiteUserMenu({showLogin = false}: {showLogin?: boolean}) {
           <span className="rounded-full bg-mugla-sand px-2 py-0.5 text-[11px] font-bold text-mugla-navy/55">{myProjects.length} başvuru</span>
         </div>
         <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-          {myProjects.length ? myProjects.map(project => <Link key={project.id} href="/projeler" onClick={() => setOpen(false)} className="block rounded-xl border border-mugla-navy/10 p-3 hover:border-mugla-orange/50">
+          {myProjects.length ? myProjects.map(project => <Link key={project.id} href={project.moderationStatus === 'Onaylandı' ? projectPath(project) : panelHref(`/vatandas/panel?basvuru=${encodeURIComponent(project.projectCode)}#oylar`)} onClick={() => setOpen(false)} className="block rounded-xl border border-mugla-navy/10 p-3 hover:border-mugla-orange/50">
             <p className="truncate text-sm font-bold">{project.title}</p>
             <p className="mt-1 flex flex-wrap gap-2 text-[11px] font-semibold text-mugla-navy/45">
               <span>{project.projectCode}</span>

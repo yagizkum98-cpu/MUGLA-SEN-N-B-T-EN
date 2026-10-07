@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import {useMemo, useState, type ReactNode} from 'react'
+import {useEffect, useMemo, useState, type ReactNode} from 'react'
 import {ArrowLeft, CheckCircle2, ChevronDown, FileText, MapPin, Search, ShoppingCart, SlidersHorizontal} from 'lucide-react'
 import {citizenUrl} from '@/lib/domain-routing'
 import {getCurrentUser} from '@/lib/local-auth'
 import {projectCategories, targetGroups} from '@/lib/project-taxonomy'
+import {projectPath} from '@/lib/project-routes'
 import {formatBudget, projectApplicationYear, useProjects, type ProjectRecord} from '@/lib/projects-store'
 import {useVoteBasket} from '@/lib/vote-basket'
 import {SiteUserMenu} from '@/components/site-user-menu'
+import {isSelectedProject} from '@/lib/project-routes'
 
 const votingSchedule = {
   start: '2026-05-01T00:00:00+03:00',
@@ -190,6 +192,9 @@ function ProjectRow({project, inBasket, confirmed, votingOpen, onAdd, onShowDeta
           <FileText size={16}/>
           Projeyi incele
         </button>
+        <button type="button" onClick={(event) => {event.stopPropagation(); location.href = projectPath(project)}} className="inline-flex h-10 items-center justify-center rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-cyan hover:text-mugla-navy">
+          Kalıcı sayfa
+        </button>
         <button disabled={!canVote || confirmed} onClick={(event) => {event.stopPropagation(); onAdd(project.id)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45">
           <ShoppingCart size={16}/>
           {confirmed ? 'Oy alindi' : canVote ? (inBasket ? 'Sepette' : 'Sepete ekle') : 'Takvim bekleniyor'}
@@ -208,6 +213,12 @@ export default function Projects() {
   const [participationStep, setParticipationStep] = useState<(typeof participationSteps)[number]['id']>('vote')
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null)
   const [message, setMessage] = useState('')
+  useEffect(() => {
+    const syncStep = () => setParticipationStep(location.hash === '#sonuclar' ? 'winners' : 'vote')
+    syncStep()
+    window.addEventListener('hashchange', syncStep)
+    return () => window.removeEventListener('hashchange', syncStep)
+  }, [])
   const scheduleVotingOpen = isWithinVotingPeriod()
 
   const approved = useMemo(() => projects.filter(project => !['Bekliyor', 'Reddedildi'].includes(String(project.moderationStatus))), [projects])
@@ -228,7 +239,7 @@ export default function Projects() {
   const matchesYear = (project: ProjectRecord) => !appliedFilters.years.length || appliedFilters.years.includes(applicationYear(project))
   const votingProjects = approved.filter(project => (!appliedFilters.years.length || appliedFilters.years.includes(project.votingYear ?? applicationYear(project))) && ['Oylamada', 'Yılın Kazanan Adayı'].includes(String(project.status)))
   const votingOpen = scheduleVotingOpen || votingProjects.length > 0
-  const winnerProjects = approved.filter(project => matchesYear(project) && ['Yılın Kazanan Adayı', 'Tamamlandı'].includes(String(project.status))).sort((a, b) => b.votes - a.votes)
+  const winnerProjects = approved.filter(project => matchesYear(project) && isSelectedProject(project)).sort((a, b) => b.votes - a.votes)
   const filtered = approved.filter(project => {
     const status = String(project.status)
     const matchesStatus = !appliedFilters.statuses.length || appliedFilters.statuses.includes(status) || (appliedFilters.statuses.includes('Tamamlandı') && status.startsWith('Tamamland'))
@@ -364,7 +375,10 @@ export default function Projects() {
             <button
               key={step.id}
               type="button"
-              onClick={() => setParticipationStep(step.id)}
+              onClick={() => {
+                setParticipationStep(step.id)
+                history.replaceState(null, '', `${location.pathname}${location.search}${step.id === 'winners' ? '#sonuclar' : '#oy-ver'}`)
+              }}
               className={`rounded-lg border px-4 py-3 text-left transition ${participationStep === step.id ? 'border-mugla-orange bg-orange-50 text-mugla-navy' : 'border-mugla-navy/10 bg-mugla-sand/60 text-mugla-navy/65 hover:border-mugla-orange/50'}`}
             >
               <span className="block text-sm font-black">{step.label}</span>
@@ -407,6 +421,7 @@ export default function Projects() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={(event) => {event.stopPropagation(); showDetails(project)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-orange hover:text-mugla-navy"><FileText size={16}/> Detaylı proje açıklaması</button>
+                  <button type="button" onClick={(event) => {event.stopPropagation(); location.href = projectPath(project)}} className="inline-flex h-10 items-center justify-center rounded-full border border-mugla-navy/10 bg-white px-4 text-sm font-bold text-mugla-navy/65 hover:border-mugla-cyan hover:text-mugla-navy">Kalıcı sayfa</button>
                   <button type="button" disabled={!votingOpen || done || inBasket || availableForBasket === 0} onClick={(event) => {event.stopPropagation(); addToBasket(project.id)}} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-mugla-orange px-4 text-sm font-bold text-white disabled:bg-mugla-navy/10 disabled:text-mugla-navy/45"><ShoppingCart size={16}/>{done ? 'Oy alındı' : inBasket ? 'Sepette' : 'Sepete ekle'}</button>
                 </div>
                 </div>
@@ -436,7 +451,10 @@ export default function Projects() {
             <h2 className="mt-2 text-2xl font-black">{selectedProject.title}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-mugla-sand px-2.5 py-1 text-xs font-black text-mugla-navy/65">{selectedProject.projectCode}</span><CategoryBadge project={selectedProject}/>{selectedProject.targetGroup && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-mugla-cyan">{selectedProject.targetGroup}</span>}<span className="text-sm text-mugla-navy/55">{selectedProject.district} · {formatBudget(selectedProject.budget)}</span></div>
           </div>
-          <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
+          <div className="flex flex-wrap gap-2">
+            <Link href={projectPath(selectedProject)} className="rounded-full bg-mugla-navy px-4 py-2 text-xs font-bold text-white">Kalıcı sayfa</Link>
+            <button type="button" onClick={() => setSelectedProject(null)} className="rounded-full bg-mugla-sand px-4 py-2 text-xs font-bold text-mugla-navy/60">Kapat</button>
+          </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {[

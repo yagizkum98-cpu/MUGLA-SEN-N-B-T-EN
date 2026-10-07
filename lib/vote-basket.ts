@@ -2,7 +2,8 @@
 
 import {useCallback, useEffect, useState} from 'react'
 
-export const VOTE_CREDIT_LIMIT = 5
+import {VOTE_CREDIT_LIMIT} from '@/lib/vote-rules'
+export {VOTE_CREDIT_LIMIT} from '@/lib/vote-rules'
 
 const STORAGE_KEY = 'mugla-vote-baskets-v1'
 const CHANGE_EVENT = 'mugla-vote-basket-changed'

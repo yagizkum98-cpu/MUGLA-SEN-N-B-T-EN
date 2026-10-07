@@ -13,14 +13,14 @@ export function CitizenPanelGate({children}: {children: React.ReactNode}) {
 
   useEffect(() => {
     if (!isCitizenDomain()) {
-      location.replace(citizenUrl(`${location.pathname}${location.search}`))
+      location.replace(citizenUrl(`${location.pathname}${location.search}${location.hash}`))
       return
     }
 
     const params = new URLSearchParams(location.search)
     if (consumeCitizenSessionTransfer(params.get('auth_transfer'))) {
       params.delete('auth_transfer')
-      history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`)
+      history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}${location.hash}`)
     }
 
     setUser(getCurrentUser())

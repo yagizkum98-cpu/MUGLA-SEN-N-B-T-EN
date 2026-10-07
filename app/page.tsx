@@ -4,9 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {FileText, FolderKanban, Mail} from 'lucide-react'
 import {useEffect, useState} from 'react'
-import {CITIZEN_DOMAIN, SUPER_ADMIN_DOMAIN, citizenUrl, isMunicipalityDomain} from '@/lib/domain-routing'
+import {CITIZEN_DOMAIN, MUNICIPALITY_DOMAIN, SUPER_ADMIN_DOMAIN, citizenUrl} from '@/lib/domain-routing'
 import {isActiveVotingProject, useProjects} from '@/lib/projects-store'
-import {SiteUserMenu} from '@/components/site-user-menu'
 
 type DecorativeLanguage = 'tr' | 'en' | 'ru' | 'zh-CN'
 
@@ -180,7 +179,7 @@ export default function Home() {
       location.replace('/admin')
       return
     }
-    if (isMunicipalityDomain()) {
+    if (location.hostname === MUNICIPALITY_DOMAIN) {
       setMunicipalityRedirecting(true)
       location.replace('/admin/giris')
     }
@@ -200,24 +199,6 @@ export default function Home() {
 
   return <main className="relative min-h-screen overflow-hidden bg-mugla-sand text-mugla-navy">
     <DecorativeLogoBackground/>
-    <header className="sticky top-0 z-30 border-b border-mugla-navy/10 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-white p-1 shadow-sm">
-            <Image src="/partners/mugla-buyuksehir.png" alt="Mugla Buyuksehir Belediyesi" width={720} height={721} className="h-full w-full object-contain"/>
-          </span>
-          <span className="text-sm font-bold leading-tight">Muğla<br/><span className="text-mugla-orange">Bütçe Senin</span></span>
-        </Link>
-        <nav className="hidden items-center gap-5 text-sm font-semibold text-mugla-navy/65 md:flex">
-          <Link href="/">Muğla Bütçe Senin</Link>
-          <Link href="/projeler">Projeler</Link>
-          <Link href="/sss">S.S.S.</Link>
-          <Link href="/kitapcik">Kitapçık</Link>
-          <Link href="/iletisim">İletişim</Link>
-        </nav>
-        <div className="flex items-center gap-2"><SiteUserMenu showLogin/></div>
-      </div>
-    </header>
 
     <section id="mugla-butce-senin" className="scroll-mt-24 border-b border-mugla-navy/10 bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[1.08fr_.92fr] lg:items-start lg:py-16">
@@ -347,18 +328,6 @@ export default function Home() {
       </div>
     </section>
 
-    <footer className="border-t border-mugla-navy/10 bg-white px-5 py-8">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-mugla-navy/55">
-        <span>© 2026 Muğla Büyükşehir Belediyesi</span>
-        <div className="flex gap-4">
-          <a href="#mugla-butce-senin">Muğla Bütçe Senin</a>
-          <Link href="/projeler">Projeler</Link>
-          <Link href="/sss">S.S.S.</Link>
-          <Link href="/kitapcik">Kitapçık</Link>
-          <Link href="/iletisim">İletişim</Link>
-        </div>
-      </div>
-    </footer>
   </main>
 }
 

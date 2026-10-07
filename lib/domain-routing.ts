@@ -37,22 +37,26 @@ export function isAdminAuthorityDomain() {
 }
 
 export function publicUrl(path = '/') {
-  return `https://${PUBLIC_DOMAIN}${path}`
+  return isLocalDomain() || host() === PUBLIC_DOMAIN ? path : `https://${PUBLIC_DOMAIN}${path}`
 }
 
 export function citizenUrl(path = '/') {
+  if (isLocalDomain()) return path === '/' ? '/giris?mode=login&next=/vatandas/panel' : path
   return `https://${CITIZEN_DOMAIN}${path}`
 }
 
 export function municipalityUrl(path = '/') {
+  if (isLocalDomain()) return path === '/' ? '/admin/giris' : path
   return `https://${MUNICIPALITY_DOMAIN}${path}`
 }
 
 export function superAdminUrl(path = '/') {
+  if (isLocalDomain()) return path === '/' ? '/admin' : path
   return `https://${SUPER_ADMIN_DOMAIN}${path}`
 }
 
 export function crmUrl(path = '/') {
+  if (isLocalDomain()) return path === '/' ? '/crm' : path
   return `https://${CRM_DOMAIN}${path}`
 }
 
