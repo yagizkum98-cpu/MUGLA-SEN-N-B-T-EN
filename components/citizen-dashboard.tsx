@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {FormEvent, useEffect, useMemo, useState} from 'react'
-import {ArrowUpRight, Bell, CalendarDays, Camera, CheckCircle2, Clock3, FileBarChart, FileText, Home, KeyRound, Lightbulb, LockKeyhole, LogOut, MapPin, Phone, Plus, ShieldCheck, ShoppingCart, Trash2, Trophy, UserRound, Vote} from 'lucide-react'
+import {ArrowUpRight, Bell, CalendarDays, Camera, CheckCircle2, Clock3, FileBarChart, FileText, Home, KeyRound, Lightbulb, LockKeyhole, LogOut, MapPin, Phone, Plus, RefreshCw, ShieldCheck, ShoppingCart, Trash2, Trophy, UserRound, Vote} from 'lucide-react'
 import {AppShell} from '@/components/app-shell'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
@@ -82,7 +82,8 @@ export function CitizenDashboard() {
   const [user, setUser] = useState<LocalUser | null>(null)
   const [message, setMessage] = useState('')
   const [applicationQuery, setApplicationQuery] = useState('')
-  const {projects, voteProject} = useProjects()
+  const {projects, ready: projectsReady, syncError, refresh, unsentProjects, retryUnsentProject, voteProject} = useProjects()
+  const [retryingSubmission, setRetryingSubmission] = useState('')
   const {notifications: civicNotifications, events: civicEvents} = useCivicUpdates()
   const {basket, confirmed, remaining, add, remove, confirm} = useVoteBasket(user?.id)
   const [profileTab, setProfileTab] = useState<'profile' | 'security' | 'preferences'>('profile')
@@ -106,7 +107,8 @@ export function CitizenDashboard() {
     }
   }, [])
 
-  const myProjects = useMemo(() => user ? projects.filter(project => project.ownerId === user.id || project.ownerEmail === user.email) : [], [projects, user])
+  const myProjects = useMemo(() => user ? projects.filter(project => project.ownerId === user.id || project.ownerEmail?.trim().toLowerCase() === user.email.trim().toLowerCase()) : [], [projects, user])
+  const myUnsentProjects = user ? unsentProjects.filter(project => project.ownerId === user.id || project.ownerEmail?.trim().toLowerCase() === user.email.trim().toLowerCase()) : []
   const queriedProjects = useMemo(() => {
     const query = applicationQuery.trim().toLocaleLowerCase('tr')
     if (!query) return myProjects
@@ -165,6 +167,16 @@ export function CitizenDashboard() {
   function signOut() {
     logoutUser()
     location.replace('/giris')
+  }
+
+  async function retrySubmission(project: typeof projects[number]) {
+    setRetryingSubmission(project.id)
+    try {
+      const saved = await retryUnsentProject(project)
+      setMessage(`${saved.projectCode} başvurunuz inceleme sırasına alındı.`)
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Başvuru gönderilemedi.')
+    } finally { setRetryingSubmission('') }
   }
 
   function addToBasket(id: string) {
@@ -252,8 +264,10 @@ export function CitizenDashboard() {
     </header>
 
     <div className="space-y-8 p-6 lg:p-10">
+      {syncError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{syncError}</p><Button type="button" variant="outline" onClick={() => void refresh()}><RefreshCw size={16}/> Tekrar dene</Button></div>}
+      {myUnsentProjects.length > 0 && <section className="rounded-lg border border-amber-200 bg-amber-50 p-4"><h2 className="font-bold">Gönderimi tamamlanmamış başvurular</h2><div className="mt-3 space-y-3">{myUnsentProjects.map(project => <div key={project.id} className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">{project.title}</p><Button type="button" variant="outline" disabled={Boolean(retryingSubmission)} onClick={() => void retrySubmission(project)}><RefreshCw size={16}/>{retryingSubmission === project.id ? 'Gönderiliyor...' : 'Tekrar gönder'}</Button></div>)}</div></section>}
       <section id="panelim" className="scroll-mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Başvurularım" value={String(myProjects.length)} note={`${pending.length} başvuru inceleme bekliyor`} icon={FileText}/>
+        <Metric label="Başvurularım" value={projectsReady ? String(myProjects.length) : '...'} note={`${pending.length} başvuru inceleme bekliyor`} icon={FileText}/>
         <Metric label="Aktif fikirlerim" value={String(active.length)} note="Onaylanıp oylamaya açılanlar" icon={Vote}/>
         <Metric label="Toplam destek" value={hasLiveOwnProject ? 'Gizli' : totalVotes.toLocaleString('tr-TR')} note={hasLiveOwnProject ? 'Oylama bitince açıklanacak' : 'Fikirlerime gelen oy'} icon={ShieldCheck}/>
         <Metric label="Sepet kredim" value={`${remaining}/${VOTE_CREDIT_LIMIT}`} note={`${basket.length} proje sepette`} icon={ShoppingCart}/>

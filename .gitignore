@@ -11,3 +11,6 @@ build/
 coverage/
 
 .vercel
+.data/
+test-results/
+playwright-report/

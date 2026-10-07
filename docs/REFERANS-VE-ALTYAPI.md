@@ -70,8 +70,10 @@ Yayina onaylanmamis projeler kamuya acik ayrinti ekraninda gosterilmez;
 basvuru sahibinin menu baglantisi kendi paneline gider. Bu gorunum filtresi
 sunucu tarafinda yetkilendirme yerine gecmez.
 
-Supabase yapilandirilmazsa API'ler bellekte gecici kayit tutar ve
-`synced: false` dondurur. Sunucu yeniden baslatildiginda bu kayitlar kaybolur.
+Proje API'si artik kalici sunucu deposu olmadan basarili kayit onayi vermez.
+Canli Supabase baglantisi ve yeni migration adimlari
+[Basvuru veri kurulumu](BASVURU-VERI-KURULUMU.md) dosyasindadir.
+Diger mevcut API'lerin bellek fallback'leri bu duzeltmenin kapsaminda degildir.
 Tarayicidaki yerel kayitlar farkli cihazlar arasinda kalicilik saglamaz.
 Prisma semasi depoda bulunur; mevcut proje ve sepet akisi Prisma uzerinden
 calismaz. Veritabani semasinin bulunmasi baglantinin aktif oldugu anlamina gelmez.

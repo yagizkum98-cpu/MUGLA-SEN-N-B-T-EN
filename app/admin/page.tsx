@@ -6,7 +6,7 @@ import {AppShell} from '@/components/app-shell'
 import {AdminAuthGate} from '@/components/admin-auth-gate'
 import {Card, CardContent, CardHeader} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
-import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CalendarDays, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
+import {Activity, AlertTriangle, ArrowUpRight, BarChart3, Bell, Building2, CalendarDays, CheckCircle2, Clock3, Database, Eye, EyeOff, FileBarChart, FileSpreadsheet, FileText, FolderKanban, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, Mail, MapPin, MessageSquare, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2, Trophy, UploadCloud, UserPlus, UserRound, UsersRound, Vote, XCircle, type LucideIcon} from 'lucide-react'
 import {formatBudget, isPendingReviewProject, projectApplicationYear, ProjectStatus, type ProjectRecord, useProjects} from '@/lib/projects-store'
 import {addAdminAccount, changeOwnAdminProfile, getCurrentAdmin, listAdminAccounts, normalizeAdminRole, removeAdminAccount, revealOwnAdminPassword, type AdminAccount, type AdminRole} from '@/lib/admin-auth'
 import {muglaDistrictDashboards} from '@/lib/district-dashboards'
@@ -855,7 +855,7 @@ function ProjectManagementPanel({
 }
 
 export default function Admin() {
-  const {projects, addProject, mergeProjects, removeProject, reviewProject, updateProject} = useProjects()
+  const {projects, syncError: projectsSyncError, refresh: refreshProjects, addProject, mergeProjects, removeProject, reviewProject, updateProject} = useProjects()
   const {records: contactRecords, removeContactRecord} = useContactRecords()
   const {citizens, campaigns, addCampaign} = useCrm()
   const {notifications: civicNotifications, events: civicEvents, addNotification: addCivicNotification, addEvent: addCivicEvent} = useCivicUpdates()
@@ -1888,6 +1888,7 @@ export default function Admin() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
+          {projectsSyncError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{projectsSyncError}</p><Button type="button" variant="outline" onClick={() => void refreshProjects()}><RefreshCw size={16}/> Tekrar dene</Button></div>}
           <div className="flex gap-2 overflow-x-auto pb-1">
             {[
               ['Tümü', scopedProjects.length],

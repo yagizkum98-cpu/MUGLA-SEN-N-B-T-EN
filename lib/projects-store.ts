@@ -1,8 +1,7 @@
 'use client'
 
-import {useCallback,useEffect,useState} from 'react'
+import {useCallback,useEffect,useRef,useState} from 'react'
 import {categoryColor, normalizeProjectCategory} from '@/lib/project-taxonomy'
-import {createClient} from '@/lib/supabase/client'
 import {apiUrl} from '@/lib/domain-routing'
 
 export type ProjectStatus='Başvuru'|'İncelemede'|'Uygun'|'Oylamada'|'Yılın Kazanan Adayı'|'İhale Aşamasında'|'Devam Ediyor'|'Tamamlandı'|'Yapılamadı'|'Ertelendi'
@@ -19,6 +18,7 @@ export type ProjectHistoryEntry={
 
 export type ProjectRecord={
   id:string
+  savedToServer?:boolean
   projectCode:string
   title:string
   shortDescription?:string
@@ -79,7 +79,8 @@ type RemoteProjectsPayload={projects:ProjectRecord[];deletedIds:string[]}
 const STORAGE_KEY='mugla-butce-senin-projects-v1'
 const DELETED_STORAGE_KEY='mugla-butce-senin-deleted-projects-v1'
 const CHANGE_EVENT='mugla-projects-changed'
-const REMOTE_TABLE='project_records'
+const SYNC_ERROR_EVENT='mugla-projects-sync-error'
+const UNSENT_STORAGE_KEY='mugla-unsent-projects-v1'
 const SOCIAL_STOPS_CLEANUP_CUTOFF='2026-07-21T18:39:15.763Z'
 const REMOVED_PROJECT_TITLES=['muğla sosyal duraklar','muğla sosyal duraklar projesi','mugla sosyal duraklar','mugla sosyal duraklar projesi','sosyal duraklar','sosyal duraklar projesi']
 
@@ -92,6 +93,7 @@ function projectCenterApiUrl(){
 }
 
 function hasApplicantData(project:Partial<ProjectRecord>){
+  if(project.source==='municipality')return false
   return Boolean(project.source==='citizen'||project.ownerId||project.ownerEmail||project.ownerName||project.applicantType||project.purpose||project.summary||project.activities||project.expectedResults||project.attachments?.length)
 }
 
@@ -154,110 +156,66 @@ function mergeProjectsById(local:ProjectRecord[],remote:ProjectRecord[]){
 }
 
 function saveLocalProjects(projects:ProjectRecord[]){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(projects))
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(projects))}catch{}
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
-async function readRemoteProjects():Promise<RemoteProjectsPayload|null>{
-  if(typeof window==='undefined')return null
-  try{
-    const response=await fetch(projectCenterApiUrl(),{cache:'no-store'})
-    const payload=await response.json().catch(()=>null)
-    if(response.ok&&Array.isArray(payload?.projects))return {
-      projects:payload.projects as ProjectRecord[],
-      deletedIds:Array.isArray(payload?.deletedIds)?payload.deletedIds.map(String):[],
-    }
-  }catch{}
-  try{
-    const{data,error}=await createClient().from(REMOTE_TABLE).select('data')
-    if(error||!Array.isArray(data))return null
-    const deletedIds=data.map(row=>row.data).filter(project=>project?.deleted===true&&project?.id).map(project=>String(project.id))
-    const deletedSet=new Set(deletedIds)
-    return {
-      projects:data.map(row=>row.data).filter(project=>project?.title&&!project?.deleted&&!deletedSet.has(String(project.id))) as ProjectRecord[],
-      deletedIds,
-    }
-  }catch{return null}
-}
-
-async function upsertRemoteProjects(projects:ProjectRecord[]){
-  if(typeof window==='undefined'||!projects.length)return
-  const deletedIds=new Set(readLocalDeletedProjectIds())
-  const activeProjects=projects.filter(project=>!deletedIds.has(project.id))
-  if(!activeProjects.length)return
-  for(const project of activeProjects){
-    try{
-      await fetch(projectCenterApiUrl(),{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({project}),
-      })
-    }catch{}
-  }
-  try{
-    await createClient().from(REMOTE_TABLE).upsert(activeProjects.map(project=>({
-      id:project.id,
-      data:project,
-      updated_at:new Date().toISOString(),
-    })),{onConflict:'id'})
-  }catch{}
-}
-
-export async function syncProjectRecord(project:ProjectRecord){
-  if(typeof window==='undefined')throw new Error('Proje kaydı tarayıcı dışında senkronize edilemez.')
-  const normalized=normalizeProject(project)
-  const response=await fetch(projectCenterApiUrl(),{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({project:normalized}),
-  })
-  if(response.ok)return normalized
-  const{error}=await createClient().from(REMOTE_TABLE).upsert({
-    id:normalized.id,
-    data:normalized,
-    updated_at:new Date().toISOString(),
-  },{onConflict:'id'})
-  if(error)throw error
-  return normalized
-}
-
-export async function submitProjectToProjectCenter(project:ProjectRecord){
-  if(typeof window==='undefined')throw new Error('Proje kaydı tarayıcı dışında gönderilemez.')
-  const normalized=normalizeProject({
-    ...project,
-    status:'Başvuru',
-    moderationStatus:'Bekliyor',
-    workflowStatus:'İlçe Admin İncelemesinde',
-    source:'citizen',
-    progress:0,
-    votes:0,
-  })
-  const response=await fetch(projectCenterApiUrl(),{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({project:normalized}),
+async function projectRequest(method:string, body?:unknown, query='') {
+  const response=await fetch(`${projectCenterApiUrl()}${query}`,{
+    method, cache:'no-store', signal:AbortSignal.timeout(20000),
+    headers:body?{'Content-Type':'application/json'}:undefined,
+    body:body?JSON.stringify(body):undefined,
   })
   const payload=await response.json().catch(()=>null)
-  if(!response.ok)throw new Error(payload?.error||'Başvuru belediye Proje Merkezi\'ne aktarılamadı.')
-  return normalizeProject(payload?.project??normalized)
+  if(!response.ok)throw new Error(payload?.error||'Proje Merkezi ile bağlantı kurulamadı.')
+  if(payload?.persisted!==true)throw new Error('Başvuru kalıcı veritabanına kaydedilmedi. Belediye veri bağlantısını kontrol etmelidir.')
+  return payload
 }
 
-async function deleteRemoteProject(id:string){
-  if(typeof window==='undefined')return
-  const deletedProject={id,deleted:true,deletedAt:new Date().toISOString()}
-  let synced=false
-  try{
-    const response=await fetch(`${projectCenterApiUrl()}?id=${encodeURIComponent(id)}`,{method:'DELETE'})
-    synced=response.ok
-  }catch{}
-  if(synced)return
-  try{
-    await createClient().from(REMOTE_TABLE).upsert({
-      id,
-      data:deletedProject,
-      updated_at:deletedProject.deletedAt,
-    },{onConflict:'id'})
-  }catch{}
+async function readRemoteProjects():Promise<RemoteProjectsPayload> {
+  const payload=await projectRequest('GET')
+  if(!Array.isArray(payload.projects))throw new Error('Proje Merkezi geçerli kayıt listesi döndürmedi.')
+  return {projects:payload.projects,deletedIds:Array.isArray(payload.deletedIds)?payload.deletedIds.map(String):[]}
+}
+
+function reportSyncError(cause:unknown) {
+  const message=cause instanceof Error?cause.message:'Proje kaydı senkronize edilemedi.'
+  window.dispatchEvent(new CustomEvent(SYNC_ERROR_EVENT,{detail:message}))
+}
+
+async function upsertRemoteProjects(projects:ProjectRecord[]) {
+  for(const project of projects)await syncProjectRecord(project)
+}
+
+export async function syncProjectRecord(project:ProjectRecord) {
+  const payload=await projectRequest('POST',{project:normalizeProject(project)})
+  const saved=normalizeProject({...payload.project,savedToServer:true})
+  saveLocalProjects(mergeProjectsById(readProjects(),[saved]))
+  return saved
+}
+
+export async function submitProjectToProjectCenter(project:ProjectRecord) {
+  const payload=await projectRequest('POST',{action:'submit',project})
+  if(!payload.project?.id||!payload.project?.projectCode)throw new Error('Başvuru kayıt onayı alınamadı.')
+  const saved=normalizeProject({...payload.project,savedToServer:true})
+  saveLocalProjects(mergeProjectsById(readProjects(),[saved]))
+  return saved
+}
+
+async function deleteRemoteProject(id:string) {
+  await projectRequest('DELETE',undefined,`?id=${encodeURIComponent(id)}`)
+}
+
+function readUnsentProjects():ProjectRecord[] {
+  if(typeof window==='undefined')return []
+  try {
+    const records=JSON.parse(localStorage.getItem(UNSENT_STORAGE_KEY)??'[]')
+    return Array.isArray(records)?records.filter(item=>item?.id&&item?.ownerEmail):[]
+  }catch{return []}
+}
+
+function saveUnsentProjects(projects:ProjectRecord[]) {
+  try{localStorage.setItem(UNSENT_STORAGE_KEY,JSON.stringify(projects))}catch{}
 }
 
 export function projectApplicationYear(project:{createdAt?:string;applicationYear?:string}){
@@ -322,41 +280,90 @@ function normalizeModerationStatus(project:ProjectRecord):ProjectModerationStatu
 export function useProjects(){
   const[projects,setProjects]=useState<ProjectRecord[]>([])
   const[ready,setReady]=useState(false)
+  const[syncError,setSyncError]=useState('')
+  const[unsentProjects,setUnsentProjects]=useState<ProjectRecord[]>([])
+  const refreshRef=useRef<()=>Promise<void>>(async()=>{})
 
   useEffect(()=>{
-    const sync=()=>{purgeRemovedLocalProjects();setProjects(readProjects().map(normalizeProject));setReady(true)}
+    let cancelled=false
+    let syncing=false
+    const sync=()=>setProjects(readProjects().filter(project=>project.savedToServer).map(normalizeProject))
     const syncRemote=async()=>{
-      const removedLocal=purgeRemovedLocalProjects()
-      const local=readProjects().map(normalizeProject)
-      const remote=await readRemoteProjects()
-      if(!remote){setProjects(local);setReady(true);return}
-      rememberLocalDeletedProjectIds(remote.deletedIds)
-      const remoteDeletedIds=new Set(remote.deletedIds)
-      const localAfterDeletes=local.filter(project=>!remoteDeletedIds.has(project.id))
-      const removedIds=[...removedLocal,...localAfterDeletes,...remote.projects].filter(project=>isRemovedProject(project)).map(project=>project.id)
-      const merged=mergeProjectsById(localAfterDeletes,remote.projects)
-      saveLocalProjects(merged)
-      setProjects(merged)
-      setReady(true)
-      if(merged.length)void upsertRemoteProjects(merged)
-      removedIds.forEach(id=>void deleteRemoteProject(id))
+      if(syncing)return
+      syncing=true
+      try{
+        const local=readProjects()
+        const remote=await readRemoteProjects()
+        if(cancelled)return
+        rememberLocalDeletedProjectIds(remote.deletedIds)
+        const knownIds=new Set([...remote.projects.map(project=>project.id),...remote.deletedIds])
+        const recoverable=local.filter(project=>!knownIds.has(project.id)&&project.ownerEmail&&isPendingReviewProject(project))
+        const recovery=new Map([...readUnsentProjects(),...recoverable].map(project=>[project.id,project]))
+        knownIds.forEach(id=>recovery.delete(id))
+        const unsent=Array.from(recovery.values())
+        saveUnsentProjects(unsent)
+        setUnsentProjects(unsent)
+        const records=remote.projects.filter(project=>!isRemovedProject(project)).map(project=>normalizeProject({...project,savedToServer:true}))
+        saveLocalProjects(records)
+        setProjects(records)
+        setSyncError('')
+      }catch(cause){
+        if(!cancelled){
+          setSyncError(cause instanceof Error?cause.message:'Proje Merkezi ile bağlantı kurulamadı.')
+          setUnsentProjects(readUnsentProjects())
+        }
+      }finally{
+        syncing=false
+        if(!cancelled)setReady(true)
+      }
     }
+    refreshRef.current=syncRemote
+    const onError=(event:Event)=>setSyncError(String((event as CustomEvent).detail))
     sync()
     void syncRemote()
-    const remoteInterval=window.setInterval(()=>void syncRemote(),15000)
-    const syncOnFocus=()=>void syncRemote()
+    const interval=window.setInterval(()=>void syncRemote(),5000)
     window.addEventListener('storage',sync)
     window.addEventListener(CHANGE_EVENT,sync)
-    window.addEventListener('focus',syncOnFocus)
-    return()=>{window.clearInterval(remoteInterval);window.removeEventListener('storage',sync);window.removeEventListener(CHANGE_EVENT,sync);window.removeEventListener('focus',syncOnFocus)}
+    window.addEventListener(SYNC_ERROR_EVENT,onError)
+    window.addEventListener('focus',syncRemote)
+    window.addEventListener('online',syncRemote)
+    return()=>{
+      cancelled=true
+      window.clearInterval(interval)
+      window.removeEventListener('storage',sync)
+      window.removeEventListener(CHANGE_EVENT,sync)
+      window.removeEventListener(SYNC_ERROR_EVENT,onError)
+      window.removeEventListener('focus',syncRemote)
+      window.removeEventListener('online',syncRemote)
+    }
   },[])
 
+  const refresh=useCallback(()=>refreshRef.current(),[])
   const save=useCallback((next:ProjectRecord[])=>{
+    const current=new Map(readProjects().map(project=>[project.id,project]))
     const normalized=next.filter(project=>!isRemovedProject(project)).map(normalizeProject)
+    const changed=normalized.filter(project=>JSON.stringify(current.get(project.id))!==JSON.stringify(project))
     saveLocalProjects(normalized)
     setProjects(normalized)
-    void upsertRemoteProjects(normalized)
+    void upsertRemoteProjects(changed).catch(reportSyncError)
   },[])
+
+  const submitProject=useCallback(async(input:NewProject,id=crypto.randomUUID())=>{
+    const candidate:ProjectRecord={...input,id,projectCode:'',createdAt:new Date().toISOString(),votes:0,progress:0,moderationStatus:'Bekliyor'}
+    const saved=await submitProjectToProjectCenter(candidate)
+    setProjects(current=>mergeProjectsById(current,[saved]))
+    setSyncError('')
+    return saved
+  },[])
+
+  const retryUnsentProject=useCallback(async(project:ProjectRecord)=>{
+    const saved=await submitProjectToProjectCenter(project)
+    const remaining=readUnsentProjects().filter(item=>item.id!==project.id)
+    saveUnsentProjects(remaining)
+    setUnsentProjects(remaining)
+    await refresh()
+    return saved
+  },[refresh])
 
   const addProject=useCallback((input:NewProject)=>{
     const current=readProjects().map(normalizeProject)
@@ -366,7 +373,7 @@ export function useProjects(){
     return project
   },[save])
 
-  const removeProject=useCallback((id:string)=>{rememberLocalDeletedProjectIds([id]);save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id)},[save])
+  const removeProject=useCallback((id:string)=>{rememberLocalDeletedProjectIds([id]);save(readProjects().filter(project=>project.id!==id));void deleteRemoteProject(id).catch(reportSyncError)},[save])
   const updateProject=useCallback((id:string,patch:Partial<ProjectRecord>)=>{
     let updated:ProjectRecord|null=null
     save(readProjects().map(project=>{
@@ -417,7 +424,7 @@ export function useProjects(){
     }))
   },[save])
 
-  return{projects,ready,addProject,mergeProjects,removeProject,reviewProject,voteProject,updateProject}
+  return{projects,ready,syncError,refresh,unsentProjects,submitProject,retryUnsentProject,addProject,mergeProjects,removeProject,reviewProject,voteProject,updateProject}
 }
 
 export function formatBudget(value:number){return new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',maximumFractionDigits:0}).format(value)}

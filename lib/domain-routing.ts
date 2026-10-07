@@ -6,6 +6,11 @@ export const MUNICIPALITY_DOMAIN = 'muglabutcesenin-belediye.vercel.app'
 export const SUPER_ADMIN_DOMAIN = 'muglabutcesenin-superadmin.vercel.app'
 export const CRM_DOMAIN = 'muglabutcesenin-crm.vercel.app'
 export const API_DOMAIN = 'api.muglabutcesenin.com'
+const SHARED_APP_DOMAINS = ['muglaseninbutcen.vercel.app', 'mugla-senin-butcen.vercel.app']
+
+function isSharedAppDomain() {
+  return SHARED_APP_DOMAINS.includes(host())
+}
 
 function host() {
   return typeof location === 'undefined' ? '' : location.hostname
@@ -17,11 +22,11 @@ export function isLocalDomain() {
 }
 
 export function isCitizenDomain() {
-  return isLocalDomain() || host() === CITIZEN_DOMAIN
+  return isLocalDomain() || isSharedAppDomain() || host() === CITIZEN_DOMAIN
 }
 
 export function isMunicipalityDomain() {
-  return isLocalDomain() || host() === MUNICIPALITY_DOMAIN
+  return isLocalDomain() || isSharedAppDomain() || host() === MUNICIPALITY_DOMAIN
 }
 
 export function isSuperAdminDomain() {
@@ -33,20 +38,20 @@ export function isCrmDomain() {
 }
 
 export function isAdminAuthorityDomain() {
-  return isLocalDomain() || host() === MUNICIPALITY_DOMAIN || host() === SUPER_ADMIN_DOMAIN || host() === CRM_DOMAIN
+  return isLocalDomain() || isSharedAppDomain() || host() === MUNICIPALITY_DOMAIN || host() === SUPER_ADMIN_DOMAIN || host() === CRM_DOMAIN
 }
 
 export function publicUrl(path = '/') {
-  return isLocalDomain() || host() === PUBLIC_DOMAIN ? path : `https://${PUBLIC_DOMAIN}${path}`
+  return isLocalDomain() || isSharedAppDomain() || host() === PUBLIC_DOMAIN ? path : `https://${PUBLIC_DOMAIN}${path}`
 }
 
 export function citizenUrl(path = '/') {
-  if (isLocalDomain()) return path === '/' ? '/giris?mode=login&next=/vatandas/panel' : path
+  if (isLocalDomain() || isSharedAppDomain()) return path === '/' ? '/giris?mode=login&next=/vatandas/panel' : path
   return `https://${CITIZEN_DOMAIN}${path}`
 }
 
 export function municipalityUrl(path = '/') {
-  if (isLocalDomain()) return path === '/' ? '/admin/giris' : path
+  if (isLocalDomain() || isSharedAppDomain()) return path === '/' ? '/admin/giris' : path
   return `https://${MUNICIPALITY_DOMAIN}${path}`
 }
 
@@ -61,5 +66,6 @@ export function crmUrl(path = '/') {
 }
 
 export function apiUrl(path = '/') {
-  return isLocalDomain() ? path : `https://${API_DOMAIN}${path}`
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '')
+  return base ? `${base}${path}` : path
 }

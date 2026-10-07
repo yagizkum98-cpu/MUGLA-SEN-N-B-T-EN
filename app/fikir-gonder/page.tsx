@@ -5,11 +5,10 @@ import {ChangeEvent,FormEvent,useEffect,useMemo,useRef,useState} from 'react'
 import {ArrowLeft,CheckCircle2,FileText,Lightbulb,Paperclip,Send,Trash2,UploadCloud} from 'lucide-react'
 import {Button} from '@/components/ui/button'
 import {saveProjectFiles} from '@/lib/project-files'
-import {submitProjectToProjectCenter,syncProjectRecord,useProjects} from '@/lib/projects-store'
+import {useProjects,type NewProject} from '@/lib/projects-store'
 import {muglaDistricts} from '@/lib/locations'
-import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity} from '@/lib/local-auth'
+import {consumeCitizenSessionTransfer, getCurrentUser, updateCurrentUserActivity, type LocalUser} from '@/lib/local-auth'
 import {citizenUrl, isCitizenDomain, publicUrl} from '@/lib/domain-routing'
-import {createClient} from '@/lib/supabase/client'
 import {projectCategories,targetGroups,type ProjectCategory} from '@/lib/project-taxonomy'
 import {allowedCategoriesForSetting,annualThemeChangeEvent,annualThemeLabelsForSetting,annualThemeYears,isProjectThemeAllowedForSetting,listAnnualThemeSettings,resolveAnnualThemeSetting,syncAnnualThemeSettings,type AnnualThemeSetting} from '@/lib/annual-themes'
 
@@ -25,7 +24,7 @@ function size(value:number){
 }
 
 export default function IdeaForm(){
-  const{projects,addProject,removeProject,updateProject}=useProjects()
+  const{projects,ready,syncError,submitProject}=useProjects()
   const[files,setFiles]=useState<File[]>([])
   const[error,setError]=useState('')
   const[submitting,setSubmitting]=useState(false)
@@ -36,7 +35,8 @@ export default function IdeaForm(){
   const[rightsAccepted,setRightsAccepted]=useState(false)
   const inputRef=useRef<HTMLInputElement>(null)
   const total=files.reduce((sum,file)=>sum+file.size,0)
-  const currentUser=getCurrentUser()
+  const[currentUser,setCurrentUser]=useState<LocalUser|null>(null)
+  const submissionId=useRef<string|null>(null)
   const currentYear=new Date().getFullYear()
   const currentYearKey=String(currentYear)
   const[applicationYear,setApplicationYear]=useState(currentYearKey)
@@ -69,11 +69,8 @@ export default function IdeaForm(){
         params.delete('auth_transfer')
         history.replaceState(null,'',`${location.pathname}${params.toString()?`?${params.toString()}`:''}`)
       }
-      if(getCurrentUser()){setAuthorized(true);return}
-      try{
-        const{data}=await createClient().auth.getSession()
-        if(data.session){setAuthorized(true);return}
-      }catch{}
+      const user=getCurrentUser()
+      if(user){setCurrentUser(user);setAuthorized(true);return}
       location.replace(publicUrl('/giris?mode=login&next=/fikir-gonder'))
     }
     check()
@@ -126,6 +123,8 @@ export default function IdeaForm(){
       return
     }
     const user=getCurrentUser()
+    if(!user){setError('Başvuru göndermek için tekrar giriş yapın.');setSubmitting(false);return}
+    if(!ready||syncError){setError(syncError||'Başvuru kayıtları yükleniyor. Lütfen tekrar deneyin.');setSubmitting(false);return}
     if(user){
       const sentThisYear=projects.filter(project=>{
         const created=new Date(project.createdAt)
@@ -144,7 +143,7 @@ export default function IdeaForm(){
     const applicantCountryCode=user?.nationality==='foreign'?'FOREIGN':'TR'
     const applicantProvince=user?.province||'Muğla'
     const applicantDistrict=user?.district||'Menteşe'
-    const project=addProject({
+    const input:NewProject={
       title:String(data.get('title')).trim(),
       purpose:String(data.get('purpose')).trim(),
       summary:String(data.get('summary')).trim(),
@@ -173,30 +172,21 @@ export default function IdeaForm(){
       ownerId:user?.id,
       ownerName:user?.name,
       ownerEmail:user?.email,
-    })
+    }
     try{
-      await saveProjectFiles(project.id,files)
-      let syncedProject
-      try{
-        syncedProject=await submitProjectToProjectCenter(project)
-      }catch(projectCenterError){
-        try{
-          syncedProject=await syncProjectRecord(project)
-        }catch{
-          syncedProject=project
-        }
-      }
-      updateProject(project.id,syncedProject)
-      updateCurrentUserActivity({proposalDelta:1,participationDelta:1})
+      submissionId.current??=crypto.randomUUID()
+      await saveProjectFiles(submissionId.current,files)
+      const project=await submitProject(input,submissionId.current)
+      try{updateCurrentUserActivity({proposalDelta:1,participationDelta:1})}catch{}
       setSuccess(project.projectCode)
+      submissionId.current=null
       setFiles([])
       form.reset()
       setRightsAccepted(false)
       setCategory(categoryOptions[0]?.[0]??'Ulaşım')
       setCustomTheme('')
     }catch(cause){
-      removeProject(project.id)
-      setError(cause instanceof Error&&cause.message?cause.message:'Dosyalar tarayici depolama alanina kaydedilemedi. Lutfen dosya boyutunu azaltip tekrar deneyin.')
+      setError(cause instanceof Error&&cause.message?cause.message:'Başvuru kaydedilemedi. Bilgileriniz korunuyor; tekrar deneyebilirsiniz.')
     }finally{
       setSubmitting(false)
     }
@@ -286,7 +276,7 @@ export default function IdeaForm(){
             {files.length>0&&<div className="mt-3 space-y-2">{files.map((file,index)=><div key={`${file.name}-${file.size}`} className="flex items-center gap-3 rounded-xl border bg-mugla-sand/50 p-3"><FileText className="shrink-0 text-mugla-cyan" size={20}/><span className="min-w-0 flex-1"><b className="block truncate text-sm">{file.name}</b><small className="text-mugla-navy/45">{size(file.size)}</small></span><button type="button" aria-label={`${file.name} dosyasini kaldir`} onClick={()=>setFiles(value=>value.filter((_,i)=>i!==index))} className="rounded-full p-2 text-red-600 hover:bg-red-50"><Trash2 size={16}/></button></div>)}</div>}
           </div>
 
-          {error&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
+          {(error||syncError)&&<div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error||syncError}</div>}
           <section className="rounded-2xl border border-mugla-navy/10 bg-mugla-sand/60 p-5">
             <p className="text-sm font-black text-mugla-navy">Sınai haklar ve proje hakları taahhüdü <span className="text-red-500">*</span></p>
             <div className="mt-3 max-h-44 overflow-y-auto rounded-xl bg-white p-4 text-sm leading-6 text-mugla-navy/65">
@@ -300,7 +290,7 @@ export default function IdeaForm(){
             </label>
           </section>
           <div className="flex items-start gap-3 rounded-2xl bg-mugla-sand p-4 text-sm text-mugla-navy/60"><Paperclip className="mt-0.5 shrink-0" size={17}/><p>Yüklediğiniz belgelerde kişisel veya hassas bilgi bulunmadığından emin olun. Başvurunuzun durumunu vatandaş panelinizden takip edebilirsiniz.</p></div>
-          <Button type="submit" variant="orange" disabled={submitting||remainingIdeas===0||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
+          <Button type="submit" variant="orange" disabled={submitting||!ready||Boolean(syncError)||remainingIdeas===0||!categoryOptions.length||!rightsAccepted} className="h-13 w-full text-base">{remainingIdeas===0?'Yillik fikir hakkınız doldu':!categoryOptions.length?'Bu yil icin acik tema yok':!rightsAccepted?'Taahhüdü onaylayın':submitting?'Basvuru kaydediliyor...':<>Fikrimi gonder <Send size={17}/></>}</Button>
         </form>
       </section>
     </div>
