@@ -34,7 +34,10 @@ canli veritabani olusturulmus veya baglanmis kabul edilmez.
 
 1. Ortak bir Supabase projesi secin.
 2. SQL Editor'de once `supabase/project-records.sql`, sonra
-   `supabase/project-submissions.sql` dosyasini uygulayin.
+   `supabase/project-submissions.sql` dosyasini uygulayin. Yeni bir proje
+   kuruyorsaniz mevcut kullanici, iletisim ve tema akislari icin
+   `supabase/citizen-records.sql`, `supabase/contact-records.sql` ve
+   `supabase/annual-theme-settings.sql` dosyalarini da uygulayin.
 3. Vercel'de `muglaseninbutcen` ve `mugla-senin-butcen` projelerinin Production
    ortamlarina ayni `NEXT_PUBLIC_SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY`
    degerlerini tanimlayin. Mevcut diger Supabase istemcileri icin ayni projeye

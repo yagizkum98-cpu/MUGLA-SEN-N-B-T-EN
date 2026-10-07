@@ -215,7 +215,7 @@ function readUnsentProjects():ProjectRecord[] {
 }
 
 function saveUnsentProjects(projects:ProjectRecord[]) {
-  try{localStorage.setItem(UNSENT_STORAGE_KEY,JSON.stringify(projects))}catch{}
+  try{localStorage.setItem(UNSENT_STORAGE_KEY,JSON.stringify(projects));return true}catch{return false}
 }
 
 export function projectApplicationYear(project:{createdAt?:string;applicationYear?:string}){
@@ -301,10 +301,10 @@ export function useProjects(){
         const recovery=new Map([...readUnsentProjects(),...recoverable].map(project=>[project.id,project]))
         knownIds.forEach(id=>recovery.delete(id))
         const unsent=Array.from(recovery.values())
-        saveUnsentProjects(unsent)
+        const recoverySaved=saveUnsentProjects(unsent)
         setUnsentProjects(unsent)
         const records=remote.projects.filter(project=>!isRemovedProject(project)).map(project=>normalizeProject({...project,savedToServer:true}))
-        saveLocalProjects(records)
+        if(recoverySaved)saveLocalProjects(records)
         setProjects(records)
         setSyncError('')
       }catch(cause){

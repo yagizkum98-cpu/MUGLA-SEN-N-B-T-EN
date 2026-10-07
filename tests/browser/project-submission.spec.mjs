@@ -105,3 +105,27 @@ test('a legacy local-only submission can be recovered without being counted befo
   await expect(page.getByRole('heading', {name: 'Gönderimi tamamlanmamış başvurular'})).toHaveCount(0)
   await context.close()
 })
+
+test('local-only drafts survive reload when the recovery backup exceeds browser quota', async ({browser}) => {
+  const user = citizen()
+  const project = {id: randomUUID(), projectCode: 'MSB-2026-LOCAL', title: 'Kota durumunda korunacak basvuru', ownerId: user.id, ownerEmail: user.email,
+    district: 'Menteşe', category: 'Afet ve Risk Yönetimi', createdAt: '2026-10-07', applicationYear: '2026',
+    moderationStatus: 'Bekliyor', status: 'Başvuru', source: 'citizen', budget: 0, votes: 0, progress: 0}
+  const context = await citizenContext(browser, user, [project])
+  await context.addInitScript(() => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function(key, value) {
+      if (key === 'mugla-unsent-projects-v1') throw new DOMException('Test quota', 'QuotaExceededError')
+      return original.call(this, key, value)
+    }
+  })
+  const page = await context.newPage()
+  await page.goto('/vatandas/panel')
+  await expect(page.getByRole('heading', {name: 'Gönderimi tamamlanmamış başvurular'})).toBeVisible()
+  await page.reload()
+  await expect(page.getByText(project.title, {exact: true})).toBeVisible()
+  const cachedIds = await page.evaluate(() => JSON.parse(localStorage.getItem('mugla-butce-senin-projects-v1')).map(project => project.id))
+  expect(cachedIds).toContain(project.id)
+  await expect(applicationCounter(page)).toHaveText('0')
+  await context.close()
+})
